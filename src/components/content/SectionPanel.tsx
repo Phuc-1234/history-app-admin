@@ -8,6 +8,7 @@ import { Modal } from '../ui/Modal';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { Input, Textarea, Select } from '../ui/FormField';
 import { Spinner } from '../ui/Spinner';
+import { IconPlus, IconEdit, IconDelete, IconSection } from '../ui/Icons';
 
 interface SectionPanelProps {
   onToast: (msg: string, type: ToastType) => void;
@@ -110,7 +111,7 @@ export function SectionPanel({ onToast }: SectionPanelProps) {
               {items.map((i) => <option key={i.value} value={i.value}>{i.label}</option>)}
             </select>
           ))}
-          <Button icon="+" onClick={openCreate} id="create-section-btn">Thêm Phần</Button>
+          <Button icon={<IconPlus size={16} />} onClick={openCreate} id="create-section-btn">Thêm Phần</Button>
         </div>
       </div>
 
@@ -143,8 +144,8 @@ export function SectionPanel({ onToast }: SectionPanelProps) {
                   </Td>
                   <Td align="right">
                     <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                      <Button variant="secondary" onClick={() => openEdit(s)} style={{ padding: '6px 14px', fontSize: 13 }}>✏ Sửa</Button>
-                      <Button variant="danger" onClick={() => setDeleteTarget(s)} style={{ padding: '6px 14px', fontSize: 13 }}>🗑 Xóa</Button>
+                      <Button variant="secondary" icon={<IconEdit size={14} />} onClick={() => openEdit(s)} style={{ padding: '6px 14px', fontSize: 13 }}>Sửa</Button>
+                      <Button variant="danger" icon={<IconDelete size={14} />} onClick={() => setDeleteTarget(s)} style={{ padding: '6px 14px', fontSize: 13 }}>Xóa</Button>
                     </div>
                   </Td>
                 </tr>
@@ -187,7 +188,9 @@ function Td({ children, align }: { children: React.ReactNode; align?: 'right' })
 function EmptyState({ message }: { message: string }) {
   return (
     <div style={{ textAlign: 'center', padding: '60px 20px', background: '#ffffff', borderRadius: 16, border: '2px dashed #e2e8f0' }}>
-      <div style={{ fontSize: 48, marginBottom: 12 }}>📭</div>
+      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
+        <IconSection size={48} color="#94a3b8" />
+      </div>
       <p style={{ color: '#94a3b8', margin: 0, fontSize: 15 }}>{message}</p>
     </div>
   );

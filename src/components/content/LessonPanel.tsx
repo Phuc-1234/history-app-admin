@@ -8,6 +8,7 @@ import { Modal } from '../ui/Modal';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { Input, Textarea, Select } from '../ui/FormField';
 import { Spinner } from '../ui/Spinner';
+import { IconPlus, IconEdit, IconDelete, IconLesson } from '../ui/Icons';
 
 interface LessonPanelProps {
   onToast: (msg: string, type: ToastType) => void;
@@ -108,7 +109,7 @@ export function LessonPanel({ onToast }: LessonPanelProps) {
             {topics.length === 0 && <option value="">— Chọn chủ đề —</option>}
             {topics.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
           </select>
-          <Button icon="+" onClick={openCreate} id="create-lesson-btn">Thêm Bài học</Button>
+          <Button icon={<IconPlus size={16} />} onClick={openCreate} id="create-lesson-btn">Thêm Bài học</Button>
         </div>
       </div>
 
@@ -136,8 +137,8 @@ export function LessonPanel({ onToast }: LessonPanelProps) {
                   <Td><span style={{ color: '#94a3b8', fontSize: 13, fontStyle: l.summary ? 'normal' : 'italic' }}>{l.summary ?? '—'}</span></Td>
                   <Td align="right">
                     <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                      <Button variant="secondary" onClick={() => openEdit(l)} style={{ padding: '6px 14px', fontSize: 13 }}>✏ Sửa</Button>
-                      <Button variant="danger" onClick={() => setDeleteTarget(l)} style={{ padding: '6px 14px', fontSize: 13 }}>🗑 Xóa</Button>
+                      <Button variant="secondary" icon={<IconEdit size={14} />} onClick={() => openEdit(l)} style={{ padding: '6px 14px', fontSize: 13 }}>Sửa</Button>
+                      <Button variant="danger" icon={<IconDelete size={14} />} onClick={() => setDeleteTarget(l)} style={{ padding: '6px 14px', fontSize: 13 }}>Xóa</Button>
                     </div>
                   </Td>
                 </tr>
@@ -177,7 +178,9 @@ function Td({ children, align }: { children: React.ReactNode; align?: 'right' })
 function EmptyState({ message }: { message: string }) {
   return (
     <div style={{ textAlign: 'center', padding: '60px 20px', background: '#ffffff', borderRadius: 16, border: '2px dashed #e2e8f0' }}>
-      <div style={{ fontSize: 48, marginBottom: 12 }}>📭</div>
+      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
+        <IconLesson size={48} color="#94a3b8" />
+      </div>
       <p style={{ color: '#94a3b8', margin: 0, fontSize: 15 }}>{message}</p>
     </div>
   );

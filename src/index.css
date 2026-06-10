@@ -61,3 +61,18 @@ select option {
   background: #ffffff;
   color: #0f172a;
 }
+
+/* Button & interactive animations */
+button {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+button:active:not(:disabled) {
+  transform: scale(0.96);
+}
+button:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+a, select, input {
+  transition: all 0.2s ease;
+}
+

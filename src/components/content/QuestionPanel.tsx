@@ -8,6 +8,7 @@ import { Modal } from '../ui/Modal';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { Input, Select, Textarea } from '../ui/FormField';
 import { Spinner } from '../ui/Spinner';
+import { IconPlus, IconEdit, IconDelete, IconQuestion, IconXP } from '../ui/Icons';
 
 interface QuestionPanelProps {
   onToast: (msg: string, type: ToastType) => void;
@@ -44,7 +45,7 @@ export function QuestionPanel({ onToast }: QuestionPanelProps) {
   const [topics, setTopics] = useState<TopicDto[]>([]);
   const [lessons, setLessons] = useState<LessonDto[]>([]);
   const [sections, setSections] = useState<SectionDto[]>([]);
-  const [nodes, setNodes] = useState<NodeDto[]>([]);
+  const [, setNodes] = useState<NodeDto[]>([]);
 
   // Filter state
   const [selGradeId, setSelGradeId] = useState('');
@@ -271,7 +272,7 @@ export function QuestionPanel({ onToast }: QuestionPanelProps) {
           <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: '#0f172a' }}>Ngân hàng câu hỏi</h2>
           <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: 14 }}>{questions.length} câu hỏi hiển thị</p>
         </div>
-        <Button icon="+" onClick={openCreate}>Thêm câu hỏi</Button>
+        <Button icon={<IconPlus size={16} />} onClick={openCreate}>Thêm câu hỏi</Button>
       </div>
 
       {/* Dynamic Filters */}
@@ -321,7 +322,9 @@ export function QuestionPanel({ onToast }: QuestionPanelProps) {
         <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}><Spinner size={36} /></div>
       ) : questions.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '60px 20px', background: '#ffffff', borderRadius: 16, border: '2px dashed #e2e8f0' }}>
-          <div style={{ fontSize: 48, marginBottom: 12 }}>❓</div>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
+            <IconQuestion size={48} color="#94a3b8" />
+          </div>
           <p style={{ color: '#94a3b8', margin: 0, fontSize: 15 }}>Chưa có câu hỏi nào khớp với bộ lọc</p>
         </div>
       ) : (
@@ -349,7 +352,11 @@ export function QuestionPanel({ onToast }: QuestionPanelProps) {
                       {q.type}
                     </span>
                   </td>
-                  <td style={TD_STYLE}>⭐ {q.difficulty} / 4</td>
+                  <td style={TD_STYLE}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                      <IconXP size={14} color="#eab308" /> {q.difficulty} / 4
+                    </span>
+                  </td>
                   <td style={TD_STYLE}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                       {q.answers.map(ans => (
@@ -372,8 +379,8 @@ export function QuestionPanel({ onToast }: QuestionPanelProps) {
                   </td>
                   <td style={{ ...TD_STYLE, textAlign: 'right' }}>
                     <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                      <Button variant="secondary" onClick={() => openEdit(q)} style={{ padding: '6px 12px', fontSize: 13 }}>✏ Sửa</Button>
-                      <Button variant="danger" onClick={() => setDeleteTarget(q)} style={{ padding: '6px 12px', fontSize: 13 }}>🗑 Xóa</Button>
+                      <Button variant="secondary" icon={<IconEdit size={14} />} onClick={() => openEdit(q)} style={{ padding: '6px 12px', fontSize: 13 }}>Sửa</Button>
+                      <Button variant="danger" icon={<IconDelete size={14} />} onClick={() => setDeleteTarget(q)} style={{ padding: '6px 12px', fontSize: 13 }}>Xóa</Button>
                     </div>
                   </td>
                 </tr>
@@ -437,7 +444,7 @@ export function QuestionPanel({ onToast }: QuestionPanelProps) {
         <div style={{ marginTop: 16 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
             <span style={{ fontSize: 13, fontWeight: 700, color: '#475569' }}>Danh sách đáp án</span>
-            {form.type === 'CHOOSE' && <Button variant="secondary" onClick={addAnswerField} style={{ padding: '4px 10px', fontSize: 12 }}>+ Thêm đáp án</Button>}
+            {form.type === 'CHOOSE' && <Button variant="secondary" icon={<IconPlus size={12} />} onClick={addAnswerField} style={{ padding: '4px 10px', fontSize: 12 }}>Thêm đáp án</Button>}
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 180, overflowY: 'auto', paddingRight: 4 }}>
@@ -460,7 +467,11 @@ export function QuestionPanel({ onToast }: QuestionPanelProps) {
                         style={INPUT_STYLE}
                       />
                     </div>
-                    {answers.length > 1 && <button onClick={() => removeAnswerField(idx)} style={DEL_BTN_STYLE}>🗑</button>}
+                    {answers.length > 1 && (
+                      <button onClick={() => removeAnswerField(idx)} style={DEL_BTN_STYLE}>
+                        <IconDelete size={16} />
+                      </button>
+                    )}
                   </>
                 )}
 
@@ -497,7 +508,11 @@ export function QuestionPanel({ onToast }: QuestionPanelProps) {
                         style={INPUT_STYLE}
                       />
                     </div>
-                    {answers.length > 1 && <button onClick={() => removeAnswerField(idx)} style={DEL_BTN_STYLE}>🗑</button>}
+                    {answers.length > 1 && (
+                      <button onClick={() => removeAnswerField(idx)} style={DEL_BTN_STYLE}>
+                        <IconDelete size={16} />
+                      </button>
+                    )}
                   </>
                 )}
               </div>
@@ -557,8 +572,11 @@ const DEL_BTN_STYLE = {
   border: 'none',
   background: 'transparent',
   cursor: 'pointer',
-  fontSize: 16,
-  color: '#ef4444'
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  color: '#ef4444',
+  padding: 4
 };
 
 const TH_STYLE = {

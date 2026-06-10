@@ -8,6 +8,19 @@ import { Modal } from '../ui/Modal';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { Input, Select } from '../ui/FormField';
 import { Spinner } from '../ui/Spinner';
+import {
+  IconPlus,
+  IconEdit,
+  IconDelete,
+  IconTest,
+  IconClock,
+  IconTarget,
+  IconXP,
+  IconGold,
+  IconGrade,
+  IconLesson,
+  IconChevronRight
+} from '../ui/Icons';
 
 interface TestPanelProps {
   onToast: (msg: string, type: ToastType) => void;
@@ -36,9 +49,6 @@ export function TestPanel({ onToast }: TestPanelProps) {
 
   // Hierarchy selections for scopes
   const [grades, setGrades] = useState<GradeDto[]>([]);
-  const [topics, setTopics] = useState<TopicDto[]>([]);
-  const [lessons, setLessons] = useState<LessonDto[]>([]);
-  const [sections, setSections] = useState<SectionDto[]>([]);
 
   // Form states
   const [modalOpen, setModalOpen] = useState(false);
@@ -203,14 +213,16 @@ export function TestPanel({ onToast }: TestPanelProps) {
           <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: '#0f172a' }}>Quản lý đề thi</h2>
           <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: 14 }}>{tests.length} đề thi hiển thị</p>
         </div>
-        <Button icon="+" onClick={openCreate}>Tạo đề thi</Button>
+        <Button icon={<IconPlus size={16} />} onClick={openCreate}>Tạo đề thi</Button>
       </div>
 
       {loading ? (
         <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}><Spinner size={36} /></div>
       ) : tests.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '60px 20px', background: '#ffffff', borderRadius: 16, border: '2px dashed #e2e8f0' }}>
-          <div style={{ fontSize: 48, marginBottom: 12 }}>📝</div>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
+            <IconTest size={48} color="#94a3b8" />
+          </div>
           <p style={{ color: '#94a3b8', margin: 0, fontSize: 15 }}>Chưa có đề thi nào được tạo</p>
         </div>
       ) : (
@@ -236,24 +248,45 @@ export function TestPanel({ onToast }: TestPanelProps) {
                     </div>
                   </td>
                   <td style={TD_STYLE}>
-                    <div style={{ fontSize: 13 }}>
-                      🕒 {t.timeLimit ? `${t.timeLimit} phút` : 'Không giới hạn'}
-                      <br />
-                      🎯 Đạt từ: {t.passThreshold}%
+                    <div style={{ fontSize: 13, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                        <IconClock size={13} color="#64748b" /> {t.timeLimit ? `${t.timeLimit} phút` : 'Không giới hạn'}
+                      </span>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                        <IconTarget size={13} color="#64748b" /> Đạt từ: {t.passThreshold}%
+                      </span>
                     </div>
                   </td>
                   <td style={TD_STYLE}>
-                    <div style={{ fontSize: 13 }}>
-                      {t.gradeId && <span>🎓 Khối {t.gradeId}</span>}
-                      {t.lessonId && <span> ➔ 📖 Bài {t.lessonId}</span>}
-                      {t.isNationalTest && <span style={{ marginLeft: 6, padding: '2px 6px', background: '#fee2e2', color: '#ef4444', borderRadius: 4, fontSize: 10, fontWeight: 700 }}>Quốc gia</span>}
+                    <div style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+                      {t.gradeId && (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                          <IconGrade size={13} color="#6c63ff" /> Khối {t.gradeId}
+                        </span>
+                      )}
+                      {t.lessonId && (
+                        <>
+                          <IconChevronRight size={10} color="#cbd5e1" />
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                            <IconLesson size={13} color="#16a34a" /> Bài {t.lessonId}
+                          </span>
+                        </>
+                      )}
+                      {t.isNationalTest && (
+                        <span style={{ marginLeft: 6, padding: '2px 6px', background: '#fee2e2', color: '#ef4444', borderRadius: 4, fontSize: 10, fontWeight: 700 }}>
+                          Quốc gia
+                        </span>
+                      )}
                     </div>
                   </td>
                   <td style={TD_STYLE}>
-                    <div style={{ fontSize: 13 }}>
-                      ✨ {t.xpReward} XP
-                      <br />
-                      🪙 {t.goldReward} Vàng
+                    <div style={{ fontSize: 13, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: '#2563eb', fontWeight: 600 }}>
+                        <IconXP size={13} color="#2563eb" /> {t.xpReward} XP
+                      </span>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: '#d97706', fontWeight: 600 }}>
+                        <IconGold size={13} color="#d97706" /> {t.goldReward} Vàng
+                      </span>
                     </div>
                   </td>
                   <td style={TD_STYLE}>
@@ -261,8 +294,8 @@ export function TestPanel({ onToast }: TestPanelProps) {
                   </td>
                   <td style={{ ...TD_STYLE, textAlign: 'right' }}>
                     <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                      <Button variant="secondary" onClick={() => openEdit(t)} style={{ padding: '6px 12px', fontSize: 13 }}>✏ Sửa</Button>
-                      <Button variant="danger" onClick={() => setDeleteTarget(t)} style={{ padding: '6px 12px', fontSize: 13 }}>🗑 Xóa</Button>
+                      <Button variant="secondary" icon={<IconEdit size={14} />} onClick={() => openEdit(t)} style={{ padding: '6px 12px', fontSize: 13 }}>Sửa</Button>
+                      <Button variant="danger" icon={<IconDelete size={14} />} onClick={() => setDeleteTarget(t)} style={{ padding: '6px 12px', fontSize: 13 }}>Xóa</Button>
                     </div>
                   </td>
                 </tr>

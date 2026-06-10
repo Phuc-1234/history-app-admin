@@ -8,6 +8,7 @@ import { Modal } from '../ui/Modal';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { Input, Textarea, Select } from '../ui/FormField';
 import { Spinner } from '../ui/Spinner';
+import { IconPlus, IconEdit, IconDelete, IconNode } from '../ui/Icons';
 
 interface NodePanelProps {
   onToast: (msg: string, type: ToastType) => void;
@@ -119,7 +120,7 @@ export function NodePanel({ onToast }: NodePanelProps) {
               {items.map((i) => <option key={i.value} value={i.value}>{i.label}</option>)}
             </select>
           ))}
-          <Button icon="+" onClick={openCreate} id="create-node-btn">Thêm Node</Button>
+          <Button icon={<IconPlus size={16} />} onClick={openCreate} id="create-node-btn">Thêm Node</Button>
         </div>
       </div>
 
@@ -158,13 +159,13 @@ export function NodePanel({ onToast }: NodePanelProps) {
                 <div style={{ fontSize: 14, color: '#475569', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{n.body}</div>
                 {n.imgUrl && (
                   <div style={{ marginTop: 8, fontSize: 12, color: '#6c63ff', display: 'flex', alignItems: 'center', gap: 4 }}>
-                    🖼 <span style={{ textDecoration: 'underline' }}>{n.imgUrl}</span>
+                    <span>🖼</span> <span style={{ textDecoration: 'underline' }}>{n.imgUrl}</span>
                   </div>
                 )}
               </div>
               <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                <Button variant="secondary" onClick={() => openEdit(n)} style={{ padding: '6px 12px', fontSize: 13 }}>✏</Button>
-                <Button variant="danger" onClick={() => setDeleteTarget(n)} style={{ padding: '6px 12px', fontSize: 13 }}>🗑</Button>
+                <Button variant="secondary" icon={<IconEdit size={14} />} onClick={() => openEdit(n)} style={{ padding: '8px' }}></Button>
+                <Button variant="danger" icon={<IconDelete size={14} />} onClick={() => setDeleteTarget(n)} style={{ padding: '8px' }}></Button>
               </div>
             </div>
           ))}
@@ -197,7 +198,9 @@ const filterSelectStyle = { background: '#ffffff', border: '1px solid #e2e8f0', 
 function EmptyState({ message }: { message: string }) {
   return (
     <div style={{ textAlign: 'center', padding: '60px 20px', background: '#ffffff', borderRadius: 16, border: '2px dashed #e2e8f0' }}>
-      <div style={{ fontSize: 48, marginBottom: 12 }}>📭</div>
+      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
+        <IconNode size={48} color="#94a3b8" />
+      </div>
       <p style={{ color: '#94a3b8', margin: 0, fontSize: 15 }}>{message}</p>
     </div>
   );

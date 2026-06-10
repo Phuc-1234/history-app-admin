@@ -3,6 +3,7 @@ import { useState } from 'react';
 import client from '../api/client';
 import { useAuthStore } from '../store/authStore';
 import { Button } from '../components/ui/Button';
+import { IconHistoryBook, IconAlert } from '../components/ui/Icons';
 import type { UserProfile } from '../types/api';
 
 export function LoginPage() {
@@ -27,10 +28,29 @@ export function LoginPage() {
       }
 
       const profile = data.profile;
-      const role = profile?.role;
+      let role = profile?.role;
+
+      // Fallback: If role is not returned in the login response, check database permissions by probing an admin endpoint
+      if (!role && data.session?.accessToken) {
+        try {
+          await client.get('/api/admin/users', {
+            params: { limit: 1 },
+            headers: { Authorization: `Bearer ${data.session.accessToken}` }
+          });
+          // Request succeeded, meaning requireAdmin middleware passed the user
+          role = 'SUPER_ADMIN';
+        } catch (err: any) {
+          const status = err?.response?.status;
+          const details = err?.response?.data?.error || err?.response?.data?.message || err?.message || 'Unknown';
+          console.error(`Admin check failed: Status ${status}, Details: ${details}`, err);
+          setError(`Đăng nhập thành công nhưng kiểm tra quyền Admin thất bại (Status: ${status}, Lỗi: ${details})`);
+          role = undefined;
+          return;
+        }
+      }
 
       if (role !== 'ADMIN' && role !== 'SUPER_ADMIN') {
-        setError('Tài khoản của bạn không có quyền truy cập Admin Dashboard');
+        setError(`Tài khoản của bạn không có quyền truy cập Admin Dashboard. Quyền hiện tại: "${role || 'không tìm thấy'}" - Kết nối tới API: "${client.defaults.baseURL || 'Trống'}"`);
         return;
       }
 
@@ -91,10 +111,10 @@ export function LoginPage() {
             borderRadius: 22,
             background: 'linear-gradient(135deg, #6c63ff, #4f46e5)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 32, margin: '0 auto 16px',
+            margin: '0 auto 16px',
             boxShadow: '0 12px 32px rgba(108,99,255,0.35)',
           }}>
-            📜
+            <IconHistoryBook size={34} color="#ffffff" />
           </div>
           <h1 style={{ margin: 0, fontSize: 28, fontWeight: 800, color: '#0f172a', letterSpacing: '-0.02em' }}>
             Sử Ký Admin
@@ -121,7 +141,7 @@ export function LoginPage() {
                 marginBottom: 20, color: '#dc2626', fontSize: 14,
                 display: 'flex', alignItems: 'center', gap: 8,
               }}>
-                <span>⚠</span> {error}
+                <IconAlert size={16} color="#dc2626" /> {error}
               </div>
             )}
 

@@ -16,6 +16,16 @@ import { ToastContainer } from '../components/ui/Toast';
 import { useAuthStore } from '../store/authStore';
 import { useToast } from '../hooks/useToast';
 import { Spinner } from '../components/ui/Spinner';
+import {
+  IconGrade,
+  IconTopic,
+  IconLesson,
+  IconSection,
+  IconUser,
+  IconVideo,
+  IconQuestion,
+  IconTest
+} from '../components/ui/Icons';
 
 export type TabId = 'overview' | 'grades' | 'topics' | 'lessons' | 'sections' | 'nodes' | 'users' | 'videos' | 'questions' | 'tests';
 
@@ -96,14 +106,14 @@ function OverviewPanel() {
   }, []);
 
   const statCards = [
-    { icon: '🎓', label: 'Khối lớp',     value: stats?.grades    ?? '—', accent: '#6c63ff', bg: '#f5f3ff', border: '#ddd6fe' },
-    { icon: '📚', label: 'Chủ đề',       value: stats?.topics    ?? '—', accent: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0' },
-    { icon: '📖', label: 'Bài học',      value: stats?.lessons   ?? '—', accent: '#d97706', bg: '#fffbeb', border: '#fde68a' },
-    { icon: '📑', label: 'Phần',         value: stats?.sections  ?? '—', accent: '#0284c7', bg: '#f0f9ff', border: '#bae6fd' },
-    { icon: '👥', label: 'Người dùng',    value: stats?.users     ?? '—', accent: '#4f46e5', bg: '#e0e7ff', border: '#c7d2fe' },
-    { icon: '🎥', label: 'Video bài học',  value: stats?.videos    ?? '—', accent: '#ec4899', bg: '#fdf2f8', border: '#fbcfe8' },
-    { icon: '❓', label: 'Câu hỏi',       value: stats?.questions ?? '—', accent: '#0d9488', bg: '#f0fdfa', border: '#99f6e4' },
-    { icon: '📝', label: 'Đề thi',        value: stats?.tests     ?? '—', accent: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe' },
+    { icon: IconGrade, label: 'Khối lớp',     value: stats?.grades    ?? '—', accent: '#6c63ff', bg: '#f5f3ff', border: '#ddd6fe' },
+    { icon: IconTopic, label: 'Chủ đề',       value: stats?.topics    ?? '—', accent: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0' },
+    { icon: IconLesson, label: 'Bài học',      value: stats?.lessons   ?? '—', accent: '#d97706', bg: '#fffbeb', border: '#fde68a' },
+    { icon: IconSection, label: 'Phần',         value: stats?.sections  ?? '—', accent: '#0284c7', bg: '#f0f9ff', border: '#bae6fd' },
+    { icon: IconUser, label: 'Người dùng',    value: stats?.users     ?? '—', accent: '#4f46e5', bg: '#e0e7ff', border: '#c7d2fe' },
+    { icon: IconVideo, label: 'Video bài học',  value: stats?.videos    ?? '—', accent: '#ec4899', bg: '#fdf2f8', border: '#fbcfe8' },
+    { icon: IconQuestion, label: 'Câu hỏi',       value: stats?.questions ?? '—', accent: '#0d9488', bg: '#f0fdfa', border: '#99f6e4' },
+    { icon: IconTest, label: 'Đề thi',        value: stats?.tests     ?? '—', accent: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe' },
   ];
 
   return (
@@ -115,40 +125,43 @@ function OverviewPanel() {
         <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}><Spinner size={36} /></div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 20, marginBottom: 36 }}>
-          {statCards.map((card) => (
-            <div key={card.label} style={{
-              background: card.bg,
-              border: `1px solid ${card.border}`,
-              borderRadius: 20,
-              padding: 24,
-              transition: 'transform 0.2s, box-shadow 0.2s',
-              cursor: 'default',
-            }}
-              onMouseEnter={e => {
-                (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-3px)';
-                (e.currentTarget as HTMLDivElement).style.boxShadow = `0 12px 32px ${card.border}88`;
-              }}
-              onMouseLeave={e => {
-                (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)';
-                (e.currentTarget as HTMLDivElement).style.boxShadow = 'none';
-              }}
-            >
-              <div style={{
-                width: 48, height: 48, borderRadius: 14,
-                background: '#ffffff',
+          {statCards.map((card) => {
+            const IconComponent = card.icon;
+            return (
+              <div key={card.label} style={{
+                background: card.bg,
                 border: `1px solid ${card.border}`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 22, marginBottom: 16,
-                boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-              }}>
-                {card.icon}
+                borderRadius: 20,
+                padding: 24,
+                transition: 'transform 0.2s, box-shadow 0.2s',
+                cursor: 'default',
+              }}
+                onMouseEnter={e => {
+                  (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-3px)';
+                  (e.currentTarget as HTMLDivElement).style.boxShadow = `0 12px 32px ${card.border}88`;
+                }}
+                onMouseLeave={e => {
+                  (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)';
+                  (e.currentTarget as HTMLDivElement).style.boxShadow = 'none';
+                }}
+              >
+                <div style={{
+                  width: 48, height: 48, borderRadius: 14,
+                  background: '#ffffff',
+                  border: `1px solid ${card.border}`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  marginBottom: 16,
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                }}>
+                  <IconComponent size={24} color={card.accent} />
+                </div>
+                <div style={{ fontSize: 36, fontWeight: 800, color: '#0f172a', lineHeight: 1, marginBottom: 8 }}>
+                  {card.value}
+                </div>
+                <div style={{ fontSize: 14, color: card.accent, fontWeight: 600 }}>{card.label}</div>
               </div>
-              <div style={{ fontSize: 36, fontWeight: 800, color: '#0f172a', lineHeight: 1, marginBottom: 8 }}>
-                {card.value}
-              </div>
-              <div style={{ fontSize: 14, color: card.accent, fontWeight: 600 }}>{card.label}</div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

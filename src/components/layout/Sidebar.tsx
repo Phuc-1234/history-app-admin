@@ -1,25 +1,50 @@
 // src/components/layout/Sidebar.tsx
 import type { TabId } from '../../pages/DashboardPage';
+import {
+  IconOverview,
+  IconGrade,
+  IconTopic,
+  IconLesson,
+  IconSection,
+  IconNode,
+  IconUser,
+  IconVideo,
+  IconQuestion,
+  IconTest,
+  IconHistoryBook
+} from '../ui/Icons';
 
 interface NavItem {
   id: TabId;
   label: string;
-  icon: string;
   description: string;
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { id: 'overview', label: 'Tổng quan', icon: '◉', description: 'Dashboard' },
-  { id: 'grades', label: 'Khối lớp', icon: '🎓', description: 'Grades' },
-  { id: 'topics', label: 'Chủ đề', icon: '📚', description: 'Topics' },
-  { id: 'lessons', label: 'Bài học', icon: '📖', description: 'Lessons' },
-  { id: 'sections', label: 'Phần', icon: '📑', description: 'Sections' },
-  { id: 'nodes', label: 'Nút kiến thức', icon: '🔷', description: 'Nodes' },
-  { id: 'users', label: 'Người dùng', icon: '👥', description: 'Users' },
-  { id: 'videos', label: 'Video bài học', icon: '🎥', description: 'Videos' },
-  { id: 'questions', label: 'Ngân hàng câu hỏi', icon: '❓', description: 'Questions' },
-  { id: 'tests', label: 'Đề thi', icon: '📝', description: 'Tests' },
+  { id: 'overview', label: 'Tổng quan', description: 'Dashboard' },
+  { id: 'grades', label: 'Khối lớp', description: 'Grades' },
+  { id: 'topics', label: 'Chủ đề', description: 'Topics' },
+  { id: 'lessons', label: 'Bài học', description: 'Lessons' },
+  { id: 'sections', label: 'Phần', description: 'Sections' },
+  { id: 'nodes', label: 'Nút kiến thức', description: 'Nodes' },
+  { id: 'users', label: 'Người dùng', description: 'Users' },
+  { id: 'videos', label: 'Video bài học', description: 'Videos' },
+  { id: 'questions', label: 'Ngân hàng câu hỏi', description: 'Questions' },
+  { id: 'tests', label: 'Đề thi', description: 'Tests' },
 ];
+
+const ICON_MAP: Record<TabId, React.ComponentType<any>> = {
+  overview: IconOverview,
+  grades: IconGrade,
+  topics: IconTopic,
+  lessons: IconLesson,
+  sections: IconSection,
+  nodes: IconNode,
+  users: IconUser,
+  videos: IconVideo,
+  questions: IconQuestion,
+  tests: IconTest,
+};
 
 interface SidebarProps {
   activeTab: TabId;
@@ -56,10 +81,9 @@ export function Sidebar({ activeTab, onTabChange, userName, userRole }: SidebarP
             borderRadius: 12,
             background: 'linear-gradient(135deg, #6c63ff, #4f46e5)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 18,
             boxShadow: '0 4px 12px rgba(108,99,255,0.35)',
           }}>
-            📜
+            <IconHistoryBook size={22} color="#ffffff" />
           </div>
           <div>
             <div style={{ fontSize: 15, fontWeight: 800, color: '#0f172a', lineHeight: 1.2 }}>
@@ -79,6 +103,7 @@ export function Sidebar({ activeTab, onTabChange, userName, userRole }: SidebarP
         </div>
         {NAV_ITEMS.map((item) => {
           const isActive = activeTab === item.id;
+          const IconComponent = ICON_MAP[item.id];
           return (
             <button
               key={item.id}
@@ -98,9 +123,9 @@ export function Sidebar({ activeTab, onTabChange, userName, userRole }: SidebarP
                 transition: 'all 0.15s ease',
                 fontFamily: 'inherit',
                 background: isActive
-                  ? 'linear-gradient(135deg, rgba(108,99,255,0.1), rgba(79,70,229,0.06))'
+                  ? 'linear-gradient(135deg, rgba(108,99,255,0.08), rgba(79,70,229,0.04))'
                   : 'transparent',
-                boxShadow: isActive ? 'inset 0 0 0 1px rgba(108,99,255,0.2)' : 'none',
+                boxShadow: isActive ? 'inset 0 0 0 1px rgba(108,99,255,0.15)' : 'none',
                 position: 'relative',
                 overflow: 'hidden',
               }}
@@ -118,8 +143,8 @@ export function Sidebar({ activeTab, onTabChange, userName, userRole }: SidebarP
                   background: 'linear-gradient(#6c63ff, #4f46e5)',
                 }} />
               )}
-              <span style={{ fontSize: 17, width: 24, textAlign: 'center', flexShrink: 0 }}>
-                {item.icon}
+              <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 24, flexShrink: 0 }}>
+                <IconComponent size={20} color={isActive ? '#4f46e5' : '#64748b'} />
               </span>
               <div>
                 <div style={{

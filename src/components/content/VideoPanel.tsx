@@ -8,6 +8,7 @@ import { Modal } from '../ui/Modal';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { Input, Select, Textarea } from '../ui/FormField';
 import { Spinner } from '../ui/Spinner';
+import { IconPlus, IconEdit, IconDelete, IconVideo } from '../ui/Icons';
 
 interface VideoPanelProps {
   onToast: (msg: string, type: ToastType) => void;
@@ -237,7 +238,7 @@ export function VideoPanel({ onToast }: VideoPanelProps) {
           <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: '#0f172a' }}>Video bài học</h2>
           <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: 14 }}>{videos.length} video trong bài học hiện tại</p>
         </div>
-        <Button icon="+" onClick={openCreate} disabled={!selectedLessonId}>Thêm Video</Button>
+        <Button icon={<IconPlus size={16} />} onClick={openCreate} disabled={!selectedLessonId}>Thêm Video</Button>
       </div>
 
       {/* Hierarchy filters */}
@@ -288,12 +289,16 @@ export function VideoPanel({ onToast }: VideoPanelProps) {
         <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}><Spinner size={36} /></div>
       ) : !selectedLessonId ? (
         <div style={{ textAlign: 'center', padding: '60px 20px', background: '#ffffff', borderRadius: 16, border: '2px dashed #e2e8f0' }}>
-          <div style={{ fontSize: 48, marginBottom: 12 }}>🎥</div>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
+            <IconVideo size={48} color="#94a3b8" />
+          </div>
           <p style={{ color: '#94a3b8', margin: 0, fontSize: 15 }}>Vui lòng chọn bài học để xem danh sách video</p>
         </div>
       ) : videos.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '60px 20px', background: '#ffffff', borderRadius: 16, border: '2px dashed #e2e8f0' }}>
-          <div style={{ fontSize: 48, marginBottom: 12 }}>📭</div>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
+            <IconVideo size={48} color="#94a3b8" />
+          </div>
           <p style={{ color: '#94a3b8', margin: 0, fontSize: 15 }}>Chưa có video nào trong bài học này</p>
         </div>
       ) : (
@@ -321,8 +326,8 @@ export function VideoPanel({ onToast }: VideoPanelProps) {
                   </td>
                   <td style={{ ...TD_STYLE, textAlign: 'right' }}>
                     <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                      <Button variant="secondary" onClick={() => openEdit(v)} style={{ padding: '6px 12px', fontSize: 13 }}>✏ Sửa</Button>
-                      <Button variant="danger" onClick={() => setDeleteTarget(v)} style={{ padding: '6px 12px', fontSize: 13 }}>🗑 Xóa</Button>
+                      <Button variant="secondary" icon={<IconEdit size={14} />} onClick={() => openEdit(v)} style={{ padding: '6px 12px', fontSize: 13 }}>Sửa</Button>
+                      <Button variant="danger" icon={<IconDelete size={14} />} onClick={() => setDeleteTarget(v)} style={{ padding: '6px 12px', fontSize: 13 }}>Xóa</Button>
                     </div>
                   </td>
                 </tr>

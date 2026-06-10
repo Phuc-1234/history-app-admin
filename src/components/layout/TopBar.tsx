@@ -1,6 +1,6 @@
 // src/components/layout/TopBar.tsx
-import { useAuthStore } from '../../store/authStore';
 import { BASE_URL } from '../../api/client';
+import { IconLogout } from '../ui/Icons';
 
 const TAB_TITLES: Record<string, string> = {
   overview: 'Tổng quan',
@@ -17,8 +17,6 @@ interface TopBarProps {
 }
 
 export function TopBar({ activeTab, onLogout }: TopBarProps) {
-  const { apiEnv, setApiEnv } = useAuthStore();
-
   return (
     <header
       style={{
@@ -48,43 +46,6 @@ export function TopBar({ activeTab, onLogout }: TopBarProps) {
 
       {/* Actions */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        {/* Env switcher */}
-        <div style={{
-          display: 'flex',
-          background: '#f1f5f9',
-          border: '1px solid #e2e8f0',
-          borderRadius: 10,
-          overflow: 'hidden',
-          fontSize: 12,
-          fontWeight: 600,
-        }}>
-          {(['local', 'production'] as const).map((env) => (
-            <button
-              key={env}
-              id={`env-${env}`}
-              onClick={() => {
-                setApiEnv(env);
-                setTimeout(() => window.location.reload(), 100);
-              }}
-              style={{
-                padding: '7px 14px',
-                border: 'none',
-                cursor: 'pointer',
-                fontFamily: 'inherit',
-                fontSize: 12,
-                fontWeight: 600,
-                transition: 'all 0.15s',
-                background: apiEnv === env
-                  ? 'linear-gradient(135deg, #6c63ff, #4f46e5)'
-                  : 'transparent',
-                color: apiEnv === env ? '#fff' : '#64748b',
-              }}
-            >
-              {env === 'local' ? '🔧 Local' : '🌐 Production'}
-            </button>
-          ))}
-        </div>
-
         {/* Logout */}
         <button
           id="logout-button"
@@ -109,7 +70,7 @@ export function TopBar({ activeTab, onLogout }: TopBarProps) {
             e.currentTarget.style.background = '#fef2f2';
           }}
         >
-          ⎋ Đăng xuất
+          <IconLogout size={14} color="#dc2626" /> Đăng xuất
         </button>
       </div>
     </header>

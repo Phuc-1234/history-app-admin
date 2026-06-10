@@ -9,6 +9,7 @@ import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { Badge } from '../ui/Badge';
 import { Input, Select } from '../ui/FormField';
 import { Spinner } from '../ui/Spinner';
+import { IconPlus, IconEdit, IconDelete, IconGrade } from '../ui/Icons';
 
 interface GradePanelProps {
   onToast: (msg: string, type: ToastType) => void;
@@ -82,7 +83,7 @@ export function GradePanel({ onToast }: GradePanelProps) {
           <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: '#0f172a' }}>Khối lớp</h2>
           <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: 14 }}>{grades.length} khối lớp</p>
         </div>
-        <Button icon="+" onClick={openCreate} id="create-grade-btn">Thêm Khối lớp</Button>
+        <Button icon={<IconPlus size={16} />} onClick={openCreate} id="create-grade-btn">Thêm Khối lớp</Button>
       </div>
 
       {loading ? (
@@ -104,15 +105,17 @@ export function GradePanel({ onToast }: GradePanelProps) {
                 <tr key={g.id} style={{ background: i % 2 === 0 ? '#ffffff' : '#fafbff', borderTop: '1px solid #f1f5f9' }}>
                   <Td>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10, fontWeight: 700, fontSize: 15, color: '#0f172a' }}>
-                      <span style={{ width: 32, height: 32, borderRadius: 8, background: '#f5f3ff', border: '1px solid #ddd6fe', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15 }}>🎓</span>
+                      <span style={{ width: 32, height: 32, borderRadius: 8, background: '#f5f3ff', border: '1px solid #ddd6fe', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <IconGrade size={18} color="#6c63ff" />
+                      </span>
                       Khối {g.id}
                     </span>
                   </Td>
                   <Td><Badge value={g.state} /></Td>
                   <Td align="right">
                     <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                      <Button variant="secondary" onClick={() => openEdit(g)} style={{ padding: '6px 14px', fontSize: 13 }}>✏ Sửa</Button>
-                      <Button variant="danger" onClick={() => setDeleteTarget(g)} style={{ padding: '6px 14px', fontSize: 13 }}>🗑 Xóa</Button>
+                      <Button variant="secondary" icon={<IconEdit size={14} />} onClick={() => openEdit(g)} style={{ padding: '6px 14px', fontSize: 13 }}>Sửa</Button>
+                      <Button variant="danger" icon={<IconDelete size={14} />} onClick={() => setDeleteTarget(g)} style={{ padding: '6px 14px', fontSize: 13 }}>Xóa</Button>
                     </div>
                   </Td>
                 </tr>
@@ -148,7 +151,9 @@ function Td({ children, align }: { children: React.ReactNode; align?: 'right' | 
 function EmptyState({ message }: { message: string }) {
   return (
     <div style={{ textAlign: 'center', padding: '60px 20px', background: '#ffffff', borderRadius: 16, border: '2px dashed #e2e8f0' }}>
-      <div style={{ fontSize: 48, marginBottom: 12 }}>📭</div>
+      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
+        <IconGrade size={48} color="#94a3b8" />
+      </div>
       <p style={{ color: '#94a3b8', margin: 0, fontSize: 15 }}>{message}</p>
     </div>
   );

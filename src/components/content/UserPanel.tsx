@@ -9,6 +9,7 @@ import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { Input, Select } from '../ui/FormField';
 import { Spinner } from '../ui/Spinner';
 import { Badge } from '../ui/Badge';
+import { IconEdit, IconDelete, IconUser, IconXP, IconGold } from '../ui/Icons';
 
 interface UserPanelProps {
   onToast: (msg: string, type: ToastType) => void;
@@ -159,7 +160,9 @@ export function UserPanel({ onToast }: UserPanelProps) {
         <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}><Spinner size={36} /></div>
       ) : users.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '60px 20px', background: '#ffffff', borderRadius: 16, border: '2px dashed #e2e8f0' }}>
-          <div style={{ fontSize: 48, marginBottom: 12 }}>👥</div>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
+            <IconUser size={48} color="#94a3b8" />
+          </div>
           <p style={{ color: '#94a3b8', margin: 0, fontSize: 15 }}>Không tìm thấy người dùng phù hợp</p>
         </div>
       ) : (
@@ -196,9 +199,13 @@ export function UserPanel({ onToast }: UserPanelProps) {
                     <Badge value={u.role} />
                   </td>
                   <td style={TD_STYLE}>
-                    <span style={{ color: '#2563eb', fontWeight: 600 }}>✨ {u.totalXp} XP</span>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: '#2563eb', fontWeight: 600 }}>
+                      <IconXP size={14} color="#2563eb" /> {u.totalXp} XP
+                    </span>
                     <span style={{ margin: '0 6px', color: '#cbd5e1' }}>|</span>
-                    <span style={{ color: '#d97706', fontWeight: 600 }}>🪙 {u.totalGold}</span>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: '#d97706', fontWeight: 600 }}>
+                      <IconGold size={14} color="#d97706" /> {u.totalGold}
+                    </span>
                   </td>
                   <td style={TD_STYLE}>
                     <div style={{ display: 'flex', gap: 6 }}>
@@ -211,8 +218,8 @@ export function UserPanel({ onToast }: UserPanelProps) {
                   </td>
                   <td style={{ ...TD_STYLE, textAlign: 'right' }}>
                     <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                      <Button variant="secondary" onClick={() => openEdit(u)} style={{ padding: '6px 12px', fontSize: 13 }}>✏ Sửa</Button>
-                      <Button variant="danger" onClick={() => setDeleteTarget(u)} style={{ padding: '6px 12px', fontSize: 13 }}>🗑 Xóa</Button>
+                      <Button variant="secondary" icon={<IconEdit size={14} />} onClick={() => openEdit(u)} style={{ padding: '6px 12px', fontSize: 13 }}>Sửa</Button>
+                      <Button variant="danger" icon={<IconDelete size={14} />} onClick={() => setDeleteTarget(u)} style={{ padding: '6px 12px', fontSize: 13 }}>Xóa</Button>
                     </div>
                   </td>
                 </tr>
