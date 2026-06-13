@@ -5,13 +5,13 @@ import {
   IconGrade,
   IconTopic,
   IconLesson,
-  IconSection,
-  IconNode,
   IconUser,
   IconVideo,
   IconQuestion,
   IconTest,
-  IconHistoryBook
+  IconHistoryBook,
+  IconMindMap,
+  IconFlashcard
 } from '../ui/Icons';
 
 interface NavItem {
@@ -25,8 +25,8 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'grades', label: 'Khối lớp', description: 'Grades' },
   { id: 'topics', label: 'Chủ đề', description: 'Topics' },
   { id: 'lessons', label: 'Bài học', description: 'Lessons' },
-  { id: 'sections', label: 'Phần', description: 'Sections' },
-  { id: 'nodes', label: 'Nút kiến thức', description: 'Nodes' },
+  { id: 'mindmaps', label: 'Sơ đồ tư duy', description: 'Mindmaps' },
+  { id: 'flashcards', label: 'Thẻ ghi nhớ', description: 'Flashcards' },
   { id: 'users', label: 'Người dùng', description: 'Users' },
   { id: 'videos', label: 'Video bài học', description: 'Videos' },
   { id: 'questions', label: 'Ngân hàng câu hỏi', description: 'Questions' },
@@ -38,8 +38,8 @@ const ICON_MAP: Record<TabId, React.ComponentType<any>> = {
   grades: IconGrade,
   topics: IconTopic,
   lessons: IconLesson,
-  sections: IconSection,
-  nodes: IconNode,
+  mindmaps: IconMindMap,
+  flashcards: IconFlashcard,
   users: IconUser,
   videos: IconVideo,
   questions: IconQuestion,
@@ -51,9 +51,11 @@ interface SidebarProps {
   onTabChange: (tab: TabId) => void;
   userName?: string;
   userRole?: string;
+  isMobile?: boolean;
+  sidebarOpen?: boolean;
 }
 
-export function Sidebar({ activeTab, onTabChange, userName, userRole }: SidebarProps) {
+export function Sidebar({ activeTab, onTabChange, userName, userRole, isMobile, sidebarOpen }: SidebarProps) {
   return (
     <aside
       style={{
@@ -65,9 +67,12 @@ export function Sidebar({ activeTab, onTabChange, userName, userRole }: SidebarP
         flexDirection: 'column',
         flexShrink: 0,
         position: 'fixed',
-        top: 0, left: 0, bottom: 0,
-        zIndex: 100,
+        top: 0,
+        left: isMobile ? (sidebarOpen ? 0 : -240) : 0,
+        bottom: 0,
+        zIndex: isMobile ? 1000 : 100,
         boxShadow: '2px 0 12px rgba(15,23,42,0.05)',
+        transition: 'left 0.3s ease',
       }}
     >
       {/* Logo */}

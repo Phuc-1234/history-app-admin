@@ -121,3 +121,29 @@ export interface AdminTestDto {
   questionIds: number[];
 }
 
+export interface FlashcardDto {
+  id: number;
+  frontText: string;
+  backText: string;
+  lessonId: number | null;
+  sectionId: number | null;
+  nodeId: number | null;
+}
+
+export interface CreateFlashcardBody {
+  frontText: string;
+  backText: string;
+  lessonId?: number;
+  sectionId?: number;
+  nodeId?: number;
+}
+
+export interface UpdateFlashcardBody {
+  frontText?: string;
+  backText?: string;
+  lessonId?: number | null;
+  sectionId?: number | null;
+  nodeId?: number | null;
+}
+
+

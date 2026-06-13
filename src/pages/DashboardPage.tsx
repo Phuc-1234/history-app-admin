@@ -6,8 +6,8 @@ import { TopBar } from '../components/layout/TopBar';
 import { GradePanel } from '../components/content/GradePanel';
 import { TopicPanel } from '../components/content/TopicPanel';
 import { LessonPanel } from '../components/content/LessonPanel';
-import { SectionPanel } from '../components/content/SectionPanel';
-import { NodePanel } from '../components/content/NodePanel';
+import { MindMapPanel } from '../components/content/MindMapPanel';
+import { FlashcardPanel } from '../components/content/FlashcardPanel';
 import { UserPanel } from '../components/content/UserPanel';
 import { VideoPanel } from '../components/content/VideoPanel';
 import { QuestionPanel } from '../components/content/QuestionPanel';
@@ -20,14 +20,15 @@ import {
   IconGrade,
   IconTopic,
   IconLesson,
-  IconSection,
   IconUser,
   IconVideo,
   IconQuestion,
-  IconTest
+  IconTest,
+  IconMindMap,
+  IconFlashcard
 } from '../components/ui/Icons';
 
-export type TabId = 'overview' | 'grades' | 'topics' | 'lessons' | 'sections' | 'nodes' | 'users' | 'videos' | 'questions' | 'tests';
+export type TabId = 'overview' | 'grades' | 'topics' | 'lessons' | 'mindmaps' | 'flashcards' | 'users' | 'videos' | 'questions' | 'tests';
 
 interface OverviewStats {
   grades: number;
@@ -38,6 +39,7 @@ interface OverviewStats {
   videos: number;
   questions: number;
   tests: number;
+  flashcards: number;
 }
 
 function OverviewPanel() {
@@ -47,12 +49,13 @@ function OverviewPanel() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const [gradesRes, usersRes, videosRes, questionsRes, testsRes] = await Promise.all([
+        const [gradesRes, usersRes, videosRes, questionsRes, testsRes, flashcardsRes] = await Promise.all([
           client.get('/api/content/grades'),
           client.get('/api/admin/users'),
           client.get('/api/admin/videos'),
           client.get('/api/admin/questions'),
-          client.get('/api/admin/tests')
+          client.get('/api/admin/tests'),
+          client.get('/api/admin/flashcards')
         ]);
 
         const grades = gradesRes.data.grades ?? [];
@@ -60,6 +63,7 @@ function OverviewPanel() {
         const videos = videosRes.data.videos ?? [];
         const questions = questionsRes.data.questions ?? [];
         const tests = testsRes.data.tests ?? [];
+        const flashcards = flashcardsRes.data.flashcards ?? [];
 
         let totalTopics = 0, totalLessons = 0, totalSections = 0;
 
@@ -94,7 +98,8 @@ function OverviewPanel() {
           users: users.length,
           videos: videos.length,
           questions: questions.length,
-          tests: tests.length
+          tests: tests.length,
+          flashcards: flashcards.length
         });
       } catch {
         // ignore
@@ -109,9 +114,10 @@ function OverviewPanel() {
     { icon: IconGrade, label: 'Khối lớp',     value: stats?.grades    ?? '—', accent: '#6c63ff', bg: '#f5f3ff', border: '#ddd6fe' },
     { icon: IconTopic, label: 'Chủ đề',       value: stats?.topics    ?? '—', accent: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0' },
     { icon: IconLesson, label: 'Bài học',      value: stats?.lessons   ?? '—', accent: '#d97706', bg: '#fffbeb', border: '#fde68a' },
-    { icon: IconSection, label: 'Phần',         value: stats?.sections  ?? '—', accent: '#0284c7', bg: '#f0f9ff', border: '#bae6fd' },
+    { icon: IconMindMap, label: 'Sơ đồ tư duy', value: stats?.sections  ?? '—', accent: '#0284c7', bg: '#f0f9ff', border: '#bae6fd' },
+    { icon: IconFlashcard, label: 'Thẻ ghi nhớ', value: stats?.flashcards ?? '—', accent: '#ec4899', bg: '#fdf2f8', border: '#fbcfe8' },
     { icon: IconUser, label: 'Người dùng',    value: stats?.users     ?? '—', accent: '#4f46e5', bg: '#e0e7ff', border: '#c7d2fe' },
-    { icon: IconVideo, label: 'Video bài học',  value: stats?.videos    ?? '—', accent: '#ec4899', bg: '#fdf2f8', border: '#fbcfe8' },
+    { icon: IconVideo, label: 'Video bài học',  value: stats?.videos    ?? '—', accent: '#ea580c', bg: '#fff7ed', border: '#ffedd5' },
     { icon: IconQuestion, label: 'Câu hỏi',       value: stats?.questions ?? '—', accent: '#0d9488', bg: '#f0fdfa', border: '#99f6e4' },
     { icon: IconTest, label: 'Đề thi',        value: stats?.tests     ?? '—', accent: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe' },
   ];
@@ -173,6 +179,23 @@ export function DashboardPage() {
   const { logout, user } = useAuthStore();
   const { toasts, addToast, removeToast } = useToast();
 
+  const [isMobile, setIsMobile] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Initialize and handle resize on client
+  useEffect(() => {
+    setIsMobile(window.innerWidth < 1024);
+    const handleResize = () => {
+      const mobile = window.innerWidth < 1024;
+      setIsMobile(mobile);
+      if (!mobile) {
+        setSidebarOpen(false);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const handleLogout = () => {
     logout();
     window.location.reload();
@@ -184,8 +207,8 @@ export function DashboardPage() {
       case 'grades':    return <GradePanel onToast={addToast} />;
       case 'topics':    return <TopicPanel onToast={addToast} />;
       case 'lessons':   return <LessonPanel onToast={addToast} />;
-      case 'sections':  return <SectionPanel onToast={addToast} />;
-      case 'nodes':     return <NodePanel onToast={addToast} />;
+      case 'mindmaps':  return <MindMapPanel onToast={addToast} />;
+      case 'flashcards': return <FlashcardPanel onToast={addToast} />;
       case 'users':     return <UserPanel onToast={addToast} />;
       case 'videos':    return <VideoPanel onToast={addToast} />;
       case 'questions': return <QuestionPanel onToast={addToast} />;
@@ -194,16 +217,58 @@ export function DashboardPage() {
   };
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: '#f4f6fb' }}>
+    <div style={{ display: 'flex', minHeight: '100vh', background: '#f4f6fb', position: 'relative' }}>
+      {/* Mobile Sidebar Drawer backdrop overlay */}
+      {isMobile && sidebarOpen && (
+        <div 
+          onClick={() => setSidebarOpen(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15,23,42,0.4)',
+            backdropFilter: 'blur(4px)',
+            zIndex: 999,
+          }}
+        />
+      )}
       <Sidebar
         activeTab={activeTab}
-        onTabChange={setActiveTab}
+        onTabChange={(tab) => {
+          setActiveTab(tab);
+          if (isMobile) {
+            setSidebarOpen(false);
+          }
+        }}
         userName={user?.name}
         userRole={user?.role}
+        isMobile={isMobile}
+        sidebarOpen={sidebarOpen}
       />
-      <div style={{ flex: 1, marginLeft: 240, display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-        <TopBar activeTab={activeTab} onLogout={handleLogout} />
-        <main style={{ flex: 1, padding: '32px 36px', maxWidth: 1200 }}>
+      <div 
+        style={{ 
+          flex: 1, 
+          marginLeft: isMobile ? 0 : 240, 
+          display: 'flex', 
+          flexDirection: 'column', 
+          minHeight: '100vh',
+          width: isMobile ? '100%' : 'calc(100% - 240px)',
+          boxSizing: 'border-box',
+          transition: 'margin-left 0.3s ease',
+        }}
+      >
+        <TopBar 
+          activeTab={activeTab} 
+          onLogout={handleLogout}
+          isMobile={isMobile}
+          onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+        />
+        <main style={{ 
+          flex: 1, 
+          padding: isMobile ? '20px 16px' : '32px 36px', 
+          maxWidth: 1200,
+          width: '100%',
+          boxSizing: 'border-box',
+        }}>
           {renderContent()}
         </main>
       </div>
