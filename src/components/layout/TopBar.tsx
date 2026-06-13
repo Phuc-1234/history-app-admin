@@ -14,9 +14,11 @@ const TAB_TITLES: Record<string, string> = {
 interface TopBarProps {
   activeTab: string;
   onLogout: () => void;
+  isMobile?: boolean;
+  onToggleSidebar?: () => void;
 }
 
-export function TopBar({ activeTab, onLogout }: TopBarProps) {
+export function TopBar({ activeTab, onLogout, isMobile, onToggleSidebar }: TopBarProps) {
   return (
     <header
       style={{
@@ -27,7 +29,7 @@ export function TopBar({ activeTab, onLogout }: TopBarProps) {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: '0 28px',
+        padding: isMobile ? '0 16px' : '0 28px',
         position: 'sticky',
         top: 0,
         zIndex: 50,
@@ -35,12 +37,38 @@ export function TopBar({ activeTab, onLogout }: TopBarProps) {
       }}
     >
       {/* Title + breadcrumb */}
-      <div>
-        <h1 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#0f172a' }}>
-          {TAB_TITLES[activeTab] ?? activeTab}
-        </h1>
-        <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 1 }}>
-          {BASE_URL}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        {isMobile && (
+          <button
+            onClick={onToggleSidebar}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 8,
+              borderRadius: 8,
+              color: '#475569',
+            }}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="3" y1="12" x2="21" y2="12"></line>
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
+          </button>
+        )}
+        <div>
+          <h1 style={{ margin: 0, fontSize: isMobile ? 16 : 18, fontWeight: 700, color: '#0f172a' }}>
+            {TAB_TITLES[activeTab] ?? activeTab}
+          </h1>
+          {!isMobile && (
+            <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 1 }}>
+              {BASE_URL}
+            </div>
+          )}
         </div>
       </div>
 

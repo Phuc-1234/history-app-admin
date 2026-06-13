@@ -229,3 +229,37 @@ export function IconHistoryBook({ size = 24, color = 'currentColor', ...props }:
     </svg>
   );
 }
+
+export function IconFlashcard({ size = 20, color = 'currentColor', ...props }: IconProps) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <rect x="3" y="5" width="18" height="14" rx="2" ry="2" />
+      <line x1="7" y1="10" x2="17" y2="10" />
+      <line x1="7" y1="14" x2="13" y2="14" />
+    </svg>
+  );
+}
+
+export function IconMindMap({ size = 20, color = 'currentColor', ...props }: IconProps) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <circle cx="12" cy="12" r="3" />
+      <circle cx="6" cy="4" r="2.5" />
+      <circle cx="18" cy="4" r="2.5" />
+      <circle cx="6" cy="20" r="2.5" />
+      <circle cx="18" cy="20" r="2.5" />
+      <line x1="9.5" y1="10" x2="7.5" y2="6.5" />
+      <line x1="14.5" y1="10" x2="16.5" y2="6.5" />
+      <line x1="9.5" y1="14" x2="7.5" y2="17.5" />
+      <line x1="14.5" y1="14" x2="16.5" y2="17.5" />
+    </svg>
+  );
+}
+
+export function IconSparkles({ size = 20, color = 'currentColor', ...props }: IconProps) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M9.813 15.904L9 21l-.813-5.096L3.09 15.09l5.097-.812L9 9.18l.813 5.097 5.096.813-5.096.814zM19.071 4.929l-.353 2.21-2.21.353 2.21.353.353 2.21.353-2.21 2.21-.353-2.21-.353-.353-2.21zM19.071 15.5l-.353 2.21-2.21.353 2.21.353.353 2.21.353-2.21 2.21-.353-2.21-.353-.353-2.21z" />
+    </svg>
+  );
+}
