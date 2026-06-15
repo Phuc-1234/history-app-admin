@@ -6,6 +6,8 @@ import { TopBar } from '../components/layout/TopBar';
 import { GradePanel } from '../components/content/GradePanel';
 import { TopicPanel } from '../components/content/TopicPanel';
 import { LessonPanel } from '../components/content/LessonPanel';
+import { SectionPanel } from '../components/content/SectionPanel';
+import { NodePanel } from '../components/content/NodePanel';
 import { MindMapPanel } from '../components/content/MindMapPanel';
 import { FlashcardPanel } from '../components/content/FlashcardPanel';
 import { UserPanel } from '../components/content/UserPanel';
@@ -28,7 +30,7 @@ import {
   IconFlashcard
 } from '../components/ui/Icons';
 
-export type TabId = 'overview' | 'grades' | 'topics' | 'lessons' | 'mindmaps' | 'flashcards' | 'users' | 'videos' | 'questions' | 'tests';
+export type TabId = 'overview' | 'grades' | 'topics' | 'lessons' | 'sections' | 'nodes' | 'mindmaps' | 'flashcards' | 'users' | 'videos' | 'questions' | 'tests';
 
 interface OverviewStats {
   grades: number;
@@ -207,6 +209,8 @@ export function DashboardPage() {
       case 'grades':    return <GradePanel onToast={addToast} />;
       case 'topics':    return <TopicPanel onToast={addToast} />;
       case 'lessons':   return <LessonPanel onToast={addToast} />;
+      case 'sections':  return <SectionPanel onToast={addToast} />;
+      case 'nodes':     return <NodePanel onToast={addToast} />;
       case 'mindmaps':  return <MindMapPanel onToast={addToast} />;
       case 'flashcards': return <FlashcardPanel onToast={addToast} />;
       case 'users':     return <UserPanel onToast={addToast} />;
