@@ -707,7 +707,7 @@ export function MindMapPanel({ onToast }: MindMapPanelProps) {
   const fetchLessonTree = useCallback(async (lessonId: number) => {
     try {
       setLoading(true);
-      const res = await client.get(`/api/content/lessons/${lessonId}/tree`);
+      const res = await client.get(`/api/admin/lessons/${lessonId}/mindmap`);
       setLessonTree(res.data);
     } catch {
       onToast('Không tải được sơ đồ tư duy của bài học', 'error');
@@ -748,28 +748,68 @@ export function MindMapPanel({ onToast }: MindMapPanelProps) {
       onToast('Tên phần là bắt buộc', 'error');
       return;
     }
-    if (!selectedLessonId) return;
+    if (!selectedLessonId || !lessonTree) return;
     try {
       setSaving(true);
       const parentId = sectionForm.parentSectionId ? Number(sectionForm.parentSectionId) : null;
+      let updatedSections: any[] = [];
+      const currentSections = lessonTree.sections || [];
+
       if (editSection) {
-        await client.patch(`/api/admin/sections/${editSection.id}`, {
-          name: sectionForm.name.trim(),
-          summary: sectionForm.summary.trim() || null,
-          position: Number(sectionForm.position) || 1,
-          parentSectionId: parentId,
-        });
-        onToast('Đã cập nhật nhánh/phần sơ đồ', 'success');
+        // Edit existing section
+        const updateRecursive = (list: any[]): any[] => {
+          return list.map(sec => {
+            if (sec.id === editSection.id) {
+              return {
+                ...sec,
+                name: sectionForm.name.trim(),
+                summary: sectionForm.summary.trim() || null,
+                position: Number(sectionForm.position) || 1,
+                parentSectionId: parentId,
+              };
+            }
+            if (sec.children) {
+              return { ...sec, children: updateRecursive(sec.children) };
+            }
+            return sec;
+          });
+        };
+        updatedSections = updateRecursive(currentSections);
       } else {
-        await client.post('/api/admin/sections', {
+        // Create new section
+        const newSec = {
+          id: Date.now(), // Unique temp ID
           name: sectionForm.name.trim(),
           summary: sectionForm.summary.trim() || null,
           position: Number(sectionForm.position) || 1,
           lessonId: selectedLessonId,
-          parentSectionId: parentId || undefined,
-        });
-        onToast('Đã tạo nhánh/phần sơ đồ mới', 'success');
+          parentSectionId: parentId || null,
+          nodes: [],
+          children: [],
+        };
+
+        if (!parentId) {
+          updatedSections = [...currentSections, newSec];
+        } else {
+          const addRecursive = (list: any[]): any[] => {
+            return list.map(sec => {
+              if (sec.id === parentId) {
+                return { ...sec, children: [...(sec.children || []), newSec] };
+              }
+              if (sec.children) {
+                return { ...sec, children: addRecursive(sec.children) };
+              }
+              return sec;
+            });
+          };
+          updatedSections = addRecursive(currentSections);
+        }
       }
+
+      await client.post(`/api/admin/lessons/${selectedLessonId}/mindmap/bulk`, {
+        sections: updatedSections,
+      });
+      onToast(editSection ? 'Đã cập nhật nhánh/phần sơ đồ' : 'Đã tạo nhánh/phần sơ đồ mới', 'success');
       setSectionModalOpen(false);
       fetchLessonTree(selectedLessonId);
     } catch (err: any) {
@@ -809,27 +849,73 @@ export function MindMapPanel({ onToast }: MindMapPanelProps) {
       onToast('Nội dung chi tiết là bắt buộc', 'error');
       return;
     }
-    if (!selectedLessonId) return;
+    if (!selectedLessonId || !lessonTree) return;
     try {
       setSaving(true);
+      let updatedSections: any[] = [];
+      const currentSections = lessonTree.sections || [];
+      const sectionId = Number(nodeForm.sectionId);
+
       if (editNode) {
-        await client.patch(`/api/admin/nodes/${editNode.id}`, {
-          header: nodeForm.header.trim() || null,
-          body: nodeForm.body.trim(),
-          position: Number(nodeForm.position) || 1,
-          imgUrl: nodeForm.imgUrl.trim() || null,
-        });
-        onToast('Đã cập nhật nút kiến thức', 'success');
+        // Edit existing node
+        const updateRecursive = (list: any[]): any[] => {
+          return list.map(sec => {
+            if (sec.nodes) {
+              const hasNode = sec.nodes.some((n: any) => n.id === editNode.id);
+              if (hasNode) {
+                return {
+                  ...sec,
+                  nodes: sec.nodes.map((n: any) => {
+                    if (n.id === editNode.id) {
+                      return {
+                        ...n,
+                        header: nodeForm.header.trim() || null,
+                        body: nodeForm.body.trim(),
+                        position: Number(nodeForm.position) || 1,
+                        imgUrl: nodeForm.imgUrl.trim() || null,
+                      };
+                    }
+                    return n;
+                  })
+                };
+              }
+            }
+            if (sec.children) {
+              return { ...sec, children: updateRecursive(sec.children) };
+            }
+            return sec;
+          });
+        };
+        updatedSections = updateRecursive(currentSections);
       } else {
-        await client.post('/api/admin/nodes', {
+        // Create new node
+        const newNd = {
+          id: Date.now(),
           header: nodeForm.header.trim() || null,
           body: nodeForm.body.trim(),
           position: Number(nodeForm.position) || 1,
           imgUrl: nodeForm.imgUrl.trim() || null,
-          sectionId: Number(nodeForm.sectionId),
-        });
-        onToast('Đã tạo nút kiến thức mới', 'success');
+          sectionId,
+        };
+
+        const addRecursive = (list: any[]): any[] => {
+          return list.map(sec => {
+            if (sec.id === sectionId) {
+              return { ...sec, nodes: [...(sec.nodes || []), newNd] };
+            }
+            if (sec.children) {
+              return { ...sec, children: addRecursive(sec.children) };
+            }
+            return sec;
+          });
+        };
+        updatedSections = addRecursive(currentSections);
       }
+
+      await client.post(`/api/admin/lessons/${selectedLessonId}/mindmap/bulk`, {
+        sections: updatedSections,
+      });
+      onToast(editNode ? 'Đã cập nhật nút kiến thức' : 'Đã tạo nút kiến thức mới', 'success');
       setNodeModalOpen(false);
       fetchLessonTree(selectedLessonId);
     } catch (err: any) {
@@ -841,16 +927,43 @@ export function MindMapPanel({ onToast }: MindMapPanelProps) {
 
   // 4. Delete Handler
   const handleDeleteConfirm = async () => {
-    if (!deleteTarget || !selectedLessonId) return;
+    if (!deleteTarget || !selectedLessonId || !lessonTree) return;
     try {
       setDeleting(true);
+      let updatedSections: any[] = [];
+      const currentSections = lessonTree.sections || [];
+
       if (deleteTarget.type === 'section') {
-        await client.delete(`/api/admin/sections/${deleteTarget.id}`);
-        onToast('Đã xóa phần và các nhánh con liên quan', 'success');
+        const deleteRecursive = (list: any[]): any[] => {
+          return list
+            .filter(sec => sec.id !== deleteTarget.id)
+            .map(sec => {
+              if (sec.children) {
+                return { ...sec, children: deleteRecursive(sec.children) };
+              }
+              return sec;
+            });
+        };
+        updatedSections = deleteRecursive(currentSections);
       } else {
-        await client.delete(`/api/admin/nodes/${deleteTarget.id}`);
-        onToast('Đã xóa nút kiến thức', 'success');
+        const deleteRecursive = (list: any[]): any[] => {
+          return list.map(sec => {
+            if (sec.nodes) {
+              sec.nodes = sec.nodes.filter((n: any) => n.id !== deleteTarget.id);
+            }
+            if (sec.children) {
+              sec.children = deleteRecursive(sec.children);
+            }
+            return sec;
+          });
+        };
+        updatedSections = deleteRecursive(currentSections);
       }
+
+      await client.post(`/api/admin/lessons/${selectedLessonId}/mindmap/bulk`, {
+        sections: updatedSections,
+      });
+      onToast(deleteTarget.type === 'section' ? 'Đã xóa nhánh sơ đồ' : 'Đã xóa nút kiến thức', 'success');
       setDeleteTarget(null);
       fetchLessonTree(selectedLessonId);
     } catch (err: any) {
