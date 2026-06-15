@@ -76,3 +76,27 @@ a, select, input {
   transition: all 0.2s ease;
 }
 
+/* CKEditor overrides */
+.ck-editor__editable {
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+  border-bottom-left-radius: 10px !important;
+  border-bottom-right-radius: 10px !important;
+  color: #0f172a !important;
+  min-height: 200px !important;
+  font-family: inherit !important;
+  box-shadow: none !important;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  padding: 10px 16px !important;
+}
+.ck-editor__editable.ck-focused {
+  border-color: #6c63ff !important;
+  box-shadow: 0 0 0 3px rgba(108,99,255,0.12) !important;
+}
+.ck-toolbar {
+  border: 1px solid #e2e8f0 !important;
+  border-top-left-radius: 10px !important;
+  border-top-right-radius: 10px !important;
+  background: #ffffff !important;
+}
+
