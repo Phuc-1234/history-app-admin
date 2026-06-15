@@ -6,9 +6,15 @@ import type { ToastType } from '../../hooks/useToast';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
-import { Input, Textarea, Select } from '../ui/FormField';
+import { Input, Select } from '../ui/FormField';
 import { Spinner } from '../ui/Spinner';
 import { IconPlus, IconEdit, IconDelete, IconNode } from '../ui/Icons';
+import { RichTextEditor } from '../ui/RichTextEditor';
+
+const isBodyEmpty = (html: string) => {
+  const text = html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, '').trim();
+  return text === '';
+};
 
 interface NodePanelProps {
   onToast: (msg: string, type: ToastType) => void;
@@ -69,7 +75,7 @@ export function NodePanel({ onToast }: NodePanelProps) {
   const openEdit = (n: NodeDto) => { setEditNode(n); setForm({ header: n.header ?? '', body: n.body, imgUrl: n.imgUrl ?? '', position: String(n.position), sectionId: String(n.sectionId ?? '') }); setModalOpen(true); };
 
   const handleSave = async () => {
-    if (!form.body.trim()) { onToast('Nội dung (body) là bắt buộc', 'error'); return; }
+    if (isBodyEmpty(form.body)) { onToast('Nội dung (body) là bắt buộc', 'error'); return; }
     const position = Number(form.position); const sectionId = Number(form.sectionId);
     if (!sectionId) { onToast('Phần là bắt buộc', 'error'); return; }
     try {
@@ -156,7 +162,7 @@ export function NodePanel({ onToast }: NodePanelProps) {
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 {n.header && <div style={{ fontSize: 15, fontWeight: 700, color: '#0f172a', marginBottom: 6 }}>{n.header}</div>}
-                <div style={{ fontSize: 14, color: '#475569', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{n.body}</div>
+                <div style={{ fontSize: 14, color: '#475569', lineHeight: 1.7 }} dangerouslySetInnerHTML={{ __html: n.body }} />
                 {n.imgUrl && (
                   <div style={{ marginTop: 8, fontSize: 12, color: '#6c63ff', display: 'flex', alignItems: 'center', gap: 4 }}>
                     <span>🖼</span> <span style={{ textDecoration: 'underline' }}>{n.imgUrl}</span>
@@ -174,7 +180,7 @@ export function NodePanel({ onToast }: NodePanelProps) {
 
       <Modal open={modalOpen} title={editNode ? 'Sửa Nút kiến thức' : 'Thêm Nút kiến thức mới'} onClose={() => setModalOpen(false)} width={580}>
         <Input label="Tiêu đề (tùy chọn)" value={form.header} onChange={(e) => setForm((f) => ({ ...f, header: e.target.value }))} placeholder="Ví dụ: Nguyên nhân bùng nổ chiến tranh" />
-        <Textarea label="Nội dung *" value={form.body} onChange={(e) => setForm((f) => ({ ...f, body: e.target.value }))} placeholder="Nội dung chính của nút kiến thức..." rows={5} />
+        <RichTextEditor label="Nội dung *" value={form.body} onChange={(val) => setForm((f) => ({ ...f, body: val }))} placeholder="Nội dung chính của nút kiến thức..." />
         <Input label="URL hình ảnh (tùy chọn)" value={form.imgUrl} onChange={(e) => setForm((f) => ({ ...f, imgUrl: e.target.value }))} placeholder="https://..." />
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           <Input label="Vị trí" type="number" value={form.position} onChange={(e) => setForm((f) => ({ ...f, position: e.target.value }))} />

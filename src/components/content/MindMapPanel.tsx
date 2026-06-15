@@ -9,6 +9,16 @@ import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { Input, Textarea, Select } from '../ui/FormField';
 import { Spinner } from '../ui/Spinner';
 import { IconPlus, IconEdit, IconDelete, IconMindMap, IconSparkles } from '../ui/Icons';
+import { RichTextEditor } from '../ui/RichTextEditor';
+
+const isBodyEmpty = (html: string) => {
+  const text = html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, '').trim();
+  return text === '';
+};
+
+const stripHtml = (html: string) => {
+  return html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ');
+};
 
 interface VisualMindMapDiagramProps {
   rootTitle: string;
@@ -293,7 +303,7 @@ export function VisualMindMapDiagram({ rootTitle, sections, height = '600px' }: 
               onMouseLeave={(e) => {
                 e.currentTarget.style.transform = 'translateY(-50%) scale(1)';
                 e.currentTarget.style.background = '#ffffff';
-                e.currentTarget.style.color = currentDepthColor.tagColor;
+                 e.currentTarget.style.color = currentDepthColor.tagColor || '';
               }}
             >
               {isCollapsed ? '+' : '-'}
@@ -449,9 +459,7 @@ export function VisualMindMapDiagram({ rootTitle, sections, height = '600px' }: 
 
                           {isExpanded ? (
                             <>
-                              <p style={{ margin: 0, fontSize: '12px', color: '#4b5563', lineHeight: 1.4, whiteSpace: 'pre-wrap' }}>
-                                {node.body}
-                              </p>
+                              <div style={{ margin: 0, fontSize: '12px', color: '#4b5563', lineHeight: 1.4 }} dangerouslySetInnerHTML={{ __html: node.body }} />
                               {node.imgUrl && (
                                 <img
                                   src={node.imgUrl}
@@ -470,7 +478,7 @@ export function VisualMindMapDiagram({ rootTitle, sections, height = '600px' }: 
                               overflow: 'hidden',
                               whiteSpace: 'nowrap'
                             }}>
-                              {node.body}
+                              {stripHtml(node.body)}
                             </p>
                           )}
                         </div>
@@ -797,7 +805,7 @@ export function MindMapPanel({ onToast }: MindMapPanelProps) {
   };
 
   const handleSaveNode = async () => {
-    if (!nodeForm.body.trim()) {
+    if (isBodyEmpty(nodeForm.body)) {
       onToast('Nội dung chi tiết là bắt buộc', 'error');
       return;
     }
@@ -1083,7 +1091,7 @@ export function MindMapPanel({ onToast }: MindMapPanelProps) {
                   </div>
                 </div>
                 {node.header && <h4 style={{ margin: '0 0 4px', fontSize: 13, fontWeight: 700, color: '#0f172a' }}>{node.header}</h4>}
-                <p style={{ margin: 0, fontSize: 13, color: '#475569', lineHeight: 1.4 }}>{node.body}</p>
+                <div style={{ margin: 0, fontSize: 13, color: '#475569', lineHeight: 1.4 }} dangerouslySetInnerHTML={{ __html: node.body }} />
                 {node.imgUrl && (
                   <img src={node.imgUrl} alt="node asset" style={{ marginTop: 8, width: '100%', maxHeight: 120, objectFit: 'cover', borderRadius: 6 }} />
                 )}
@@ -1330,12 +1338,11 @@ export function MindMapPanel({ onToast }: MindMapPanelProps) {
             onChange={(e) => setNodeForm({ ...nodeForm, header: e.target.value })}
             placeholder="Ví dụ: Nguyên nhân trực tiếp"
           />
-          <Textarea
+          <RichTextEditor
             label="Nội dung kiến thức chi tiết"
             value={nodeForm.body}
-            onChange={(e) => setNodeForm({ ...nodeForm, body: e.target.value })}
+            onChange={(val) => setNodeForm({ ...nodeForm, body: val })}
             placeholder="Nhập nội dung tóm tắt chi tiết..."
-            rows={4}
           />
           <Input
             label="Đường dẫn ảnh minh họa (tùy chọn)"
