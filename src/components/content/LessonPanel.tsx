@@ -6,7 +6,8 @@ import type { ToastType } from '../../hooks/useToast';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
-import { Input, Textarea, Select } from '../ui/FormField';
+import { Input, Select } from '../ui/FormField';
+import { RichTextEditor } from '../ui/RichTextEditor';
 import { Spinner } from '../ui/Spinner';
 import { IconPlus, IconEdit, IconDelete, IconLesson } from '../ui/Icons';
 
@@ -134,7 +135,16 @@ export function LessonPanel({ onToast }: LessonPanelProps) {
                     </span>
                   </Td>
                   <Td><span style={{ color: '#0f172a', fontWeight: 600 }}>{l.name}</span></Td>
-                  <Td><span style={{ color: '#94a3b8', fontSize: 13, fontStyle: l.summary ? 'normal' : 'italic' }}>{l.summary ?? '—'}</span></Td>
+                  <Td>
+                    {l.summary ? (
+                      <div 
+                        style={{ color: '#64748b', fontSize: 13, maxHeight: '60px', overflow: 'hidden' }} 
+                        dangerouslySetInnerHTML={{ __html: l.summary }} 
+                      />
+                    ) : (
+                      <span style={{ color: '#94a3b8', fontSize: 13, fontStyle: 'italic' }}>—</span>
+                    )}
+                  </Td>
                   <Td align="right">
                     <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                       <Button variant="secondary" icon={<IconEdit size={14} />} onClick={() => openEdit(l)} style={{ padding: '6px 14px', fontSize: 13 }}>Sửa</Button>
@@ -150,7 +160,7 @@ export function LessonPanel({ onToast }: LessonPanelProps) {
 
       <Modal open={modalOpen} title={editLesson ? 'Sửa Bài học' : 'Thêm Bài học mới'} onClose={() => setModalOpen(false)}>
         <Input label="Tên bài học" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="Ví dụ: Bài 1: Cách mạng tháng Tám" />
-        <Textarea label="Tóm tắt (tùy chọn)" value={form.summary} onChange={(e) => setForm((f) => ({ ...f, summary: e.target.value }))} placeholder="Mô tả ngắn về bài học..." rows={3} />
+        <RichTextEditor label="Tóm tắt (tùy chọn)" value={form.summary} onChange={(val) => setForm((f) => ({ ...f, summary: val }))} placeholder="Mô tả ngắn về bài học..." />
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           <Input label="Vị trí" type="number" value={form.position} onChange={(e) => setForm((f) => ({ ...f, position: e.target.value }))} />
           <Select label="Chủ đề" value={form.topicId} onChange={(e) => setForm((f) => ({ ...f, topicId: e.target.value }))} disabled={!!editLesson}>
