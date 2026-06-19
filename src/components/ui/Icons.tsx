@@ -263,3 +263,19 @@ export function IconSparkles({ size = 20, color = 'currentColor', ...props }: Ic
     </svg>
   );
 }
+
+export function IconMagicWand({ size = 20, color = 'currentColor', ...props }: IconProps) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M15 4V2" />
+      <path d="M15 16v-2" />
+      <path d="M8 9h2" />
+      <path d="M20 9h2" />
+      <path d="M17.8 11.8l1.4 1.4" />
+      <path d="M12.2 6.2L13.6 7.6" />
+      <path d="M17.8 6.2l-1.4 1.4" />
+      <path d="M12.2 11.8l-1.4-1.4" />
+      <path d="M2 22L15 9" />
+    </svg>
+  );
+}

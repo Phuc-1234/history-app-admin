@@ -8,7 +8,7 @@ import { Modal } from '../ui/Modal';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { Textarea, Select } from '../ui/FormField';
 import { Spinner } from '../ui/Spinner';
-import { IconPlus, IconEdit, IconDelete, IconFlashcard, IconSparkles } from '../ui/Icons';
+import { IconPlus, IconEdit, IconDelete, IconFlashcard, IconMagicWand, IconAlert } from '../ui/Icons';
 
 interface FlashcardPanelProps {
   onToast: (msg: string, type: ToastType) => void;
@@ -39,6 +39,7 @@ export function FlashcardPanel({ onToast }: FlashcardPanelProps) {
   const [aiText, setAiText] = useState('');
   const [aiGenerating, setAiGenerating] = useState(false);
   const [aiPreviewList, setAiPreviewList] = useState<{ frontText: string; backText: string }[]>([]);
+  const [aiSaveConfirmOpen, setAiSaveConfirmOpen] = useState(false);
 
   // 1. Cascade Select Fetches
   useEffect(() => {
@@ -311,7 +312,7 @@ export function FlashcardPanel({ onToast }: FlashcardPanelProps) {
           <div style={{ display: 'flex', gap: 12 }}>
             <Button
               variant="secondary"
-              icon={<IconSparkles size={16} color="#6c63ff" />}
+              icon={<IconMagicWand size={16} color="#6c63ff" />}
               onClick={() => {
                 setAiPreviewList([]);
                 setAiModalOpen(true);
@@ -323,7 +324,7 @@ export function FlashcardPanel({ onToast }: FlashcardPanelProps) {
                 fontWeight: 600,
               }}
             >
-              Tạo bằng AI (Gemini)
+              Trợ lý AI
             </Button>
             <Button icon={<IconPlus size={16} />} onClick={openCreate}>
               Thêm Thẻ thủ công
@@ -490,11 +491,25 @@ export function FlashcardPanel({ onToast }: FlashcardPanelProps) {
         onClose={() => !aiGenerating && setAiModalOpen(false)}
         title="Tự động sinh Thẻ ghi nhớ bằng Trợ lý AI"
       >
-        <div style={{ width: 680, maxWidth: '100%', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ width: 680, maxWidth: '100%', maxHeight: '76vh', display: 'flex', flexDirection: 'column', overflowY: 'auto', paddingRight: '4px' }}>
           
           {/* Key & Model settings */}
-          <div style={{ padding: '10px 14px', background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0', marginBottom: 16, fontSize: 13, color: '#475569' }}>
-            ✨ Sử dụng mô hình trí tuệ nhân tạo Gemini được thiết lập trên Backend.
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '8px 14px',
+            background: '#fffbeb',
+            borderRadius: 8,
+            border: '1px solid #fef3c7',
+            marginBottom: 16,
+            fontSize: 13,
+            color: '#b45309',
+            width: 'fit-content',
+            fontWeight: 500,
+          }}>
+            <IconAlert size={16} color="#b45309" />
+            <span>AI có thể mắc sai sót. Hãy kiểm tra kỹ thông tin trước khi lưu.</span>
           </div>
 
           {/* Text Input */}
@@ -513,7 +528,7 @@ export function FlashcardPanel({ onToast }: FlashcardPanelProps) {
             </span>
             <Button
               variant="secondary"
-              icon={aiGenerating ? <Spinner size={14} /> : <IconSparkles size={14} color="#6c63ff" />}
+              icon={aiGenerating ? <Spinner size={14} /> : <IconMagicWand size={14} color="#6c63ff" />}
               onClick={handleAIGenerate}
               disabled={aiGenerating}
               style={{
@@ -595,7 +610,7 @@ export function FlashcardPanel({ onToast }: FlashcardPanelProps) {
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, borderTop: '1px solid #f1f5f9', paddingTop: 16 }}>
             <Button variant="secondary" onClick={() => setAiModalOpen(false)} disabled={aiGenerating || saving}>Hủy</Button>
             <Button
-              onClick={handleAISave}
+              onClick={() => setAiSaveConfirmOpen(true)}
               disabled={aiGenerating || saving || aiPreviewList.length === 0}
             >
               {saving ? 'Đang lưu...' : 'Lưu tất cả vào Bài học (Ghi đè)'}
@@ -612,6 +627,19 @@ export function FlashcardPanel({ onToast }: FlashcardPanelProps) {
         title="Xóa thẻ ghi nhớ"
         message="Bạn có chắc chắn muốn xóa thẻ ghi nhớ này? Hành động này không thể hoàn tác."
         loading={deleting}
+      />
+
+      {/* AI Save Confirmation */}
+      <ConfirmDialog
+        open={aiSaveConfirmOpen}
+        onCancel={() => setAiSaveConfirmOpen(false)}
+        onConfirm={async () => {
+          setAiSaveConfirmOpen(false);
+          await handleAISave();
+        }}
+        title="Xác nhận ghi đè danh sách thẻ ghi nhớ"
+        message="Hành động này sẽ ghi đè và THAY THẾ hoàn toàn tất cả các thẻ ghi nhớ hiện tại của bài học này bằng danh sách thẻ ghi nhớ mới từ AI. Bạn có chắc chắn muốn tiếp tục không?"
+        loading={saving}
       />
     </div>
   );
