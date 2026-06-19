@@ -1,5 +1,5 @@
 // src/components/content/MindMapPanel.tsx
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import client from '../../api/client';
 import type { GradeDto, TopicDto, LessonDto, SectionDto, NodeDto } from '../../types/api';
 import type { ToastType } from '../../hooks/useToast';
