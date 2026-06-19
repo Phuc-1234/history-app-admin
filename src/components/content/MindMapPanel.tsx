@@ -1,15 +1,26 @@
 // src/components/content/MindMapPanel.tsx
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import client from '../../api/client';
 import type { GradeDto, TopicDto, LessonDto, SectionDto, NodeDto } from '../../types/api';
 import type { ToastType } from '../../hooks/useToast';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
-import { Input, Textarea, Select } from '../ui/FormField';
+import { Input, Textarea } from '../ui/FormField';
 import { Spinner } from '../ui/Spinner';
-import { IconPlus, IconEdit, IconDelete, IconMindMap, IconSparkles } from '../ui/Icons';
+import { IconMindMap, IconMagicWand, IconAlert } from '../ui/Icons';
 import { RichTextEditor } from '../ui/RichTextEditor';
+import {
+  ReactFlow,
+  Controls,
+  useNodesState,
+  useEdgesState,
+  ReactFlowProvider,
+  useReactFlow,
+  Handle,
+  Position,
+} from '@xyflow/react';
+import '@xyflow/react/dist/style.css';
 
 const isBodyEmpty = (html: string) => {
   const text = html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, '').trim();
@@ -24,6 +35,479 @@ interface VisualMindMapDiagramProps {
   rootTitle: string;
   sections: any[];
   height?: string;
+  onAddSection?: (parentId?: number) => void;
+  onEditSection?: (sec: any) => void;
+  onDeleteSection?: (id: number) => void;
+  onAddNode?: (secId: number) => void;
+  onEditNode?: (node: any) => void;
+  onDeleteNode?: (id: number) => void;
+}
+
+// ─── Custom React Flow Nodes ──────────────────────────────────────────────────
+
+const RootNode = ({ data }: any) => {
+  return (
+    <div
+      style={{
+        background: 'linear-gradient(135deg, #4f46e5, #6366f1)',
+        color: '#ffffff',
+        borderRadius: '16px',
+        width: '280px',
+        boxShadow: '0 10px 25px rgba(79,70,229,0.25)',
+        border: '1px solid rgba(255,255,255,0.1)',
+        fontFamily: 'Inter, system-ui, sans-serif',
+        textAlign: 'left',
+        overflow: 'hidden',
+      }}
+    >
+      <div style={{ padding: '18px 24px 12px 24px' }}>
+        <div style={{ fontSize: '11px', textTransform: 'uppercase', opacity: 0.8, fontWeight: 700, letterSpacing: '0.05em', marginBottom: '6px' }}>
+          Bài học gốc
+        </div>
+        <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, lineHeight: 1.4 }}>
+          {data.label}
+        </h3>
+      </div>
+      
+      {data.onAddSection && (
+        <div style={{
+          borderTop: '1px solid rgba(255,255,255,0.1)',
+          padding: '8px 16px',
+          display: 'flex',
+          justifyContent: 'flex-start',
+          background: 'rgba(255,255,255,0.05)',
+        }}>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              data.onAddSection();
+            }}
+            className="nodrag"
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#ffffff',
+              fontSize: '11px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              padding: 0,
+            }}
+          >
+            ➕ Thêm Nhánh chính (Cấp 1)
+          </button>
+        </div>
+      )}
+
+      <Handle
+        type="source"
+        position={Position.Right}
+        style={{ background: 'transparent', border: 'none', right: 0, top: '50%' }}
+      />
+    </div>
+  );
+};
+
+const SectionNode = ({ data }: any) => {
+  const depth = data.depth || 0;
+  const colors = [
+    { border: '#4f46e5', text: '#ffffff' },
+    { border: '#818cf8', text: '#1e1b4b', headerBg: '#f5f3ff', tagColor: '#4f46e5' },
+    { border: '#38bdf8', text: '#0c4a6e', headerBg: '#f0f9ff', tagColor: '#0284c7' },
+    { border: '#34d399', text: '#064e3b', headerBg: '#ecfdf5', tagColor: '#059669' },
+  ];
+  const currentDepthColor = colors[Math.min(depth, colors.length - 1)];
+
+  return (
+    <div
+      style={{
+        background: '#ffffff',
+        border: `2px solid ${currentDepthColor.border}`,
+        borderRadius: '12px',
+        boxShadow: '0 4px 12px rgba(15,23,42,0.05)',
+        width: '260px',
+        position: 'relative',
+        fontFamily: 'Inter, system-ui, sans-serif',
+        textAlign: 'left',
+      }}
+    >
+      <Handle
+        type="target"
+        position={Position.Left}
+        style={{ background: 'transparent', border: 'none', left: 0, top: '50%' }}
+      />
+      
+      {/* Header */}
+      <div style={{
+        padding: '10px 14px',
+        borderBottom: `1px solid ${currentDepthColor.border}1a`,
+        background: currentDepthColor.headerBg,
+        borderTopLeftRadius: '10px',
+        borderTopRightRadius: '10px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+      }}>
+        <span style={{
+          fontSize: '10px',
+          fontWeight: 800,
+          color: currentDepthColor.tagColor,
+          textTransform: 'uppercase',
+          letterSpacing: '0.05em',
+        }}>
+          Nhánh cấp {depth}
+        </span>
+        <span style={{ fontSize: '10px', color: '#64748b', fontWeight: 600 }}>
+          Vị trí {data.position}
+        </span>
+      </div>
+
+      {/* Body */}
+      <div style={{ padding: '14px 14px 10px 14px' }}>
+        <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: '#0f172a', lineHeight: 1.4 }}>
+          {data.name}
+        </h4>
+        {data.summary && (
+          <p style={{ margin: '6px 0 0 0', fontSize: '12px', color: '#64748b', lineHeight: 1.4 }}>
+            {data.summary}
+          </p>
+        )}
+      </div>
+
+      {/* Action Buttons Footer */}
+      {(data.onAddSection || data.onAddNode || data.onEditSection || data.onDeleteSection) && (
+        <div style={{
+          borderTop: '1px solid #f1f5f9',
+          padding: '8px 12px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          background: '#f8fafc',
+          borderBottomLeftRadius: '10px',
+          borderBottomRightRadius: '10px',
+        }}>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                data.onAddSection(data.id);
+              }}
+              className="nodrag"
+              style={{ background: 'none', border: 'none', color: '#0284c7', fontSize: '11px', fontWeight: 600, cursor: 'pointer', padding: 0 }}
+            >
+              + Nhánh
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                data.onAddNode(data.id);
+              }}
+              className="nodrag"
+              style={{ background: 'none', border: 'none', color: '#10b981', fontSize: '11px', fontWeight: 600, cursor: 'pointer', padding: 0 }}
+            >
+              + Nút
+            </button>
+          </div>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                data.onEditSection(data.rawSection);
+              }}
+              className="nodrag"
+              style={{ background: 'none', border: 'none', color: '#64748b', fontSize: '11px', cursor: 'pointer', padding: 0 }}
+            >
+              Sửa
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                data.onDeleteSection(data.id);
+              }}
+              className="nodrag"
+              style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '11px', cursor: 'pointer', padding: 0 }}
+            >
+              Xóa
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Toggle Button for collapsing branches */}
+      {data.hasChildren && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            data.onToggleCollapse();
+          }}
+          className="nodrag"
+          style={{
+            position: 'absolute',
+            top: '50%',
+            right: '-11px',
+            transform: 'translateY(-50%)',
+            width: '22px',
+            height: '22px',
+            borderRadius: '50%',
+            background: '#ffffff',
+            border: `2px solid ${currentDepthColor.border}`,
+            color: currentDepthColor.tagColor,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '14px',
+            fontWeight: 'bold',
+            cursor: 'pointer',
+            zIndex: 10,
+            boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
+            transition: 'all 0.15s ease',
+          }}
+        >
+          {data.isCollapsed ? '+' : '-'}
+        </button>
+      )}
+
+      {!data.isCollapsed && (
+        <Handle
+          type="source"
+          position={Position.Right}
+          style={{ background: 'transparent', border: 'none', right: 0, top: '50%' }}
+        />
+      )}
+    </div>
+  );
+};
+
+const KnowledgeNode = ({ data }: any) => {
+  const isExpanded = data.isExpanded;
+
+  return (
+    <div
+      style={{
+        background: '#ffffff',
+        border: isExpanded ? '2px solid #10b981' : '1px solid #e2e8f0',
+        borderRadius: '10px',
+        width: '240px',
+        boxShadow: '0 2px 8px rgba(15,23,42,0.03)',
+        position: 'relative',
+        fontFamily: 'Inter, system-ui, sans-serif',
+        textAlign: 'left',
+      }}
+    >
+      <Handle
+        type="target"
+        position={Position.Left}
+        style={{ background: 'transparent', border: 'none', left: 0, top: '50%' }}
+      />
+      
+      <div style={{ padding: '12px 14px 10px 14px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+          <span style={{ fontSize: '9px', fontWeight: 700, color: '#10b981', textTransform: 'uppercase' }}>
+            Nút kiến thức
+          </span>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              data.onToggleExpand();
+            }}
+            className="nodrag"
+            style={{
+              fontSize: '11px',
+              fontWeight: 'bold',
+              color: isExpanded ? '#ffffff' : '#10b981',
+              background: isExpanded ? '#10b981' : '#ecfdf5',
+              width: '16px',
+              height: '16px',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              border: '1px solid #10b981',
+              cursor: 'pointer',
+              padding: 0,
+              transition: 'all 0.15s ease',
+            }}
+          >
+            {isExpanded ? '-' : '+'}
+          </button>
+        </div>
+
+        {data.header && (
+          <h5 style={{ margin: '0 0 4px 0', fontSize: '12px', fontWeight: 700, color: '#1f2937' }}>
+            {data.header}
+          </h5>
+        )}
+
+        {isExpanded ? (
+          <>
+            <div style={{ margin: 0, fontSize: '12px', color: '#4b5563', lineHeight: 1.4 }} dangerouslySetInnerHTML={{ __html: data.body }} />
+            {data.imgUrl && (
+              <img
+                src={data.imgUrl}
+                alt="asset"
+                style={{ marginTop: '8px', width: '100%', maxHeight: '120px', objectFit: 'cover', borderRadius: '4px' }}
+              />
+            )}
+          </>
+        ) : (
+          <p style={{
+            margin: 0,
+            fontSize: '12px',
+            color: '#64748b',
+            lineHeight: 1.4,
+            textOverflow: 'ellipsis',
+            overflow: 'hidden',
+            whiteSpace: 'nowrap'
+          }}>
+            {stripHtml(data.body)}
+          </p>
+        )}
+      </div>
+
+      {/* Action Footer */}
+      {(data.onEditNode || data.onDeleteNode) && (
+        <div style={{
+          borderTop: '1px solid #f1f5f9',
+          padding: '8px 12px',
+          display: 'flex',
+          justifyContent: 'flex-end',
+          gap: '12px',
+          background: '#f8fafc',
+          borderBottomLeftRadius: '8px',
+          borderBottomRightRadius: '8px',
+        }}>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              data.onEditNode(data.rawNode);
+            }}
+            className="nodrag"
+            style={{ background: 'none', border: 'none', color: '#64748b', fontSize: '11px', cursor: 'pointer', fontWeight: 600, padding: 0 }}
+          >
+            Sửa
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              data.onDeleteNode(data.id);
+            }}
+            className="nodrag"
+            style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '11px', cursor: 'pointer', fontWeight: 600, padding: 0 }}
+          >
+            Xóa
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const nodeTypes = {
+  root: RootNode,
+  section: SectionNode,
+  knowledge: KnowledgeNode,
+};
+
+// ─── Layout & Tree Math Helpers ───────────────────────────────────────────────
+
+interface TreeNode {
+  id: string;
+  type: 'root' | 'section' | 'knowledge';
+  data: any;
+  children: TreeNode[];
+  isCollapsed?: boolean;
+  isExpanded?: boolean;
+}
+
+const getNodeHeight = (node: TreeNode) => {
+  if (node.type === 'root') return 140;
+  if (node.type === 'knowledge') {
+    return node.isExpanded ? 280 : 110;
+  }
+  return node.data.summary ? 170 : 140;
+};
+
+const getNodeWidth = (node: TreeNode) => {
+  if (node.type === 'root') return 280;
+  if (node.type === 'section') return 260;
+  return 240;
+};
+
+function computeTreeLayout(
+  node: TreeNode,
+  depth: number,
+  startY: number,
+  parentX: number,
+  parentWidth: number,
+  gapX: number,
+  gapY: number,
+  nodesList: any[],
+  edgesList: any[]
+): { subtreeHeight: number; centerY: number } {
+  const nodeW = getNodeWidth(node);
+  const nodeH = getNodeHeight(node);
+  const currentX = depth === 0 ? 0 : parentX + parentWidth + gapX;
+
+  const children = node.isCollapsed ? [] : node.children;
+
+  if (children.length === 0) {
+    const centerY = startY + nodeH / 2;
+    nodesList.push({
+      id: node.id,
+      type: node.type,
+      position: { x: currentX, y: startY },
+      draggable: true,
+      data: { ...node.data, depth, isCollapsed: node.isCollapsed, isExpanded: node.isExpanded },
+    });
+    return { subtreeHeight: nodeH, centerY };
+  }
+
+  let currentY = startY;
+  const childCenterYs: number[] = [];
+
+  for (let i = 0; i < children.length; i++) {
+    const child = children[i];
+    const { subtreeHeight: cSubtreeH, centerY: cCenterY } = computeTreeLayout(
+      child,
+      depth + 1,
+      currentY,
+      currentX,
+      nodeW,
+      gapX,
+      gapY,
+      nodesList,
+      edgesList
+    );
+    childCenterYs.push(cCenterY);
+    
+    const edgeColor = depth === 0 ? '#818cf8' : depth === 1 ? '#38bdf8' : '#34d399';
+    edgesList.push({
+      id: `edge-${node.id}-${child.id}`,
+      source: node.id,
+      target: child.id,
+      type: 'smoothstep',
+      style: { stroke: edgeColor, strokeWidth: depth === 0 ? 3 : 2 },
+      pathOptions: { borderRadius: 12 },
+    });
+    currentY += cSubtreeH + gapY;
+  }
+
+  const childrenTotalHeight = currentY - startY - gapY;
+  const centerY = startY + childrenTotalHeight / 2;
+  const nodeY = centerY - nodeH / 2;
+
+  nodesList.push({
+    id: node.id,
+    type: node.type,
+    position: { x: currentX, y: nodeY },
+    draggable: true,
+    data: { ...node.data, depth, isCollapsed: node.isCollapsed, isExpanded: node.isExpanded },
+  });
+
+  const subtreeHeight = Math.max(nodeH, childrenTotalHeight);
+  return { subtreeHeight, centerY };
 }
 
 function getInitialCollapsedSections(sectionsList: any[]): Set<string> {
@@ -43,122 +527,31 @@ function getInitialCollapsedSections(sectionsList: any[]): Set<string> {
   return collapsed;
 }
 
-export function VisualMindMapDiagram({ rootTitle, sections, height = '600px' }: VisualMindMapDiagramProps) {
-  const [zoomScale, setZoomScale] = useState<number>(0.9);
-  const [panOffset, setPanOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
-  const [touchStartDist, setTouchStartDist] = useState<number | null>(null);
+// ─── VisualMindMapDiagramContent & Provider ───────────────────────────────────
 
+function VisualMindMapDiagramContent({
+  rootTitle,
+  sections,
+  height = '600px',
+  onAddSection,
+  onEditSection,
+  onDeleteSection,
+  onAddNode,
+  onEditNode,
+  onDeleteNode,
+}: VisualMindMapDiagramProps) {
+  const { fitView } = useReactFlow();
+  const [nodes, setNodes, onNodesChange] = useNodesState<any>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<any>([]);
+  
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(() => getInitialCollapsedSections(sections));
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
-  const containerRef = useRef<HTMLDivElement>(null);
 
-  // Reset collapse state and pan/zoom when new sections are loaded (e.g. new lesson or new AI preview)
   useEffect(() => {
     setCollapsedSections(getInitialCollapsedSections(sections));
-    setZoomScale(0.9);
-    setPanOffset({ x: 0, y: 0 });
   }, [sections]);
 
-  // Handle trackpad pinch-to-zoom on native wheel event to prevent browser page zoom
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const handleWheelNative = (e: WheelEvent) => {
-      if (e.ctrlKey) {
-        e.preventDefault();
-        const zoomFactor = Math.min(0.08, Math.abs(e.deltaY) * 0.005);
-        setZoomScale(s => {
-          let nextScale = s + (e.deltaY < 0 ? zoomFactor : -zoomFactor);
-          return Math.min(1.5, Math.max(0.4, nextScale));
-        });
-      }
-    };
-
-    container.addEventListener('wheel', handleWheelNative, { passive: false });
-    return () => {
-      container.removeEventListener('wheel', handleWheelNative);
-    };
-  }, []);
-
-  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    const target = e.target as HTMLElement;
-    if (target.closest('button') || target.closest('input') || target.closest('textarea') || target.closest('a')) {
-      return;
-    }
-    setIsDragging(true);
-    setDragStart({ x: e.clientX - panOffset.x, y: e.clientY - panOffset.y });
-  };
-
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!isDragging) return;
-    setPanOffset({
-      x: e.clientX - dragStart.x,
-      y: e.clientY - dragStart.y,
-    });
-  };
-
-  const handleMouseUp = () => {
-    setIsDragging(false);
-  };
-
-  const handleDoubleClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    const target = e.target as HTMLElement;
-    if (target.closest('button') || target.closest('input') || target.closest('textarea') || target.closest('a')) {
-      return;
-    }
-    setZoomScale(0.9);
-    setPanOffset({ x: 0, y: 0 });
-  };
-
-  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
-    const target = e.target as HTMLElement;
-    if (target.closest('button') || target.closest('input') || target.closest('textarea') || target.closest('a')) {
-      return;
-    }
-    if (e.touches.length === 1) {
-      setIsDragging(true);
-      setDragStart({
-        x: e.touches[0].clientX - panOffset.x,
-        y: e.touches[0].clientY - panOffset.y,
-      });
-    } else if (e.touches.length === 2) {
-      setIsDragging(false);
-      const dist = Math.hypot(
-        e.touches[0].clientX - e.touches[1].clientX,
-        e.touches[0].clientY - e.touches[1].clientY
-      );
-      setTouchStartDist(dist);
-    }
-  };
-
-  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
-    if (e.touches.length === 1 && isDragging) {
-      setPanOffset({
-        x: e.touches[0].clientX - dragStart.x,
-        y: e.touches[0].clientY - dragStart.y,
-      });
-    } else if (e.touches.length === 2 && touchStartDist !== null) {
-      const dist = Math.hypot(
-        e.touches[0].clientX - e.touches[1].clientX,
-        e.touches[0].clientY - e.touches[1].clientY
-      );
-      const ratio = dist / touchStartDist;
-      let nextScale = zoomScale * ratio;
-      nextScale = Math.min(1.5, Math.max(0.4, nextScale));
-      setZoomScale(nextScale);
-      setTouchStartDist(dist);
-    }
-  };
-
-  const handleTouchEnd = () => {
-    setIsDragging(false);
-    setTouchStartDist(null);
-  };
-
-  const toggleSection = (secKey: string) => {
+  const toggleSection = useCallback((secKey: string) => {
     setCollapsedSections(prev => {
       const next = new Set(prev);
       if (next.has(secKey)) {
@@ -168,9 +561,9 @@ export function VisualMindMapDiagram({ rootTitle, sections, height = '600px' }: 
       }
       return next;
     });
-  };
+  }, []);
 
-  const toggleNode = (nodeKey: string) => {
+  const toggleNode = useCallback((nodeKey: string) => {
     setExpandedNodes(prev => {
       const next = new Set(prev);
       if (next.has(nodeKey)) {
@@ -180,458 +573,126 @@ export function VisualMindMapDiagram({ rootTitle, sections, height = '600px' }: 
       }
       return next;
     });
-  };
+  }, []);
 
-  const renderNode = (item: any, depth = 0) => {
-    const colors = [
-      { bg: 'linear-gradient(135deg, #6366f1, #4f46e5)', border: '#4f46e5', text: '#ffffff' },
-      { bg: '#ffffff', border: '#818cf8', text: '#1e1b4b', headerBg: '#f5f3ff', tagColor: '#4f46e5' },
-      { bg: '#ffffff', border: '#38bdf8', text: '#0c4a6e', headerBg: '#f0f9ff', tagColor: '#0284c7' },
-      { bg: '#ffffff', border: '#34d399', text: '#064e3b', headerBg: '#ecfdf5', tagColor: '#059669' },
-    ];
+  const mapSectionToTreeNode = useCallback((sec: any, depth = 1): TreeNode => {
+    const secKey = sec.id ? `sec-${sec.id}` : `sec-${sec.name}`;
+    const isCollapsed = collapsedSections.has(secKey);
+    
+    const childNodes = (sec.nodes || []).map((node: any) => {
+      const nodeKey = node.id ? `node-${node.id}` : `node-${node.header || node.body}`;
+      const isExpanded = expandedNodes.has(nodeKey);
+      return {
+        id: nodeKey,
+        type: 'knowledge' as const,
+        data: {
+          id: node.id,
+          header: node.header,
+          body: node.body,
+          imgUrl: node.imgUrl,
+          position: node.position,
+          rawNode: node,
+          onToggleExpand: () => toggleNode(nodeKey),
+          onEditNode,
+          onDeleteNode,
+        },
+        children: [],
+        isExpanded,
+      };
+    });
 
-    const currentDepthColor = colors[Math.min(depth + 1, colors.length - 1)];
-    const sectionKey = item.id ? `sec-${item.id}` : `sec-${item.name}`;
-    const isCollapsed = collapsedSections.has(sectionKey);
+    const childSections = (sec.children || []).map((c: any) => mapSectionToTreeNode(c, depth + 1));
 
-    const hasChildren = (item.children && item.children.length > 0) || (item.nodes && item.nodes.length > 0);
-    const showChildren = hasChildren && !isCollapsed;
+    return {
+      id: secKey,
+      type: 'section',
+      data: {
+        id: sec.id,
+        name: sec.name,
+        summary: sec.summary,
+        position: sec.position,
+        hasChildren: (sec.children && sec.children.length > 0) || (sec.nodes && sec.nodes.length > 0),
+        rawSection: sec,
+        onToggleCollapse: () => toggleSection(secKey),
+        onAddSection,
+        onEditSection,
+        onDeleteSection,
+        onAddNode,
+        onDeleteNode,
+      },
+      children: [...childSections, ...childNodes],
+      isCollapsed,
+    };
+  }, [collapsedSections, expandedNodes, toggleSection, toggleNode, onAddSection, onEditSection, onDeleteSection, onAddNode, onEditNode, onDeleteNode]);
 
-    return (
-      <div
-        key={sectionKey}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '24px',
-          position: 'relative',
-          margin: '8px 0',
-        }}
-      >
-        {/* Node Card wrapper for absolute toggle positioning */}
-        <div id={sectionKey} style={{ position: 'relative', flexShrink: 0 }}>
-          <div
-            style={{
-              background: currentDepthColor.bg,
-              border: `2px solid ${currentDepthColor.border}`,
-              borderRadius: '12px',
-              boxShadow: '0 4px 12px rgba(15,23,42,0.05)',
-              width: '260px',
-              transition: 'all 0.2s ease',
-              position: 'relative',
-              zIndex: 2,
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-2px)';
-              e.currentTarget.style.boxShadow = '0 8px 20px rgba(99,102,241,0.12)';
-              e.currentTarget.style.borderColor = '#6366f1';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'none';
-              e.currentTarget.style.boxShadow = '0 4px 12px rgba(15,23,42,0.05)';
-              e.currentTarget.style.borderColor = currentDepthColor.border;
-            }}
-          >
-            {/* Header */}
-            <div style={{
-              padding: '10px 14px',
-              borderBottom: `1px solid ${currentDepthColor.border}1a`,
-              background: currentDepthColor.headerBg,
-              borderTopLeftRadius: '10px',
-              borderTopRightRadius: '10px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}>
-              <span style={{
-                fontSize: '10px',
-                fontWeight: 800,
-                color: currentDepthColor.tagColor,
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em',
-              }}>
-                Nhánh cấp {depth + 1}
-              </span>
-              <span style={{ fontSize: '10px', color: '#64748b', fontWeight: 600 }}>
-                Vị trí {item.position}
-              </span>
-            </div>
+  useEffect(() => {
+    const rootNode: TreeNode = {
+      id: 'root',
+      type: 'root',
+      data: {
+        label: rootTitle,
+        onAddSection: () => onAddSection && onAddSection(),
+      },
+      children: sections.map(sec => mapSectionToTreeNode(sec, 1)),
+      isCollapsed: false,
+    };
 
-            {/* Body */}
-            <div style={{ padding: '14px' }}>
-              <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: '#0f172a', lineHeight: 1.4 }}>
-                {item.name}
-              </h4>
-              {item.summary && (
-                <p style={{ margin: '6px 0 0 0', fontSize: '12px', color: '#64748b', lineHeight: 1.4 }}>
-                  {item.summary}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* Toggle Button for collapsing branches */}
-          {hasChildren && (
-            <button
-              onClick={() => toggleSection(sectionKey)}
-              style={{
-                position: 'absolute',
-                top: '50%',
-                right: '-11px',
-                transform: 'translateY(-50%)',
-                width: '22px',
-                height: '22px',
-                borderRadius: '50%',
-                background: '#ffffff',
-                border: `2px solid ${currentDepthColor.border}`,
-                color: currentDepthColor.tagColor,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '14px',
-                fontWeight: 'bold',
-                cursor: 'pointer',
-                zIndex: 10,
-                boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
-                transition: 'all 0.15s ease',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)';
-                e.currentTarget.style.background = currentDepthColor.border;
-                e.currentTarget.style.color = '#ffffff';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(-50%) scale(1)';
-                e.currentTarget.style.background = '#ffffff';
-                 e.currentTarget.style.color = currentDepthColor.tagColor || '';
-              }}
-            >
-              {isCollapsed ? '+' : '-'}
-            </button>
-          )}
-        </div>
-
-        {/* Node Children and Leaves Connection Container */}
-        {showChildren && (
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '12px',
-            position: 'relative',
-            paddingLeft: '24px',
-          }}>
-            {/* Sub-sections and Nodes rendering */}
-            {(() => {
-              const childrenList = item.children || [];
-              const nodesList = item.nodes || [];
-              const totalChildren = childrenList.length + nodesList.length;
-
-              return (
-                <>
-                  {/* Sub-sections */}
-                  {childrenList.map((child: any, idx: number) => {
-                    const childKey = child.id ? `sec-${child.id}` : `sec-${child.name}`;
-                    return (
-                      <div key={childKey} style={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
-                        {/* Horizontal branch line */}
-                        <div
-                          style={{
-                            position: 'absolute',
-                            left: '-24px',
-                            width: '24px',
-                            height: '2px',
-                            background: '#cbd5e1',
-                            top: '50%',
-                            transform: 'translateY(-50%)',
-                            zIndex: 1,
-                          }}
-                        />
-
-                        {/* Vertical connector line segment */}
-                        {totalChildren > 1 && (
-                          <div
-                            style={{
-                              position: 'absolute',
-                              left: '-24px',
-                              width: '2px',
-                              background: '#cbd5e1',
-                              top: idx === 0 ? '50%' : '0',
-                              bottom: idx === totalChildren - 1 ? '50%' : '0',
-                              zIndex: 1,
-                            }}
-                          />
-                        )}
-
-                        {renderNode(child, depth + 1)}
-                      </div>
-                    );
-                  })}
-
-                  {/* Nodes (Leaves) */}
-                  {nodesList.map((node: any, idx: number) => {
-                    const nodeKey = node.id ? `node-${node.id}` : `node-${node.header || node.body}`;
-                    const isExpanded = expandedNodes.has(nodeKey);
-                    const absoluteIdx = childrenList.length + idx;
-
-                    return (
-                      <div key={nodeKey} style={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
-                        {/* Horizontal branch line */}
-                        <div
-                          style={{
-                            position: 'absolute',
-                            left: '-24px',
-                            width: '24px',
-                            height: '2px',
-                            background: '#cbd5e1',
-                            top: '50%',
-                            transform: 'translateY(-50%)',
-                            zIndex: 1,
-                          }}
-                        />
-
-                        {/* Vertical connector line segment */}
-                        {totalChildren > 1 && (
-                          <div
-                            style={{
-                              position: 'absolute',
-                              left: '-24px',
-                              width: '2px',
-                              background: '#cbd5e1',
-                              top: absoluteIdx === 0 ? '50%' : '0',
-                              bottom: absoluteIdx === totalChildren - 1 ? '50%' : '0',
-                              zIndex: 1,
-                            }}
-                          />
-                        )}
-
-                        {/* Leaf Card */}
-                        <div
-                          id={nodeKey}
-                          onClick={() => toggleNode(nodeKey)}
-                          style={{
-                            background: '#ffffff',
-                            border: isExpanded ? '2px solid #10b981' : '1px solid #e2e8f0',
-                            borderRadius: '10px',
-                            padding: '12px 14px',
-                            width: '240px',
-                            boxShadow: '0 2px 8px rgba(15,23,42,0.03)',
-                            flexShrink: 0,
-                            position: 'relative',
-                            zIndex: 2,
-                            cursor: 'pointer',
-                            transition: 'all 0.15s ease',
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.transform = 'translateY(-1px)';
-                            e.currentTarget.style.boxShadow = '0 4px 12px rgba(15,23,42,0.08)';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.transform = 'none';
-                            e.currentTarget.style.boxShadow = '0 2px 8px rgba(15,23,42,0.03)';
-                          }}
-                        >
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                            <span style={{ fontSize: '9px', fontWeight: 700, color: '#10b981', textTransform: 'uppercase' }}>
-                              Nút kiến thức
-                            </span>
-                            <span style={{
-                              fontSize: '11px',
-                              fontWeight: 'bold',
-                              color: isExpanded ? '#ffffff' : '#10b981',
-                              background: isExpanded ? '#10b981' : '#ecfdf5',
-                              width: '16px',
-                              height: '16px',
-                              borderRadius: '50%',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              border: '1px solid #10b981',
-                              transition: 'all 0.15s ease',
-                            }}>
-                              {isExpanded ? '-' : '+'}
-                            </span>
-                          </div>
-                          {node.header && (
-                            <h5 style={{ margin: '0 0 4px 0', fontSize: '12px', fontWeight: 700, color: '#1f2937' }}>
-                              {node.header}
-                            </h5>
-                          )}
-
-                          {isExpanded ? (
-                            <>
-                              <div style={{ margin: 0, fontSize: '12px', color: '#4b5563', lineHeight: 1.4 }} dangerouslySetInnerHTML={{ __html: node.body }} />
-                              {node.imgUrl && (
-                                <img
-                                  src={node.imgUrl}
-                                  alt="asset"
-                                  style={{ marginTop: '8px', width: '100%', maxHeight: '80px', objectFit: 'cover', borderRadius: '4px' }}
-                                />
-                              )}
-                            </>
-                          ) : (
-                            <p style={{
-                              margin: 0,
-                              fontSize: '12px',
-                              color: '#64748b',
-                              lineHeight: 1.4,
-                              textOverflow: 'ellipsis',
-                              overflow: 'hidden',
-                              whiteSpace: 'nowrap'
-                            }}>
-                              {stripHtml(node.body)}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </>
-              );
-            })()}
-          </div>
-        )}
-      </div>
+    const calculatedNodes: any[] = [];
+    const calculatedEdges: any[] = [];
+    
+    computeTreeLayout(
+      rootNode,
+      0, // depth
+      0, // startY
+      0, // parentX
+      0, // parentWidth
+      120, // gapX
+      36, // gapY
+      calculatedNodes,
+      calculatedEdges
     );
-  };
+
+    setNodes(calculatedNodes);
+    setEdges(calculatedEdges);
+    
+    setTimeout(() => {
+      fitView({ duration: 300, padding: 0.1 });
+    }, 50);
+  }, [sections, collapsedSections, expandedNodes, rootTitle, mapSectionToTreeNode, fitView, setNodes, setEdges, onAddSection]);
 
   return (
     <div
-      ref={containerRef}
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
-      onDoubleClick={handleDoubleClick}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
       style={{
         width: '100%',
-        overflow: 'hidden',
+        height: height,
         background: '#f8fafc',
         borderRadius: '16px',
         border: '1px solid #e2e8f0',
-        padding: '36px',
-        height: height,
-        boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.02)',
         position: 'relative',
-        cursor: isDragging ? 'grabbing' : 'grab',
-        userSelect: 'none',
+        overflow: 'hidden',
       }}
     >
-      {/* Visual tip overlay */}
-      <div style={{
-        position: 'absolute',
-        bottom: '12px',
-        left: '12px',
-        pointerEvents: 'none',
-        fontSize: '11px',
-        color: '#94a3b8',
-        fontWeight: 600,
-        background: 'rgba(255, 255, 255, 0.7)',
-        backdropFilter: 'blur(4px)',
-        padding: '4px 8px',
-        borderRadius: '6px',
-        border: '1px solid #e2e8f0',
-        zIndex: 10,
-      }}>
-        💡 Kéo thả để di chuyển | Pinch (véo) để zoom di động | Click đúp để reset
-      </div>
-
-      {/* Scalable Mindmap Container */}
-      <div
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '32px',
-          position: 'relative',
-          transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomScale})`,
-          transformOrigin: 'top left',
-          transition: isDragging ? 'none' : 'transform 0.1s ease-out',
-        }}
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        nodeTypes={nodeTypes}
+        minZoom={0.1}
+        maxZoom={1.5}
+        fitView
       >
-        {/* ROOT NODE */}
-        <div
-          style={{
-            background: 'linear-gradient(135deg, #4f46e5, #6366f1)',
-            color: '#ffffff',
-            borderRadius: '16px',
-            padding: '18px 24px',
-            width: '280px',
-            flexShrink: 0,
-            boxShadow: '0 10px 25px rgba(79,70,229,0.25)',
-            position: 'relative',
-            zIndex: 2,
-            border: '1px solid rgba(255,255,255,0.1)',
-          }}
-        >
-          <div style={{ fontSize: '11px', textTransform: 'uppercase', opacity: 0.8, fontWeight: 700, letterSpacing: '0.05em', marginBottom: '6px' }}>
-            Bài học gốc
-          </div>
-          <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, lineHeight: 1.4 }}>
-            {rootTitle}
-          </h3>
-        </div>
-
-        {/* Level 1 branches */}
-        {sections && sections.length > 0 && (
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '16px',
-              position: 'relative',
-              paddingLeft: '32px',
-            }}
-          >
-            {sections.map((sec, idx) => {
-              const secKey = sec.id ? `sec-${sec.id}` : `sec-${sec.name}`;
-              return (
-                <div
-                  key={secKey}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    position: 'relative',
-                  }}
-                >
-                  {/* Horizontal line to root */}
-                  <div
-                    style={{
-                      position: 'absolute',
-                      left: '-32px',
-                      width: '32px',
-                      height: '2px',
-                      background: '#818cf8',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      zIndex: 1,
-                    }}
-                  />
-
-                  {/* Vertical connector line segment */}
-                  {sections.length > 1 && (
-                    <div
-                      style={{
-                        position: 'absolute',
-                        left: '-32px',
-                        width: '2px',
-                        background: '#818cf8',
-                        top: idx === 0 ? '50%' : '0',
-                        bottom: idx === sections.length - 1 ? '50%' : '0',
-                        zIndex: 1,
-                      }}
-                    />
-                  )}
-
-                  {renderNode(sec, 0)}
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+        <Controls />
+      </ReactFlow>
     </div>
+  );
+}
+
+export function VisualMindMapDiagram(props: VisualMindMapDiagramProps) {
+  return (
+    <ReactFlowProvider>
+      <VisualMindMapDiagramContent {...props} />
+    </ReactFlowProvider>
   );
 }
 
@@ -671,8 +732,8 @@ export function MindMapPanel({ onToast }: MindMapPanelProps) {
   const [aiText, setAiText] = useState('');
   const [aiGenerating, setAiGenerating] = useState(false);
   const [aiPreviewSections, setAiPreviewSections] = useState<any[]>([]);
-  const [mainViewMode, setMainViewMode] = useState<'list' | 'visual'>('list');
-  const [aiPreviewMode, setAiPreviewMode] = useState<'edit' | 'visual'>('edit');
+
+  const [aiSaveConfirmOpen, setAiSaveConfirmOpen] = useState(false);
 
   // 1. Cascade Select Fetches
   useEffect(() => {
@@ -1025,203 +1086,9 @@ export function MindMapPanel({ onToast }: MindMapPanelProps) {
     }
   };
 
-  // Helper render preview tree recursively in modal
-  const renderPreviewTree = (secs: any[], depth = 0) => {
-    return secs.map((sec, idx) => (
-      <div key={idx} style={{
-        background: '#ffffff',
-        border: '1px solid #e2e8f0',
-        borderRadius: 10,
-        padding: 12,
-        marginBottom: 10,
-        marginLeft: depth * 20,
-        borderLeft: depth > 0 ? '3px solid #6c63ff' : '1px solid #e2e8f0',
-      }}>
-        <div style={{ display: 'flex', gap: 12, marginBottom: 8, alignItems: 'center' }}>
-          <span style={{ fontSize: 11, fontWeight: 700, color: '#6c63ff', textTransform: 'uppercase' }}>Nhánh cấp {depth + 1}</span>
-          <input
-            value={sec.name}
-            onChange={(e) => {
-              // Quick mutation for preview tree
-              sec.name = e.target.value;
-              setAiPreviewSections([...aiPreviewSections]);
-            }}
-            placeholder="Tên nhánh"
-            style={{ flex: 1, border: 'none', borderBottom: '1px solid #e2e8f0', fontSize: 14, outline: 'none', fontWeight: 600, color: '#0f172a' }}
-          />
-          <button
-            onClick={() => {
-              // Delete section from list
-              const removeSec = (list: any[]): any[] => {
-                return list.filter(item => item !== sec).map(item => {
-                  if (item.children) item.children = removeSec(item.children);
-                  return item;
-                });
-              };
-              setAiPreviewSections(removeSec(aiPreviewSections));
-            }}
-            style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: 12 }}
-          >
-            Bỏ nhánh
-          </button>
-        </div>
 
-        {/* Nodes inside preview section */}
-        {sec.nodes && sec.nodes.map((node: any, nIdx: number) => (
-          <div key={nIdx} style={{ background: '#f8fafc', borderRadius: 8, padding: 10, marginBottom: 6, marginLeft: 16, border: '1px dashed #cbd5e1' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-              <input
-                value={node.header || ''}
-                onChange={(e) => {
-                  node.header = e.target.value;
-                  setAiPreviewSections([...aiPreviewSections]);
-                }}
-                placeholder="Tiêu đề nút (ví dụ: Hoàn cảnh)"
-                style={{ border: 'none', background: 'transparent', fontSize: 12, outline: 'none', fontWeight: 700, width: '70%' }}
-              />
-              <button
-                onClick={() => {
-                  sec.nodes = sec.nodes.filter((_: any, i: number) => i !== nIdx);
-                  setAiPreviewSections([...aiPreviewSections]);
-                }}
-                style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: 11 }}
-              >
-                Xóa nút
-              </button>
-            </div>
-            <textarea
-              value={node.body}
-              onChange={(e) => {
-                node.body = e.target.value;
-                setAiPreviewSections([...aiPreviewSections]);
-              }}
-              placeholder="Nội dung tóm tắt chi tiết..."
-              rows={2}
-              style={{ width: '100%', border: 'none', background: 'transparent', fontSize: 13, outline: 'none', resize: 'none', fontFamily: 'inherit', color: '#475569' }}
-            />
-          </div>
-        ))}
 
-        <button
-          onClick={() => {
-            if (!sec.nodes) sec.nodes = [];
-            sec.nodes.push({ header: 'Tiêu đề nút', body: 'Nội dung chi tiết', position: sec.nodes.length + 1 });
-            setAiPreviewSections([...aiPreviewSections]);
-          }}
-          style={{ marginLeft: 16, fontSize: 12, color: '#6c63ff', background: 'none', border: 'none', cursor: 'pointer' }}
-        >
-          + Thêm nút kiến thức vào nhánh
-        </button>
 
-        {/* Recursive Children rendering */}
-        {sec.children && sec.children.length > 0 && (
-          <div style={{ marginTop: 12 }}>
-            {renderPreviewTree(sec.children, depth + 1)}
-          </div>
-        )}
-      </div>
-    ))
-  };
-
-  // Helper render current mindmap tree recursively
-  const renderTree = (sectionsList: SectionDto[], depth = 0) => {
-    return sectionsList.map((sec) => (
-      <div key={sec.id} style={{
-        background: '#ffffff',
-        border: '1px solid #e2e8f0',
-        borderRadius: 16,
-        padding: 20,
-        marginBottom: 16,
-        marginLeft: depth * 24,
-        borderLeft: `4px solid ${depth === 0 ? '#6c63ff' : depth === 1 ? '#0284c7' : '#10b981'}`,
-        boxShadow: '0 2px 8px rgba(15,23,42,0.02)',
-      }}>
-        {/* Section Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 10, fontWeight: 700, color: '#6c63ff', background: '#f5f3ff', padding: '2px 8px', borderRadius: 20 }}>
-                Nhánh Cấp {depth + 1} (vị trí {sec.position})
-              </span>
-              {sec.summary && <span style={{ fontSize: 12, color: '#64748b' }}>— {sec.summary}</span>}
-            </div>
-            <h3 style={{ margin: '6px 0 0', fontSize: 16, fontWeight: 700, color: '#0f172a' }}>{sec.name}</h3>
-          </div>
-
-          <div style={{ display: 'flex', gap: 12 }}>
-            <button
-              onClick={() => openCreateNode(sec.id)}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#10b981', fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}
-            >
-              <IconPlus size={14} /> Thêm Nút
-            </button>
-            <button
-              onClick={() => openCreateSection(sec.id)}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#0284c7', fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}
-            >
-              <IconPlus size={14} /> Thêm Nhánh con
-            </button>
-            <button
-              onClick={() => openEditSection(sec)}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}
-            >
-              <IconEdit size={14} /> Sửa
-            </button>
-            <button
-              onClick={() => setDeleteTarget({ type: 'section', id: sec.id })}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}
-            >
-              <IconDelete size={14} /> Xóa
-            </button>
-          </div>
-        </div>
-
-        {/* Nodes inside this section */}
-        {sec.nodes && sec.nodes.length > 0 && (
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-            gap: 12,
-            marginBottom: sec.children && sec.children.length > 0 ? 16 : 0,
-            background: '#f8fafc',
-            padding: 14,
-            borderRadius: 12,
-            border: '1px solid #e2e8f0',
-          }}>
-            {sec.nodes.map((node) => (
-              <div key={node.id} style={{
-                background: '#ffffff',
-                border: '1px solid #e2e8f0',
-                borderRadius: 10,
-                padding: 14,
-                position: 'relative',
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: '#64748b' }}>Vị trí {node.position}</span>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <button onClick={() => openEditNode(node)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', padding: 0 }}><IconEdit size={12} /></button>
-                    <button onClick={() => setDeleteTarget({ type: 'node', id: node.id })} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: 0 }}><IconDelete size={12} /></button>
-                  </div>
-                </div>
-                {node.header && <h4 style={{ margin: '0 0 4px', fontSize: 13, fontWeight: 700, color: '#0f172a' }}>{node.header}</h4>}
-                <div style={{ margin: 0, fontSize: 13, color: '#475569', lineHeight: 1.4 }} dangerouslySetInnerHTML={{ __html: node.body }} />
-                {node.imgUrl && (
-                  <img src={node.imgUrl} alt="node asset" style={{ marginTop: 8, width: '100%', maxHeight: 120, objectFit: 'cover', borderRadius: 6 }} />
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Child Sections (nested recursion) */}
-        {sec.children && sec.children.length > 0 && (
-          <div style={{ marginTop: 12 }}>
-            {renderTree(sec.children, depth + 1)}
-          </div>
-        )}
-      </div>
-    ));
-  };
 
   return (
     <div>
@@ -1229,47 +1096,86 @@ export function MindMapPanel({ onToast }: MindMapPanelProps) {
       <div style={{
         background: '#ffffff',
         border: '1px solid #e2e8f0',
-        borderRadius: 16,
-        padding: 20,
-        marginBottom: 24,
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-        gap: 16,
+        borderRadius: 12,
+        padding: '10px 16px',
+        marginBottom: 12,
+        display: 'flex',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: '24px',
         boxShadow: '0 2px 8px rgba(15,23,42,0.02)',
       }}>
-        <Select
-          label="Khối lớp"
-          value={selectedGradeId ?? ''}
-          onChange={(e) => setSelectedGradeId(Number(e.target.value))}
-        >
-          {grades.map((g) => (
-            <option key={g.id} value={g.id}>Khối {g.id}</option>
-          ))}
-        </Select>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <label style={{ fontSize: 13, fontWeight: 600, color: '#475569', whiteSpace: 'nowrap' }}>Khối lớp:</label>
+          <select
+            value={selectedGradeId ?? ''}
+            onChange={(e) => setSelectedGradeId(Number(e.target.value))}
+            style={{
+              background: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              borderRadius: 10,
+              padding: '6px 12px',
+              color: '#0f172a',
+              fontSize: 13,
+              outline: 'none',
+              cursor: 'pointer',
+            }}
+          >
+            {grades.map((g) => (
+              <option key={g.id} value={g.id}>Khối {g.id}</option>
+            ))}
+          </select>
+        </div>
 
-        <Select
-          label="Chủ đề"
-          value={selectedTopicId ?? ''}
-          onChange={(e) => setSelectedTopicId(Number(e.target.value) || null)}
-          disabled={topics.length === 0}
-        >
-          {topics.length === 0 && <option value="">Chưa có chủ đề nào</option>}
-          {topics.map((t) => (
-            <option key={t.id} value={t.id}>{t.name}</option>
-          ))}
-        </Select>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: '180px' }}>
+          <label style={{ fontSize: 13, fontWeight: 600, color: '#475569', whiteSpace: 'nowrap' }}>Chủ đề:</label>
+          <select
+            value={selectedTopicId ?? ''}
+            onChange={(e) => setSelectedTopicId(Number(e.target.value) || null)}
+            disabled={topics.length === 0}
+            style={{
+              width: '100%',
+              background: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              borderRadius: 10,
+              padding: '6px 12px',
+              color: '#0f172a',
+              fontSize: 13,
+              outline: 'none',
+              cursor: 'pointer',
+            }}
+          >
+            {topics.length === 0 && <option value="">Chưa có chủ đề nào</option>}
+            {topics.map((t) => (
+              <option key={t.id} value={t.id}>{t.name}</option>
+            ))}
+          </select>
+        </div>
 
-        <Select
-          label="Bài học"
-          value={selectedLessonId ?? ''}
-          onChange={(e) => setSelectedLessonId(Number(e.target.value) || null)}
-          disabled={lessons.length === 0}
-        >
-          {lessons.length === 0 && <option value="">Chưa có bài học nào</option>}
-          {lessons.map((l) => (
-            <option key={l.id} value={l.id}>{l.name}</option>
-          ))}
-        </Select>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: '180px' }}>
+          <label style={{ fontSize: 13, fontWeight: 600, color: '#475569', whiteSpace: 'nowrap' }}>Bài học:</label>
+          <select
+            value={selectedLessonId ?? ''}
+            onChange={(e) => setSelectedLessonId(Number(e.target.value) || null)}
+            disabled={lessons.length === 0}
+            style={{
+              width: '100%',
+              background: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              borderRadius: 10,
+              padding: '6px 12px',
+              color: '#0f172a',
+              fontSize: 13,
+              outline: 'none',
+              cursor: 'pointer',
+            }}
+          >
+            {lessons.length === 0 && <option value="">Chưa có bài học nào</option>}
+            {lessons.map((l) => (
+              <option key={l.id} value={l.id}>{l.name}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* Main Actions & Header */}
@@ -1278,81 +1184,18 @@ export function MindMapPanel({ onToast }: MindMapPanelProps) {
         alignItems: 'center',
         justifyContent: 'space-between',
         flexWrap: 'wrap',
-        gap: '16px 24px',
-        marginBottom: 24
+        gap: '12px 24px',
+        marginBottom: 12
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '16px 24px' }}>
-          <div>
-            <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: '#0f172a' }}>Cấu trúc Sơ đồ tư duy</h2>
-            <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: 14 }}>
-              {selectedLessonId ? 'Xem cấu trúc cây sơ đồ nhánh và các nút kiến thức chi tiết.' : 'Vui lòng chọn bài học'}
-            </p>
-          </div>
-
-          {selectedLessonId && (
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              background: '#f1f5f9',
-              padding: '4px',
-              borderRadius: '10px',
-              border: '1px solid #e2e8f0',
-              height: '40px',
-              boxSizing: 'border-box',
-            }}>
-              <button
-                onClick={() => setMainViewMode('list')}
-                style={{
-                  height: '100%',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  padding: '0 16px',
-                  borderRadius: '8px',
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  background: mainViewMode === 'list' ? '#ffffff' : 'transparent',
-                  color: mainViewMode === 'list' ? '#6c63ff' : '#475569',
-                  boxShadow: mainViewMode === 'list' ? '0 2px 6px rgba(15,23,42,0.06)' : 'none',
-                  transition: 'all 0.15s ease',
-                  boxSizing: 'border-box',
-                }}
-              >
-                Danh sách CRUD
-              </button>
-              <button
-                onClick={() => setMainViewMode('visual')}
-                style={{
-                  height: '100%',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  padding: '0 16px',
-                  borderRadius: '8px',
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  background: mainViewMode === 'visual' ? '#ffffff' : 'transparent',
-                  color: mainViewMode === 'visual' ? '#6c63ff' : '#475569',
-                  boxShadow: mainViewMode === 'visual' ? '0 2px 6px rgba(15,23,42,0.06)' : 'none',
-                  transition: 'all 0.15s ease',
-                  boxSizing: 'border-box',
-                }}
-              >
-                Sơ đồ trực quan 🎨
-              </button>
-            </div>
-          )}
+        <div>
+          <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#0f172a' }}>Cấu trúc Sơ đồ tư duy</h2>
         </div>
 
         {selectedLessonId && (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center' }}>
             <Button
               variant="secondary"
-              icon={<IconSparkles size={16} color="#6c63ff" />}
+              icon={<IconMagicWand size={14} color="#6c63ff" />}
               onClick={() => {
                 setAiPreviewSections([]);
                 setAiModalOpen(true);
@@ -1362,21 +1205,12 @@ export function MindMapPanel({ onToast }: MindMapPanelProps) {
                 background: '#faf5ff',
                 color: '#6c63ff',
                 fontWeight: 600,
-                height: '40px',
+                height: '34px',
+                fontSize: '13px',
                 boxSizing: 'border-box',
               }}
             >
-              Tạo bằng AI (Gemini)
-            </Button>
-            <Button
-              icon={<IconPlus size={16} />}
-              onClick={() => openCreateSection()}
-              style={{
-                height: '40px',
-                boxSizing: 'border-box',
-              }}
-            >
-              Thêm Nhánh chính (Cấp 1)
+              Trợ lý AI
             </Button>
           </div>
         )}
@@ -1394,15 +1228,18 @@ export function MindMapPanel({ onToast }: MindMapPanelProps) {
           <div style={{ marginBottom: 16 }}><IconMindMap size={48} color="#cbd5e1" /></div>
           Chưa có nhánh nào trong sơ đồ. Hãy tự thêm nhánh đầu tiên hoặc nhấn "Tạo bằng AI" để sinh nhanh từ tài liệu lịch sử!
         </div>
-      ) : mainViewMode === 'visual' ? (
+      ) : (
         <VisualMindMapDiagram
           rootTitle={lessons.find(l => l.id === selectedLessonId)?.name || 'Bài học'}
           sections={lessonTree.sections}
+          height="calc(100vh - 230px)"
+          onAddSection={openCreateSection}
+          onEditSection={openEditSection}
+          onDeleteSection={(id) => setDeleteTarget({ type: 'section', id })}
+          onAddNode={openCreateNode}
+          onEditNode={openEditNode}
+          onDeleteNode={(id) => setDeleteTarget({ type: 'node', id })}
         />
-      ) : (
-        <div>
-          {renderTree(lessonTree.sections)}
-        </div>
       )}
 
       {/* Section Create/Edit Modal */}
@@ -1484,10 +1321,24 @@ export function MindMapPanel({ onToast }: MindMapPanelProps) {
         title="Tự động sinh Sơ đồ tư duy bằng Trợ lý AI"
         width={1000}
       >
-        <div style={{ width: '100%', maxWidth: '100%', maxHeight: '82vh', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ width: '100%', maxWidth: '100%', maxHeight: '76vh', display: 'flex', flexDirection: 'column', overflowY: 'auto', paddingRight: '4px' }}>
           {/* Settings row */}
-          <div style={{ padding: '10px 14px', background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0', marginBottom: 16, fontSize: 13, color: '#475569' }}>
-            ✨ Sử dụng mô hình trí tuệ nhân tạo Gemini được thiết lập trên Backend.
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '8px 14px',
+            background: '#fffbeb',
+            borderRadius: 8,
+            border: '1px solid #fef3c7',
+            marginBottom: 16,
+            fontSize: 13,
+            color: '#b45309',
+            width: 'fit-content',
+            fontWeight: 500,
+          }}>
+            <IconAlert size={16} color="#b45309" />
+            <span>AI có thể mắc sai sót. Hãy kiểm tra kỹ thông tin trước khi lưu.</span>
           </div>
 
           {/* Text Input */}
@@ -1506,7 +1357,7 @@ export function MindMapPanel({ onToast }: MindMapPanelProps) {
             </span>
             <Button
               variant="secondary"
-              icon={aiGenerating ? <Spinner size={14} /> : <IconSparkles size={14} color="#6c63ff" />}
+              icon={aiGenerating ? <Spinner size={14} /> : <IconMagicWand size={14} color="#6c63ff" />}
               onClick={handleAIGenerate}
               disabled={aiGenerating}
               style={{
@@ -1519,99 +1370,17 @@ export function MindMapPanel({ onToast }: MindMapPanelProps) {
             </Button>
           </div>
 
-          {/* AI Result Preview Tree & Diagram Toggle */}
+          {/* AI Result Preview Visual Diagram */}
           {aiPreviewSections.length > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-              {/* Tab Switcher for Preview */}
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                background: '#f1f5f9',
-                padding: '4px',
-                borderRadius: '10px',
-                border: '1px solid #e2e8f0',
-                marginBottom: '12px',
-                width: 'fit-content',
-                height: '40px',
-                boxSizing: 'border-box',
-              }}>
-                <button
-                  onClick={() => setAiPreviewMode('edit')}
-                  style={{
-                    height: '100%',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: '0 16px',
-                    borderRadius: '8px',
-                    border: 'none',
-                    cursor: 'pointer',
-                    fontSize: '13px',
-                    fontWeight: 600,
-                    background: aiPreviewMode === 'edit' ? '#ffffff' : 'transparent',
-                    color: aiPreviewMode === 'edit' ? '#6c63ff' : '#475569',
-                    boxShadow: aiPreviewMode === 'edit' ? '0 2px 6px rgba(15,23,42,0.06)' : 'none',
-                    transition: 'all 0.15s ease',
-                    boxSizing: 'border-box',
-                  }}
-                >
-                  Chỉnh sửa văn bản
-                </button>
-                <button
-                  onClick={() => setAiPreviewMode('visual')}
-                  style={{
-                    height: '100%',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: '0 16px',
-                    borderRadius: '8px',
-                    border: 'none',
-                    cursor: 'pointer',
-                    fontSize: '13px',
-                    fontWeight: 600,
-                    background: aiPreviewMode === 'visual' ? '#ffffff' : 'transparent',
-                    color: aiPreviewMode === 'visual' ? '#6c63ff' : '#475569',
-                    boxShadow: aiPreviewMode === 'visual' ? '0 2px 6px rgba(15,23,42,0.06)' : 'none',
-                    transition: 'all 0.15s ease',
-                    boxSizing: 'border-box',
-                  }}
-                >
-                  Xem sơ đồ trực quan 🎨
-                </button>
+            <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, marginBottom: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: '#475569' }}>Xem trước sơ đồ trực quan từ AI 🎨</span>
               </div>
-
-              {aiPreviewMode === 'visual' ? (
-                <div style={{ marginBottom: '16px' }}>
-                  <VisualMindMapDiagram
-                    rootTitle={lessons.find(l => l.id === selectedLessonId)?.name || 'Xem trước bài học'}
-                    sections={aiPreviewSections}
-                    height="350px"
-                  />
-                </div>
-              ) : (
-                <div style={{
-                  flex: 1,
-                  overflowY: 'auto',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: 12,
-                  padding: 16,
-                  background: '#f8fafc',
-                  maxHeight: 280,
-                  marginBottom: 16,
-                }}>
-                  <h4 style={{ margin: '0 0 12px', fontSize: 14, fontWeight: 700, color: '#334155' }}>Xem trước & Chỉnh sửa cây Sơ đồ tư duy</h4>
-
-                  {renderPreviewTree(aiPreviewSections)}
-
-                  <button
-                    onClick={() => setAiPreviewSections([...aiPreviewSections, { name: 'Nhánh mới', summary: '', position: aiPreviewSections.length + 1, nodes: [], children: [] }])}
-                    style={{ width: '100%', padding: 10, marginTop: 12, border: '1px dashed #cbd5e1', borderRadius: 8, background: '#fff', color: '#64748b', cursor: 'pointer', fontSize: 13 }}
-                  >
-                    + Thêm một nhánh chính cấp 1 trống
-                  </button>
-                </div>
-              )}
+              <VisualMindMapDiagram
+                rootTitle={lessons.find(l => l.id === selectedLessonId)?.name || 'Xem trước bài học'}
+                sections={aiPreviewSections}
+                height="320px"
+              />
             </div>
           )}
 
@@ -1619,7 +1388,7 @@ export function MindMapPanel({ onToast }: MindMapPanelProps) {
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, borderTop: '1px solid #f1f5f9', paddingTop: 16 }}>
             <Button variant="secondary" onClick={() => setAiModalOpen(false)} disabled={aiGenerating || saving}>Hủy</Button>
             <Button
-              onClick={handleAISave}
+              onClick={() => setAiSaveConfirmOpen(true)}
               disabled={aiGenerating || saving || aiPreviewSections.length === 0}
             >
               {saving ? 'Đang lưu...' : 'Lưu sơ đồ tư duy (Ghi đè)'}
@@ -1640,6 +1409,19 @@ export function MindMapPanel({ onToast }: MindMapPanelProps) {
             : 'Bạn có chắc chắn muốn xóa nút kiến thức này?'
         }
         loading={deleting}
+      />
+
+      {/* AI Save Confirmation */}
+      <ConfirmDialog
+        open={aiSaveConfirmOpen}
+        onCancel={() => setAiSaveConfirmOpen(false)}
+        onConfirm={async () => {
+          setAiSaveConfirmOpen(false);
+          await handleAISave();
+        }}
+        title="Xác nhận ghi đè sơ đồ tư duy"
+        message="Hành động này sẽ ghi đè và THAY THẾ hoàn toàn sơ đồ tư duy hiện tại của bài học này bằng cấu trúc sơ đồ tư duy mới từ AI. Bạn có chắc chắn muốn tiếp tục không?"
+        loading={saving}
       />
     </div>
   );
