@@ -1,5 +1,5 @@
 // src/components/content/MindMapPanel.tsx
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import client from '../../api/client';
 import type { GradeDto, TopicDto, LessonDto, SectionDto, NodeDto } from '../../types/api';
 import type { ToastType } from '../../hooks/useToast';
@@ -546,6 +546,7 @@ function VisualMindMapDiagramContent({
   
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(() => getInitialCollapsedSections(sections));
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
+  const lastFittedTitleRef = useRef<string | null>(null);
 
   useEffect(() => {
     setCollapsedSections(getInitialCollapsedSections(sections));
@@ -655,9 +656,12 @@ function VisualMindMapDiagramContent({
     setNodes(calculatedNodes);
     setEdges(calculatedEdges);
     
-    setTimeout(() => {
-      fitView({ duration: 300, padding: 0.1 });
-    }, 50);
+    if (lastFittedTitleRef.current !== rootTitle) {
+      lastFittedTitleRef.current = rootTitle;
+      setTimeout(() => {
+        fitView({ duration: 300, padding: 0.1 });
+      }, 50);
+    }
   }, [sections, collapsedSections, expandedNodes, rootTitle, mapSectionToTreeNode, fitView, setNodes, setEdges, onAddSection]);
 
   return (
@@ -778,7 +782,10 @@ export function MindMapPanel({ onToast }: MindMapPanelProps) {
   }, [onToast]);
 
   useEffect(() => {
-    if (selectedLessonId) fetchLessonTree(selectedLessonId);
+    if (selectedLessonId) {
+      setLessonTree(null);
+      fetchLessonTree(selectedLessonId);
+    }
   }, [selectedLessonId, fetchLessonTree]);
 
   // 2. Section CRUD Handlers
@@ -1217,7 +1224,7 @@ export function MindMapPanel({ onToast }: MindMapPanelProps) {
       </div>
 
       {/* Tree Visualization Area */}
-      {loading ? (
+      {loading && !lessonTree ? (
         <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}><Spinner size={36} /></div>
       ) : !selectedLessonId ? (
         <div style={{ padding: 48, textAlign: 'center', background: '#ffffff', borderRadius: 16, border: '1px solid #e2e8f0', color: '#64748b' }}>
@@ -1229,17 +1236,36 @@ export function MindMapPanel({ onToast }: MindMapPanelProps) {
           Chưa có nhánh nào trong sơ đồ. Hãy tự thêm nhánh đầu tiên hoặc nhấn "Tạo bằng AI" để sinh nhanh từ tài liệu lịch sử!
         </div>
       ) : (
-        <VisualMindMapDiagram
-          rootTitle={lessons.find(l => l.id === selectedLessonId)?.name || 'Bài học'}
-          sections={lessonTree.sections}
-          height="calc(100vh - 230px)"
-          onAddSection={openCreateSection}
-          onEditSection={openEditSection}
-          onDeleteSection={(id) => setDeleteTarget({ type: 'section', id })}
-          onAddNode={openCreateNode}
-          onEditNode={openEditNode}
-          onDeleteNode={(id) => setDeleteTarget({ type: 'node', id })}
-        />
+        <div style={{ position: 'relative' }}>
+          <VisualMindMapDiagram
+            rootTitle={lessons.find(l => l.id === selectedLessonId)?.name || 'Bài học'}
+            sections={lessonTree.sections}
+            height="calc(100vh - 230px)"
+            onAddSection={openCreateSection}
+            onEditSection={openEditSection}
+            onDeleteSection={(id) => setDeleteTarget({ type: 'section', id })}
+            onAddNode={openCreateNode}
+            onEditNode={openEditNode}
+            onDeleteNode={(id) => setDeleteTarget({ type: 'node', id })}
+          />
+          {loading && (
+            <div style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(255, 255, 255, 0.6)',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              borderRadius: '16px',
+              zIndex: 1000,
+            }}>
+              <Spinner size={36} />
+            </div>
+          )}
+        </div>
       )}
 
       {/* Section Create/Edit Modal */}
