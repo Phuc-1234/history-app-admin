@@ -9,12 +9,15 @@ import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { Textarea, Select } from '../ui/FormField';
 import { Spinner } from '../ui/Spinner';
 import { IconPlus, IconEdit, IconDelete, IconFlashcard, IconMagicWand, IconAlert } from '../ui/Icons';
+import type { TabId, NavParams } from '../../pages/DashboardPage';
 
 interface FlashcardPanelProps {
   onToast: (msg: string, type: ToastType) => void;
+  navParams?: NavParams;
+  onNavigate?: (tab: TabId, params?: NavParams) => void;
 }
 
-export function FlashcardPanel({ onToast }: FlashcardPanelProps) {
+export function FlashcardPanel({ onToast, navParams, onNavigate: _onNavigate }: FlashcardPanelProps) {
   const [grades, setGrades] = useState<GradeDto[]>([]);
   const [topics, setTopics] = useState<TopicDto[]>([]);
   const [lessons, setLessons] = useState<LessonDto[]>([]);
@@ -25,6 +28,8 @@ export function FlashcardPanel({ onToast }: FlashcardPanelProps) {
   const [selectedGradeId, setSelectedGradeId] = useState<number | null>(null);
   const [selectedTopicId, setSelectedTopicId] = useState<number | null>(null);
   const [selectedLessonId, setSelectedLessonId] = useState<number | null>(null);
+  const [selectedSectionId, setSelectedSectionId] = useState<number | null>(null);
+  const [selectedNodeId, setSelectedNodeId] = useState<number | null>(null);
 
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
@@ -46,30 +51,42 @@ export function FlashcardPanel({ onToast }: FlashcardPanelProps) {
     client.get('/api/content/grades').then((r) => {
       const gs = r.data.grades ?? [];
       setGrades(gs);
-      if (gs.length) setSelectedGradeId(gs[0].id);
+      if (navParams?.gradeId) {
+        setSelectedGradeId(navParams.gradeId);
+      } else if (gs.length) {
+        setSelectedGradeId(gs[0].id);
+      }
     });
-  }, []);
+  }, [navParams?.gradeId]);
 
   useEffect(() => {
     if (!selectedGradeId) return;
     client.get(`/api/content/grades/${selectedGradeId}/topics`).then((r) => {
       const ts = r.data.topics ?? [];
       setTopics(ts);
-      setSelectedTopicId(ts.length ? ts[0].id : null);
+      if (navParams?.topicId && ts.some((t: any) => t.id === navParams.topicId)) {
+        setSelectedTopicId(navParams.topicId);
+      } else {
+        setSelectedTopicId(ts.length ? ts[0].id : null);
+      }
       setLessons([]);
       setFlashcards([]);
     });
-  }, [selectedGradeId]);
+  }, [selectedGradeId, navParams?.topicId]);
 
   useEffect(() => {
     if (!selectedTopicId) return;
     client.get(`/api/content/topics/${selectedTopicId}/lessons`).then((r) => {
       const ls = r.data.lessons ?? [];
       setLessons(ls);
-      setSelectedLessonId(ls.length ? ls[0].id : null);
+      if (navParams?.lessonId && ls.some((l: any) => l.id === navParams.lessonId)) {
+        setSelectedLessonId(navParams.lessonId);
+      } else {
+        setSelectedLessonId(ls.length ? ls[0].id : null);
+      }
       setFlashcards([]);
     });
-  }, [selectedTopicId]);
+  }, [selectedTopicId, navParams?.lessonId]);
 
   const fetchFlashcards = useCallback(async (lessonId: number) => {
     try {
@@ -96,6 +113,8 @@ export function FlashcardPanel({ onToast }: FlashcardPanelProps) {
     if (!selectedLessonId) {
       setSections([]);
       setNodes([]);
+      setSelectedSectionId(null);
+      setSelectedNodeId(null);
       return;
     }
     client.get(`/api/content/lessons/${selectedLessonId}/tree`).then((r) => {
@@ -117,20 +136,71 @@ export function FlashcardPanel({ onToast }: FlashcardPanelProps) {
         traverse(tree.sections);
         setSections(flatSecs);
         setNodes(flatNodes);
+
+        if (navParams?.sectionId && flatSecs.some(s => s.id === navParams.sectionId)) {
+          setSelectedSectionId(navParams.sectionId);
+        } else {
+          setSelectedSectionId(null);
+        }
+
+        if (navParams?.nodeId && flatNodes.some(n => n.id === navParams.nodeId)) {
+          setSelectedNodeId(navParams.nodeId);
+        } else {
+          setSelectedNodeId(null);
+        }
       } else {
         setSections([]);
         setNodes([]);
+        setSelectedSectionId(null);
+        setSelectedNodeId(null);
       }
     }).catch(() => {
       setSections([]);
       setNodes([]);
+      setSelectedSectionId(null);
+      setSelectedNodeId(null);
     });
-  }, [selectedLessonId]);
+  }, [selectedLessonId, navParams?.sectionId, navParams?.nodeId]);
+
+  useEffect(() => {
+    if (navParams?.gradeId) {
+      setSelectedGradeId(navParams.gradeId);
+    }
+  }, [navParams?.gradeId]);
+
+  useEffect(() => {
+    if (navParams?.topicId) {
+      setSelectedTopicId(navParams.topicId);
+    }
+  }, [navParams?.topicId]);
+
+  useEffect(() => {
+    if (navParams?.lessonId) {
+      setSelectedLessonId(navParams.lessonId);
+    }
+  }, [navParams?.lessonId]);
+
+  useEffect(() => {
+    if (navParams?.sectionId) {
+      setSelectedSectionId(navParams.sectionId);
+    }
+  }, [navParams?.sectionId]);
+
+  useEffect(() => {
+    if (navParams?.nodeId) {
+      setSelectedNodeId(navParams.nodeId);
+    }
+  }, [navParams?.nodeId]);
 
   // 2. Individual CRUD Handlers
   const openCreate = () => {
     setEditCard(null);
-    setForm({ frontText: '', backText: '', sectionId: '', nodeId: '' });
+    setForm({
+      frontText: '',
+      backText: '',
+      sectionId: selectedSectionId ? String(selectedSectionId) : '',
+      nodeId: selectedNodeId ? String(selectedNodeId) : '',
+    });
     setModalOpen(true);
   };
 
@@ -250,6 +320,21 @@ export function FlashcardPanel({ onToast }: FlashcardPanelProps) {
     }
   };
 
+  const filteredFlashcards = flashcards.filter((card) => {
+    if (selectedNodeId) {
+      return card.nodeId === selectedNodeId;
+    }
+    if (selectedSectionId) {
+      if (card.sectionId === selectedSectionId) return true;
+      if (card.nodeId) {
+        const node = nodes.find((n) => n.id === card.nodeId);
+        return node?.sectionId === selectedSectionId;
+      }
+      return false;
+    }
+    return true;
+  });
+
   return (
     <div>
       {/* Cascade Filters */}
@@ -267,7 +352,11 @@ export function FlashcardPanel({ onToast }: FlashcardPanelProps) {
         <Select
           label="Khối lớp"
           value={selectedGradeId ?? ''}
-          onChange={(e) => setSelectedGradeId(Number(e.target.value))}
+          onChange={(e) => {
+            setSelectedGradeId(Number(e.target.value));
+            setSelectedSectionId(null);
+            setSelectedNodeId(null);
+          }}
         >
           {grades.map((g) => (
             <option key={g.id} value={g.id}>Khối {g.id}</option>
@@ -277,7 +366,11 @@ export function FlashcardPanel({ onToast }: FlashcardPanelProps) {
         <Select
           label="Chủ đề"
           value={selectedTopicId ?? ''}
-          onChange={(e) => setSelectedTopicId(Number(e.target.value) || null)}
+          onChange={(e) => {
+            setSelectedTopicId(Number(e.target.value) || null);
+            setSelectedSectionId(null);
+            setSelectedNodeId(null);
+          }}
           disabled={topics.length === 0}
         >
           {topics.length === 0 && <option value="">Chưa có chủ đề nào</option>}
@@ -289,13 +382,49 @@ export function FlashcardPanel({ onToast }: FlashcardPanelProps) {
         <Select
           label="Bài học"
           value={selectedLessonId ?? ''}
-          onChange={(e) => setSelectedLessonId(Number(e.target.value) || null)}
+          onChange={(e) => {
+            setSelectedLessonId(Number(e.target.value) || null);
+            setSelectedSectionId(null);
+            setSelectedNodeId(null);
+          }}
           disabled={lessons.length === 0}
         >
           {lessons.length === 0 && <option value="">Chưa có bài học nào</option>}
           {lessons.map((l) => (
             <option key={l.id} value={l.id}>{l.name}</option>
           ))}
+        </Select>
+
+        <Select
+          label="Phần/Nhánh"
+          value={selectedSectionId ?? ''}
+          onChange={(e) => {
+            const secId = Number(e.target.value) || null;
+            setSelectedSectionId(secId);
+            setSelectedNodeId(null);
+          }}
+          disabled={!selectedLessonId || sections.length === 0}
+        >
+          <option value="">Tất cả</option>
+          {sections.map((sec) => (
+            <option key={sec.id} value={sec.id}>{sec.name}</option>
+          ))}
+        </Select>
+
+        <Select
+          label="Nút kiến thức"
+          value={selectedNodeId ?? ''}
+          onChange={(e) => setSelectedNodeId(Number(e.target.value) || null)}
+          disabled={!selectedSectionId}
+        >
+          <option value="">Tất cả</option>
+          {nodes
+            .filter((n) => n.sectionId === selectedSectionId)
+            .map((node) => (
+              <option key={node.id} value={node.id}>
+                {node.header || node.body.slice(0, 40) + '...'}
+              </option>
+            ))}
         </Select>
       </div>
 
@@ -304,7 +433,7 @@ export function FlashcardPanel({ onToast }: FlashcardPanelProps) {
         <div>
           <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: '#0f172a' }}>Thẻ ghi nhớ (Flashcards)</h2>
           <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: 14 }}>
-            {selectedLessonId ? `Có ${flashcards.length} thẻ ghi nhớ trong bài học này` : 'Vui lòng chọn bài học'}
+            {selectedLessonId ? `Có ${filteredFlashcards.length} thẻ ghi nhớ trong bài học này` : 'Vui lòng chọn bài học'}
           </p>
         </div>
 
@@ -340,7 +469,7 @@ export function FlashcardPanel({ onToast }: FlashcardPanelProps) {
         <div style={{ padding: 48, textAlign: 'center', background: '#ffffff', borderRadius: 16, border: '1px solid #e2e8f0', color: '#64748b' }}>
           Vui lòng chọn Khối lớp, Chủ đề và Bài học để tải danh sách thẻ ghi nhớ.
         </div>
-      ) : flashcards.length === 0 ? (
+      ) : filteredFlashcards.length === 0 ? (
         <div style={{ padding: 60, textAlign: 'center', background: '#ffffff', borderRadius: 16, border: '1px solid #e2e8f0', color: '#94a3b8' }}>
           <div style={{ marginBottom: 16 }}><IconFlashcard size={48} color="#cbd5e1" /></div>
           Chưa có thẻ ghi nhớ nào. Bạn có thể tự thêm hoặc nhấn "Tạo bằng AI" để tự sinh nhanh từ sách giáo khoa!
@@ -351,7 +480,7 @@ export function FlashcardPanel({ onToast }: FlashcardPanelProps) {
           gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
           gap: 20,
         }}>
-          {flashcards.map((card) => (
+          {filteredFlashcards.map((card) => (
             <div
               key={card.id}
               style={{

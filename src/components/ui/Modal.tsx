@@ -37,8 +37,11 @@ export function Modal({ open, title, onClose, children, width = 520 }: ModalProp
           borderRadius: 18,
           width: '100%',
           maxWidth: width,
+          maxHeight: '90vh',
           border: '1px solid #e2e8f0',
           boxShadow: '0 20px 60px rgba(15,23,42,0.18)',
+          display: 'flex',
+          flexDirection: 'column',
           overflow: 'hidden',
           animation: 'slideUp 0.2s ease',
         }}
@@ -69,7 +72,7 @@ export function Modal({ open, title, onClose, children, width = 520 }: ModalProp
           </button>
         </div>
         {/* Body */}
-        <div style={{ padding: '24px' }}>{children}</div>
+        <div style={{ padding: '24px', overflowY: 'auto', flex: 1 }}>{children}</div>
       </div>
     </div>
   );

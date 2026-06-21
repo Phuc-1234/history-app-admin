@@ -14,6 +14,7 @@ import { UserPanel } from '../components/content/UserPanel';
 import { VideoPanel } from '../components/content/VideoPanel';
 import { QuestionPanel } from '../components/content/QuestionPanel';
 import { TestPanel } from '../components/content/TestPanel';
+import { TestPresetPanel } from '../components/content/TestPresetPanel';
 import { ToastContainer } from '../components/ui/Toast';
 import { useAuthStore } from '../store/authStore';
 import { useToast } from '../hooks/useToast';
@@ -30,7 +31,7 @@ import {
   IconFlashcard
 } from '../components/ui/Icons';
 
-export type TabId = 'overview' | 'grades' | 'topics' | 'lessons' | 'sections' | 'nodes' | 'mindmaps' | 'flashcards' | 'users' | 'videos' | 'questions' | 'tests';
+export type TabId = 'overview' | 'grades' | 'topics' | 'lessons' | 'sections' | 'nodes' | 'mindmaps' | 'flashcards' | 'users' | 'videos' | 'questions' | 'tests' | 'testpresets';
 
 interface OverviewStats {
   grades: number;
@@ -176,8 +177,17 @@ function OverviewPanel() {
   );
 }
 
+export interface NavParams {
+  gradeId?: number | null;
+  topicId?: number | null;
+  lessonId?: number | null;
+  sectionId?: number | null;
+  nodeId?: number | null;
+}
+
 export function DashboardPage() {
   const [activeTab, setActiveTab] = useState<TabId>('overview');
+  const [navParams, setNavParams] = useState<NavParams>({});
   const { logout, user } = useAuthStore();
   const { toasts, addToast, removeToast } = useToast();
 
@@ -203,20 +213,28 @@ export function DashboardPage() {
     window.location.reload();
   };
 
+  const handleNavigate = (tab: TabId, params?: NavParams) => {
+    if (params) {
+      setNavParams((prev) => ({ ...prev, ...params }));
+    }
+    setActiveTab(tab);
+  };
+
   const renderContent = () => {
     switch (activeTab) {
       case 'overview':  return <OverviewPanel />;
-      case 'grades':    return <GradePanel onToast={addToast} />;
-      case 'topics':    return <TopicPanel onToast={addToast} />;
-      case 'lessons':   return <LessonPanel onToast={addToast} />;
-      case 'sections':  return <SectionPanel onToast={addToast} />;
+      case 'grades':    return <GradePanel onToast={addToast} onNavigate={handleNavigate} />;
+      case 'topics':    return <TopicPanel onToast={addToast} navParams={navParams} onNavigate={handleNavigate} />;
+      case 'lessons':   return <LessonPanel onToast={addToast} navParams={navParams} onNavigate={handleNavigate} />;
+      case 'sections':  return <SectionPanel onToast={addToast} navParams={navParams} onNavigate={handleNavigate} />;
       case 'nodes':     return <NodePanel onToast={addToast} />;
-      case 'mindmaps':  return <MindMapPanel onToast={addToast} />;
-      case 'flashcards': return <FlashcardPanel onToast={addToast} />;
+      case 'mindmaps':  return <MindMapPanel onToast={addToast} navParams={navParams} onNavigate={handleNavigate} />;
+      case 'flashcards': return <FlashcardPanel onToast={addToast} navParams={navParams} onNavigate={handleNavigate} />;
       case 'users':     return <UserPanel onToast={addToast} />;
       case 'videos':    return <VideoPanel onToast={addToast} />;
       case 'questions': return <QuestionPanel onToast={addToast} />;
       case 'tests':     return <TestPanel onToast={addToast} />;
+      case 'testpresets': return <TestPresetPanel onToast={addToast} />;
     }
   };
 

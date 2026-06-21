@@ -10,12 +10,15 @@ import { Input, Select } from '../ui/FormField';
 import { RichTextEditor } from '../ui/RichTextEditor';
 import { Spinner } from '../ui/Spinner';
 import { IconPlus, IconEdit, IconDelete, IconLesson } from '../ui/Icons';
+import type { TabId, NavParams } from '../../pages/DashboardPage';
 
 interface LessonPanelProps {
   onToast: (msg: string, type: ToastType) => void;
+  navParams?: NavParams;
+  onNavigate?: (tab: TabId, params?: NavParams) => void;
 }
 
-export function LessonPanel({ onToast }: LessonPanelProps) {
+export function LessonPanel({ onToast, navParams, onNavigate }: LessonPanelProps) {
   const [grades, setGrades] = useState<GradeDto[]>([]);
   const [topics, setTopics] = useState<TopicDto[]>([]);
   const [lessons, setLessons] = useState<LessonDto[]>([]);
@@ -33,19 +36,39 @@ export function LessonPanel({ onToast }: LessonPanelProps) {
     client.get('/api/content/grades').then((r) => {
       const gs = r.data.grades ?? [];
       setGrades(gs);
-      if (gs.length) setSelectedGradeId(gs[0].id);
+      if (navParams?.gradeId) {
+        setSelectedGradeId(navParams.gradeId);
+      } else if (gs.length) {
+        setSelectedGradeId(gs[0].id);
+      }
     }).catch(() => onToast('Không tải được khối lớp', 'error'));
-  }, [onToast]);
+  }, [onToast, navParams?.gradeId]);
 
   useEffect(() => {
     if (!selectedGradeId) return;
     client.get(`/api/content/grades/${selectedGradeId}/topics`).then((r) => {
       const ts = r.data.topics ?? [];
       setTopics(ts);
-      setSelectedTopicId(ts.length ? ts[0].id : null);
+      if (navParams?.topicId && ts.some((t: any) => t.id === navParams.topicId)) {
+        setSelectedTopicId(navParams.topicId);
+      } else {
+        setSelectedTopicId(ts.length ? ts[0].id : null);
+      }
       setLessons([]);
     }).catch(() => onToast('Không tải được chủ đề', 'error'));
-  }, [selectedGradeId, onToast]);
+  }, [selectedGradeId, onToast, navParams?.topicId]);
+
+  useEffect(() => {
+    if (navParams?.gradeId) {
+      setSelectedGradeId(navParams.gradeId);
+    }
+  }, [navParams?.gradeId]);
+
+  useEffect(() => {
+    if (navParams?.topicId) {
+      setSelectedTopicId(navParams.topicId);
+    }
+  }, [navParams?.topicId]);
 
   const fetchLessons = useCallback(async (topicId: number) => {
     try {
@@ -65,7 +88,7 @@ export function LessonPanel({ onToast }: LessonPanelProps) {
   const handleSave = async () => {
     if (!form.name.trim()) { onToast('Tên bài học là bắt buộc', 'error'); return; }
     const position = Number(form.position); const topicId = Number(form.topicId);
-    if (isNaN(position) || !topicId) { onToast('Dữ liệu không hợp lệ', 'error'); return; }
+    if (isNaN(position) || !topicId || position < 0) { onToast('Vị trí phải là số không âm', 'error'); return; }
     try {
       setSaving(true);
       if (editLesson) {
@@ -99,7 +122,7 @@ export function LessonPanel({ onToast }: LessonPanelProps) {
     <div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
         <div>
-          <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: '#0f172a' }}>Bài học</h2>
+          <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: '#0f172a' }}>Danh sách bài học</h2>
           <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: 14 }}>{lessons.length} bài học</p>
         </div>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
@@ -146,7 +169,10 @@ export function LessonPanel({ onToast }: LessonPanelProps) {
                     )}
                   </Td>
                   <Td align="right">
-                    <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                    <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                      <Button variant="secondary" onClick={() => onNavigate?.('sections', { gradeId: selectedGradeId, topicId: selectedTopicId, lessonId: l.id })} style={{ padding: '6px 14px', fontSize: 13, borderColor: '#6c63ff', color: '#6c63ff' }}>Nội dung</Button>
+                      <Button variant="secondary" onClick={() => onNavigate?.('mindmaps', { gradeId: selectedGradeId, topicId: selectedTopicId, lessonId: l.id })} style={{ padding: '6px 14px', fontSize: 13, borderColor: '#0284c7', color: '#0284c7' }}>Sơ đồ</Button>
+                      <Button variant="secondary" onClick={() => onNavigate?.('flashcards', { gradeId: selectedGradeId, topicId: selectedTopicId, lessonId: l.id, sectionId: null, nodeId: null })} style={{ padding: '6px 14px', fontSize: 13, borderColor: '#ec4899', color: '#ec4899' }}>Thẻ ghi nhớ</Button>
                       <Button variant="secondary" icon={<IconEdit size={14} />} onClick={() => openEdit(l)} style={{ padding: '6px 14px', fontSize: 13 }}>Sửa</Button>
                       <Button variant="danger" icon={<IconDelete size={14} />} onClick={() => setDeleteTarget(l)} style={{ padding: '6px 14px', fontSize: 13 }}>Xóa</Button>
                     </div>
@@ -162,7 +188,7 @@ export function LessonPanel({ onToast }: LessonPanelProps) {
         <Input label="Tên bài học" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="Ví dụ: Bài 1: Cách mạng tháng Tám" />
         <RichTextEditor label="Tóm tắt (tùy chọn)" value={form.summary} onChange={(val) => setForm((f) => ({ ...f, summary: val }))} placeholder="Mô tả ngắn về bài học..." />
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          <Input label="Vị trí" type="number" value={form.position} onChange={(e) => setForm((f) => ({ ...f, position: e.target.value }))} />
+          <Input label="Vị trí" type="number" min={0} value={form.position} onChange={(e) => setForm((f) => ({ ...f, position: e.target.value }))} />
           <Select label="Chủ đề" value={form.topicId} onChange={(e) => setForm((f) => ({ ...f, topicId: e.target.value }))} disabled={!!editLesson}>
             {topics.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
           </Select>

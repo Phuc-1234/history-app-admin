@@ -95,6 +95,12 @@ export interface AdminQuestionDto {
   difficulty: number;
   promptText: string;
   document: string | null;
+  explanation: string | null;
+  isActive: boolean;
+  scopeId: number | null;
+  scopeType: string | null;
+  answerDataJson: any;
+  // Backup
   gradeId: number | null;
   topicId: number | null;
   lessonId: number | null;
@@ -107,8 +113,13 @@ export interface AdminTestDto {
   id: string;
   title: string;
   summary: string | null;
-  isManual: boolean;
+  presetId: string | null;
+  scopeId: number | null;
+  scopeType: string | null;
   isNationalTest: boolean;
+  questionIds: number[];
+  // Backup
+  isManual: boolean;
   questionNumber: number;
   timeLimit: number | null;
   xpReward: number;
@@ -118,7 +129,23 @@ export interface AdminTestDto {
   topicId: number | null;
   lessonId: number | null;
   sectionId: number | null;
-  questionIds: number[];
+}
+
+export interface TestPresetDto {
+  id: string;
+  name: string;
+  purposeType: 'EXAM' | 'PRACTICE';
+  questionCount: number | null;
+  passThreshold: number;
+  timeLimit: number | null;
+  difficultyRatioJson: any;
+}
+
+export interface ScopeTestPresetDefaultDto {
+  scopeType: 'GRADE' | 'TOPIC' | 'LESSON' | 'SECTION' | 'NODE' | 'NATIONAL';
+  purposeType: 'EXAM' | 'PRACTICE';
+  defaultTestPresetId: string;
+  presetName?: string;
 }
 
 export interface FlashcardDto {

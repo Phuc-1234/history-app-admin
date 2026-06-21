@@ -11,13 +11,16 @@ import { Input, Select } from '../ui/FormField';
 import { Spinner } from '../ui/Spinner';
 import { IconPlus, IconEdit, IconDelete, IconGrade } from '../ui/Icons';
 
+import type { TabId, NavParams } from '../../pages/DashboardPage';
+
 interface GradePanelProps {
   onToast: (msg: string, type: ToastType) => void;
+  onNavigate?: (tab: TabId, params?: NavParams) => void;
 }
 
 const EMPTY_FORM = { id: '', state: 'PRIVATE' as 'PUBLIC' | 'PRIVATE' };
 
-export function GradePanel({ onToast }: GradePanelProps) {
+export function GradePanel({ onToast, onNavigate }: GradePanelProps) {
   const [grades, setGrades] = useState<GradeDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -114,6 +117,7 @@ export function GradePanel({ onToast }: GradePanelProps) {
                   <Td><Badge value={g.state} /></Td>
                   <Td align="right">
                     <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                      <Button variant="secondary" onClick={() => onNavigate?.('topics', { gradeId: g.id })} style={{ padding: '6px 14px', fontSize: 13, borderColor: '#6c63ff', color: '#6c63ff' }}>Xem chủ đề</Button>
                       <Button variant="secondary" icon={<IconEdit size={14} />} onClick={() => openEdit(g)} style={{ padding: '6px 14px', fontSize: 13 }}>Sửa</Button>
                       <Button variant="danger" icon={<IconDelete size={14} />} onClick={() => setDeleteTarget(g)} style={{ padding: '6px 14px', fontSize: 13 }}>Xóa</Button>
                     </div>

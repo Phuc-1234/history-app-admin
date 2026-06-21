@@ -185,8 +185,8 @@ export function VideoPanel({ onToast }: VideoPanelProps) {
   const handleSave = async () => {
     const pos = Number(form.position);
     const lessonId = Number(form.lessonId);
-    if (!form.title || !form.hlsUrl || isNaN(pos) || !form.lessonId || isNaN(lessonId)) {
-      onToast('Vui lòng điền đầy đủ thông tin hợp lệ', 'error');
+    if (!form.title || !form.hlsUrl || isNaN(pos) || pos < 0 || !form.lessonId || isNaN(lessonId)) {
+      onToast('Vui lòng điền đầy đủ thông tin hợp lệ (vị trí phải không âm)', 'error');
       return;
     }
 
@@ -370,7 +370,7 @@ export function VideoPanel({ onToast }: VideoPanelProps) {
         <Input label="Tiêu đề video" value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} placeholder="Ví dụ: Đoạn trích trận đánh Rạch Gầm - Xoài Mút" />
         <div style={{ display: 'flex', gap: 16, marginBottom: 12 }}>
           <div style={{ flex: 1 }}>
-            <Input label="Vị trí hiển thị" type="number" value={form.position} onChange={(e) => setForm((f) => ({ ...f, position: e.target.value }))} placeholder="Ví dụ: 1" />
+            <Input label="Vị trí hiển thị" type="number" min={0} value={form.position} onChange={(e) => setForm((f) => ({ ...f, position: e.target.value }))} placeholder="Ví dụ: 1" />
           </div>
           <div style={{ flex: 3 }}>
             <Input label="Đường dẫn phát (HLS HLS .m3u8)" value={form.hlsUrl} onChange={(e) => setForm((f) => ({ ...f, hlsUrl: e.target.value }))} placeholder="https://example.com/stream/video.m3u8" />
