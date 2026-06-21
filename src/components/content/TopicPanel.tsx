@@ -9,14 +9,17 @@ import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { Input, Select } from '../ui/FormField';
 import { Spinner } from '../ui/Spinner';
 import { IconPlus, IconEdit, IconDelete, IconTopic } from '../ui/Icons';
+import type { TabId, NavParams } from '../../pages/DashboardPage';
 
 interface TopicPanelProps {
   onToast: (msg: string, type: ToastType) => void;
+  navParams?: NavParams;
+  onNavigate?: (tab: TabId, params?: NavParams) => void;
 }
 
 const EMPTY_FORM = { name: '', position: '', gradeId: '' };
 
-export function TopicPanel({ onToast }: TopicPanelProps) {
+export function TopicPanel({ onToast, navParams, onNavigate }: TopicPanelProps) {
   const [grades, setGrades] = useState<GradeDto[]>([]);
   const [selectedGradeId, setSelectedGradeId] = useState<number | null>(null);
   const [topics, setTopics] = useState<TopicDto[]>([]);
@@ -32,9 +35,19 @@ export function TopicPanel({ onToast }: TopicPanelProps) {
     client.get('/api/content/grades').then((r) => {
       const gs = r.data.grades ?? [];
       setGrades(gs);
-      if (gs.length > 0) setSelectedGradeId(gs[0].id);
+      if (navParams?.gradeId) {
+        setSelectedGradeId(navParams.gradeId);
+      } else if (gs.length > 0) {
+        setSelectedGradeId(gs[0].id);
+      }
     }).catch(() => onToast('Không tải được danh sách khối lớp', 'error'));
-  }, [onToast]);
+  }, [onToast, navParams?.gradeId]);
+
+  useEffect(() => {
+    if (navParams?.gradeId) {
+      setSelectedGradeId(navParams.gradeId);
+    }
+  }, [navParams?.gradeId]);
 
   const fetchTopics = useCallback(async (gradeId: number) => {
     try {
@@ -54,7 +67,7 @@ export function TopicPanel({ onToast }: TopicPanelProps) {
   const handleSave = async () => {
     if (!form.name.trim()) { onToast('Tên chủ đề là bắt buộc', 'error'); return; }
     const position = Number(form.position); const gradeId = Number(form.gradeId);
-    if (isNaN(position) || isNaN(gradeId)) { onToast('Dữ liệu không hợp lệ', 'error'); return; }
+    if (isNaN(position) || isNaN(gradeId) || position < 0) { onToast('Vị trí phải là số không âm', 'error'); return; }
     try {
       setSaving(true);
       if (editTopic) {
@@ -123,6 +136,7 @@ export function TopicPanel({ onToast }: TopicPanelProps) {
                   <Td><span style={{ color: '#6c63ff', fontWeight: 600, fontSize: 13 }}>Khối {t.gradeId}</span></Td>
                   <Td align="right">
                     <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                      <Button variant="secondary" onClick={() => onNavigate?.('lessons', { gradeId: selectedGradeId, topicId: t.id })} style={{ padding: '6px 14px', fontSize: 13, borderColor: '#d97706', color: '#d97706' }}>Xem bài học</Button>
                       <Button variant="secondary" icon={<IconEdit size={14} />} onClick={() => openEdit(t)} style={{ padding: '6px 14px', fontSize: 13 }}>Sửa</Button>
                       <Button variant="danger" icon={<IconDelete size={14} />} onClick={() => setDeleteTarget(t)} style={{ padding: '6px 14px', fontSize: 13 }}>Xóa</Button>
                     </div>
@@ -137,7 +151,7 @@ export function TopicPanel({ onToast }: TopicPanelProps) {
       <Modal open={modalOpen} title={editTopic ? 'Sửa Chủ đề' : 'Thêm Chủ đề mới'} onClose={() => setModalOpen(false)}>
         <Input label="Tên chủ đề" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="Ví dụ: Việt Nam thời phong kiến" />
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          <Input label="Vị trí" type="number" value={form.position} onChange={(e) => setForm((f) => ({ ...f, position: e.target.value }))} placeholder="1" />
+          <Input label="Vị trí" type="number" min={0} value={form.position} onChange={(e) => setForm((f) => ({ ...f, position: e.target.value }))} placeholder="1" />
           <Select label="Khối lớp" value={form.gradeId} onChange={(e) => setForm((f) => ({ ...f, gradeId: e.target.value }))} disabled={!!editTopic}>
             {grades.map((g) => <option key={g.id} value={g.id}>Khối {g.id}</option>)}
           </Select>

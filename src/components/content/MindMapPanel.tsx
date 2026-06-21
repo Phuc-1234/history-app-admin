@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import client from '../../api/client';
 import type { GradeDto, TopicDto, LessonDto, SectionDto, NodeDto } from '../../types/api';
+import type { TabId, NavParams } from '../../pages/DashboardPage';
 import type { ToastType } from '../../hooks/useToast';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
@@ -198,16 +199,6 @@ const SectionNode = ({ data }: any) => {
               style={{ background: 'none', border: 'none', color: '#0284c7', fontSize: '11px', fontWeight: 600, cursor: 'pointer', padding: 0 }}
             >
               + Nhánh
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                data.onAddNode(data.id);
-              }}
-              className="nodrag"
-              style={{ background: 'none', border: 'none', color: '#10b981', fontSize: '11px', fontWeight: 600, cursor: 'pointer', padding: 0 }}
-            >
-              + Nút
             </button>
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
@@ -702,9 +693,11 @@ export function VisualMindMapDiagram(props: VisualMindMapDiagramProps) {
 
 interface MindMapPanelProps {
   onToast: (msg: string, type: ToastType) => void;
+  navParams?: NavParams;
+  onNavigate?: (tab: TabId, params?: NavParams) => void;
 }
 
-export function MindMapPanel({ onToast }: MindMapPanelProps) {
+export function MindMapPanel({ onToast, navParams, onNavigate: _onNavigate }: MindMapPanelProps) {
   const [grades, setGrades] = useState<GradeDto[]>([]);
   const [topics, setTopics] = useState<TopicDto[]>([]);
   const [lessons, setLessons] = useState<LessonDto[]>([]);
@@ -744,30 +737,60 @@ export function MindMapPanel({ onToast }: MindMapPanelProps) {
     client.get('/api/content/grades').then((r) => {
       const gs = r.data.grades ?? [];
       setGrades(gs);
-      if (gs.length) setSelectedGradeId(gs[0].id);
+      if (navParams?.gradeId) {
+        setSelectedGradeId(navParams.gradeId);
+      } else if (gs.length) {
+        setSelectedGradeId(gs[0].id);
+      }
     });
-  }, []);
+  }, [navParams?.gradeId]);
 
   useEffect(() => {
     if (!selectedGradeId) return;
     client.get(`/api/content/grades/${selectedGradeId}/topics`).then((r) => {
       const ts = r.data.topics ?? [];
       setTopics(ts);
-      setSelectedTopicId(ts.length ? ts[0].id : null);
+      if (navParams?.topicId && ts.some((t: any) => t.id === navParams.topicId)) {
+        setSelectedTopicId(navParams.topicId);
+      } else {
+        setSelectedTopicId(ts.length ? ts[0].id : null);
+      }
       setLessons([]);
       setLessonTree(null);
     });
-  }, [selectedGradeId]);
+  }, [selectedGradeId, navParams?.topicId]);
 
   useEffect(() => {
     if (!selectedTopicId) return;
     client.get(`/api/content/topics/${selectedTopicId}/lessons`).then((r) => {
       const ls = r.data.lessons ?? [];
       setLessons(ls);
-      setSelectedLessonId(ls.length ? ls[0].id : null);
+      if (navParams?.lessonId && ls.some((l: any) => l.id === navParams.lessonId)) {
+        setSelectedLessonId(navParams.lessonId);
+      } else {
+        setSelectedLessonId(ls.length ? ls[0].id : null);
+      }
       setLessonTree(null);
     });
-  }, [selectedTopicId]);
+  }, [selectedTopicId, navParams?.lessonId]);
+
+  useEffect(() => {
+    if (navParams?.gradeId) {
+      setSelectedGradeId(navParams.gradeId);
+    }
+  }, [navParams?.gradeId]);
+
+  useEffect(() => {
+    if (navParams?.topicId) {
+      setSelectedTopicId(navParams.topicId);
+    }
+  }, [navParams?.topicId]);
+
+  useEffect(() => {
+    if (navParams?.lessonId) {
+      setSelectedLessonId(navParams.lessonId);
+    }
+  }, [navParams?.lessonId]);
 
   const fetchLessonTree = useCallback(async (lessonId: number) => {
     try {
@@ -814,6 +837,11 @@ export function MindMapPanel({ onToast }: MindMapPanelProps) {
   const handleSaveSection = async () => {
     if (!sectionForm.name.trim()) {
       onToast('Tên phần là bắt buộc', 'error');
+      return;
+    }
+    const position = Number(sectionForm.position);
+    if (isNaN(position) || position < 0) {
+      onToast('Thứ tự hiển thị phải là số không âm', 'error');
       return;
     }
     if (!selectedLessonId || !lessonTree) return;
@@ -915,6 +943,11 @@ export function MindMapPanel({ onToast }: MindMapPanelProps) {
   const handleSaveNode = async () => {
     if (isBodyEmpty(nodeForm.body)) {
       onToast('Nội dung chi tiết là bắt buộc', 'error');
+      return;
+    }
+    const position = Number(nodeForm.position);
+    if (isNaN(position) || position < 0) {
+      onToast('Thứ tự hiển thị phải là số không âm', 'error');
       return;
     }
     if (!selectedLessonId || !lessonTree) return;
@@ -1276,7 +1309,7 @@ export function MindMapPanel({ onToast }: MindMapPanelProps) {
       >
         <div style={{ width: 440, maxWidth: '100%' }}>
           <Input
-            label="Tên nhánh/Phần chính"
+            label="nội dung nhánh/lá"
             value={sectionForm.name}
             onChange={(e) => setSectionForm({ ...sectionForm, name: e.target.value })}
             placeholder="Ví dụ: 1. Hoàn cảnh lịch sử"
@@ -1290,6 +1323,7 @@ export function MindMapPanel({ onToast }: MindMapPanelProps) {
           <Input
             label="Thứ tự hiển thị"
             type="number"
+            min={0}
             value={sectionForm.position}
             onChange={(e) => setSectionForm({ ...sectionForm, position: e.target.value })}
             placeholder="Thứ tự hiển thị (ví dụ: 1, 2, 3)"
@@ -1329,6 +1363,7 @@ export function MindMapPanel({ onToast }: MindMapPanelProps) {
           <Input
             label="Thứ tự hiển thị"
             type="number"
+            min={0}
             value={nodeForm.position}
             onChange={(e) => setNodeForm({ ...nodeForm, position: e.target.value })}
             placeholder="Thứ tự hiển thị trong nhánh"

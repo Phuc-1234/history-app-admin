@@ -6,14 +6,14 @@ import {
   IconTopic,
   IconLesson,
   IconSection,
-  IconNode,
   IconUser,
   IconVideo,
   IconQuestion,
   IconTest,
   IconHistoryBook,
   IconMindMap,
-  IconFlashcard
+  IconFlashcard,
+  IconTarget
 } from '../ui/Icons';
 
 interface NavItem {
@@ -26,30 +26,30 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'overview', label: 'Tổng quan', description: 'Dashboard' },
   { id: 'grades', label: 'Khối lớp', description: 'Grades' },
   { id: 'topics', label: 'Chủ đề', description: 'Topics' },
-  { id: 'lessons', label: 'Bài học', description: 'Lessons' },
-  { id: 'sections', label: 'Phần sơ đồ', description: 'Sections' },
-  { id: 'nodes', label: 'Nút kiến thức', description: 'Nodes' },
+  { id: 'lessons', label: 'Danh sách bài học', description: 'Lessons' },
+  { id: 'sections', label: 'Nội dung bài học', description: 'Lesson Content' },
   { id: 'mindmaps', label: 'Sơ đồ tư duy', description: 'Mindmaps' },
   { id: 'flashcards', label: 'Thẻ ghi nhớ', description: 'Flashcards' },
   { id: 'users', label: 'Người dùng', description: 'Users' },
   { id: 'videos', label: 'Video bài học', description: 'Videos' },
   { id: 'questions', label: 'Ngân hàng câu hỏi', description: 'Questions' },
   { id: 'tests', label: 'Đề thi', description: 'Tests' },
+  { id: 'testpresets', label: 'Cấu hình mẫu đề', description: 'Test Presets' },
 ];
 
-const ICON_MAP: Record<TabId, React.ComponentType<any>> = {
+const ICON_MAP: Record<string, any> = {
   overview: IconOverview,
   grades: IconGrade,
   topics: IconTopic,
   lessons: IconLesson,
   sections: IconSection,
-  nodes: IconNode,
   mindmaps: IconMindMap,
   flashcards: IconFlashcard,
   users: IconUser,
   videos: IconVideo,
   questions: IconQuestion,
   tests: IconTest,
+  testpresets: IconTarget,
 };
 
 interface SidebarProps {
