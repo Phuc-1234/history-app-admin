@@ -12,7 +12,15 @@ import {
   Table,
   TableToolbar,
   Alignment,
-  Font
+  Font,
+  Image,
+  ImageToolbar,
+  ImageCaption,
+  ImageStyle,
+  ImageResize,
+  LinkImage,
+  ImageInsert,
+  Base64UploadAdapter
 } from 'ckeditor5';
 import 'ckeditor5/ckeditor5.css';
 import { FieldWrapper } from './FormField';
@@ -44,7 +52,15 @@ export function RichTextEditor({ label, value, onChange, placeholder }: RichText
               Table,
               TableToolbar,
               Alignment,
-              Font
+              Font,
+              Image,
+              ImageToolbar,
+              ImageCaption,
+              ImageStyle,
+              ImageResize,
+              LinkImage,
+              ImageInsert,
+              Base64UploadAdapter
             ],
             toolbar: [
               'undo', 'redo', '|',
@@ -53,8 +69,20 @@ export function RichTextEditor({ label, value, onChange, placeholder }: RichText
               'fontSize', 'fontColor', 'fontBackgroundColor', '|',
               'alignment', '|',
               'bulletedList', 'numberedList', '|',
-              'link', 'insertTable'
+              'link', 'insertImage', 'insertTable'
             ],
+            image: {
+              toolbar: [
+                'imageStyle:inline',
+                'imageStyle:block',
+                'imageStyle:side',
+                '|',
+                'toggleImageCaption',
+                'imageTextAlternative',
+                '|',
+                'linkImage'
+              ]
+            },
             placeholder: placeholder || 'Nhập nội dung...',
           }}
           data={value}

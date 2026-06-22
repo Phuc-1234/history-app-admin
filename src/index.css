@@ -100,3 +100,32 @@ a, select, input {
   background: #ffffff !important;
 }
 
+/* CKEditor Image Styles */
+.ck-content img {
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
+  border-radius: 8px;
+  margin: 8px auto;
+  display: block;
+}
+.ck-content .image {
+  margin: 16px auto;
+  text-align: center;
+}
+.ck-content .image-style-side {
+  float: right;
+  margin-left: 16px;
+  max-width: 50%;
+}
+.ck-content .image-style-align-left {
+  float: left;
+  margin-right: 16px;
+  max-width: 50%;
+}
+.ck-content .image-style-align-right {
+  float: right;
+  margin-left: 16px;
+  max-width: 50%;
+}
+
