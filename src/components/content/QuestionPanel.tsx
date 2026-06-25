@@ -6,9 +6,11 @@ import type { ToastType } from '../../hooks/useToast';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
-import { Input, Select, Textarea } from '../ui/FormField';
+import { Select } from '../ui/FormField';
 import { Spinner } from '../ui/Spinner';
 import { IconPlus, IconEdit, IconDelete, IconQuestion, IconXP } from '../ui/Icons';
+import { RichTextEditor } from '../ui/RichTextEditor';
+import { stripHtml } from '../../utils/html';
 
 interface QuestionPanelProps {
   onToast: (msg: string, type: ToastType) => void;
@@ -21,22 +23,18 @@ interface FormAnswer {
   rightText: string;
 }
 
-const EMPTY_ANSWER: FormAnswer = { content: '', isCorrect: false, leftText: '', rightText: '' };
+interface FormQuestionItem {
+  key: string;
+  type: 'CHOOSE' | 'FILL' | 'MATCH';
+  difficulty: string;
+  isActive: boolean;
+  promptText: string;
+  document: string;
+  explanation: string;
+  answers: FormAnswer[];
+}
 
-const EMPTY_FORM = {
-  type: 'CHOOSE' as 'CHOOSE' | 'FILL' | 'MATCH',
-  difficulty: '1',
-  promptText: '',
-  document: '',
-  explanation: '',
-  isActive: true,
-  scopeType: 'GRADE' as 'GRADE' | 'TOPIC' | 'LESSON' | 'SECTION' | 'NODE' | 'NATIONAL',
-  gradeId: '',
-  topicId: '',
-  lessonId: '',
-  sectionId: '',
-  nodeId: ''
-};
+const EMPTY_ANSWER: FormAnswer = { content: '', isCorrect: false, leftText: '', rightText: '' };
 
 export function QuestionPanel({ onToast }: QuestionPanelProps) {
   const [questions, setQuestions] = useState<AdminQuestionDto[]>([]);
@@ -60,8 +58,20 @@ export function QuestionPanel({ onToast }: QuestionPanelProps) {
   // Modal form state
   const [modalOpen, setModalOpen] = useState(false);
   const [editQuestion, setEditQuestion] = useState<AdminQuestionDto | null>(null);
-  const [form, setForm] = useState(EMPTY_FORM);
-  const [answers, setAnswers] = useState<FormAnswer[]>([EMPTY_ANSWER]);
+  
+  // Scope settings shared by all questions in the batch
+  const [scopeState, setScopeState] = useState({
+    scopeType: 'GRADE' as 'GRADE' | 'TOPIC' | 'LESSON' | 'SECTION' | 'NODE' | 'NATIONAL',
+    gradeId: '',
+    topicId: '',
+    lessonId: '',
+    sectionId: '',
+    nodeId: ''
+  });
+  
+  // List of question forms to build (supports batching in create mode)
+  const [formQuestions, setFormQuestions] = useState<FormQuestionItem[]>([]);
+  
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<AdminQuestionDto | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -142,37 +152,47 @@ export function QuestionPanel({ onToast }: QuestionPanelProps) {
 
   // Cascade loads for form Modal
   useEffect(() => {
-    if (!form.gradeId) { setFormTopics([]); setFormLessons([]); setFormSections([]); setFormNodes([]); return; }
-    client.get(`/api/content/grades/${form.gradeId}/topics`).then(r => setFormTopics(r.data.topics ?? []));
-  }, [form.gradeId]);
+    if (!scopeState.gradeId) { setFormTopics([]); setFormLessons([]); setFormSections([]); setFormNodes([]); return; }
+    client.get(`/api/content/grades/${scopeState.gradeId}/topics`).then(r => setFormTopics(r.data.topics ?? []));
+  }, [scopeState.gradeId]);
 
   useEffect(() => {
-    if (!form.topicId) { setFormLessons([]); setFormSections([]); setFormNodes([]); return; }
-    client.get(`/api/content/topics/${form.topicId}/lessons`).then(r => setFormLessons(r.data.lessons ?? []));
-  }, [form.topicId]);
+    if (!scopeState.topicId) { setFormLessons([]); setFormSections([]); setFormNodes([]); return; }
+    client.get(`/api/content/topics/${scopeState.topicId}/lessons`).then(r => setFormLessons(r.data.lessons ?? []));
+  }, [scopeState.topicId]);
 
   useEffect(() => {
-    if (!form.lessonId) { setFormSections([]); setFormNodes([]); return; }
-    client.get(`/api/content/lessons/${form.lessonId}/sections`).then(r => setFormSections(r.data.sections ?? []));
-  }, [form.lessonId]);
+    if (!scopeState.lessonId) { setFormSections([]); setFormNodes([]); return; }
+    client.get(`/api/content/lessons/${scopeState.lessonId}/sections`).then(r => setFormSections(r.data.sections ?? []));
+  }, [scopeState.lessonId]);
 
   useEffect(() => {
-    if (!form.sectionId) { setFormNodes([]); return; }
-    client.get(`/api/content/sections/${form.sectionId}/nodes`).then(r => setFormNodes(r.data.nodes ?? []));
-  }, [form.sectionId]);
+    if (!scopeState.sectionId) { setFormNodes([]); return; }
+    client.get(`/api/content/sections/${scopeState.sectionId}/nodes`).then(r => setFormNodes(r.data.nodes ?? []));
+  }, [scopeState.sectionId]);
 
   const openCreate = () => {
     setEditQuestion(null);
-    setForm({
-      ...EMPTY_FORM,
+    setScopeState({
+      scopeType: 'GRADE',
       gradeId: selGradeId,
       topicId: selTopicId,
       lessonId: selLessonId,
       sectionId: selSectionId,
-      nodeId: selNodeId,
-      scopeType: 'GRADE'
+      nodeId: selNodeId
     });
-    setAnswers([EMPTY_ANSWER]);
+    setFormQuestions([
+      {
+        key: Math.random().toString(),
+        type: 'CHOOSE',
+        difficulty: '1',
+        isActive: true,
+        promptText: '',
+        document: '',
+        explanation: '',
+        answers: [{ ...EMPTY_ANSWER }]
+      }
+    ]);
     setModalOpen(true);
   };
 
@@ -210,13 +230,7 @@ export function QuestionPanel({ onToast }: QuestionPanelProps) {
       gradeId = String(q.gradeId ?? '');
     }
 
-    setForm({
-      type: q.type as 'CHOOSE' | 'FILL' | 'MATCH',
-      difficulty: String(q.difficulty),
-      promptText: q.promptText,
-      document: q.document ?? '',
-      explanation: q.explanation ?? '',
-      isActive: q.isActive !== false,
+    setScopeState({
       scopeType: scopeTypeVal,
       gradeId,
       topicId,
@@ -276,96 +290,157 @@ export function QuestionPanel({ onToast }: QuestionPanelProps) {
       parsedAnswers = [EMPTY_ANSWER];
     }
 
-    setAnswers(parsedAnswers);
+    setFormQuestions([
+      {
+        key: Math.random().toString(),
+        type,
+        difficulty: String(q.difficulty),
+        isActive: q.isActive !== false,
+        promptText: q.promptText,
+        document: q.document ?? '',
+        explanation: q.explanation ?? '',
+        answers: parsedAnswers
+      }
+    ]);
     setModalOpen(true);
   };
 
-  const addAnswerField = () => setAnswers([...answers, EMPTY_ANSWER]);
-  const removeAnswerField = (idx: number) => setAnswers(answers.filter((_, i) => i !== idx));
-  const updateAnswerField = (idx: number, field: keyof FormAnswer, val: any) => {
-    setAnswers(answers.map((ans, i) => i === idx ? { ...ans, [field]: val } : ans));
+  const addQuestionItem = () => {
+    setFormQuestions(prev => [
+      ...prev,
+      {
+        key: Math.random().toString(),
+        type: 'CHOOSE',
+        difficulty: '1',
+        isActive: true,
+        promptText: '',
+        document: '',
+        explanation: '',
+        answers: [{ ...EMPTY_ANSWER }]
+      }
+    ]);
+  };
+
+  const removeQuestionItem = (idx: number) => {
+    setFormQuestions(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  const updateQuestionField = <K extends keyof FormQuestionItem>(idx: number, field: K, val: FormQuestionItem[K]) => {
+    setFormQuestions(prev => prev.map((q, i) => i === idx ? { ...q, [field]: val } : q));
+  };
+
+  const addAnswerField = (qIdx: number) => {
+    setFormQuestions(prev => prev.map((q, i) => i === qIdx ? { ...q, answers: [...q.answers, { ...EMPTY_ANSWER }] } : q));
+  };
+
+  const removeAnswerField = (qIdx: number, ansIdx: number) => {
+    setFormQuestions(prev => prev.map((q, i) => i === qIdx ? { ...q, answers: q.answers.filter((_, aIdx) => aIdx !== ansIdx) } : q));
+  };
+
+  const updateAnswerField = (qIdx: number, ansIdx: number, field: keyof FormAnswer, val: any) => {
+    setFormQuestions(prev => prev.map((q, i) => i === qIdx ? {
+      ...q,
+      answers: q.answers.map((ans, aIdx) => aIdx === ansIdx ? { ...ans, [field]: val } : ans)
+    } : q));
   };
 
   const handleSave = async () => {
-    const diff = Number(form.difficulty);
-    if (!form.promptText || isNaN(diff) || !answers.length) {
-      onToast('Vui lòng điền đầy đủ thông tin hợp lệ', 'error');
-      return;
-    }
-
     // Validate scope selections based on scopeType
     let scopeId: number | null = null;
-    if (form.scopeType === 'GRADE') {
-      if (!form.gradeId) return onToast('Vui lòng chọn Khối lớp', 'error');
-      scopeId = Number(form.gradeId);
-    } else if (form.scopeType === 'TOPIC') {
-      if (!form.topicId) return onToast('Vui lòng chọn Chủ đề', 'error');
-      scopeId = Number(form.topicId);
-    } else if (form.scopeType === 'LESSON') {
-      if (!form.lessonId) return onToast('Vui lòng chọn Bài học', 'error');
-      scopeId = Number(form.lessonId);
-    } else if (form.scopeType === 'SECTION') {
-      if (!form.sectionId) return onToast('Vui lòng chọn Phần', 'error');
-      scopeId = Number(form.sectionId);
-    } else if (form.scopeType === 'NODE') {
-      if (!form.nodeId) return onToast('Vui lòng chọn Nút kiến thức', 'error');
-      scopeId = Number(form.nodeId);
+    if (scopeState.scopeType === 'GRADE') {
+      if (!scopeState.gradeId) return onToast('Vui lòng chọn Khối lớp', 'error');
+      scopeId = Number(scopeState.gradeId);
+    } else if (scopeState.scopeType === 'TOPIC') {
+      if (!scopeState.topicId) return onToast('Vui lòng chọn Chủ đề', 'error');
+      scopeId = Number(scopeState.topicId);
+    } else if (scopeState.scopeType === 'LESSON') {
+      if (!scopeState.lessonId) return onToast('Vui lòng chọn Bài học', 'error');
+      scopeId = Number(scopeState.lessonId);
+    } else if (scopeState.scopeType === 'SECTION') {
+      if (!scopeState.sectionId) return onToast('Vui lòng chọn Phần', 'error');
+      scopeId = Number(scopeState.sectionId);
+    } else if (scopeState.scopeType === 'NODE') {
+      if (!scopeState.nodeId) return onToast('Vui lòng chọn Nút kiến thức', 'error');
+      scopeId = Number(scopeState.nodeId);
     }
 
-    // Construct answerDataJson based on type
-    let answerDataJson: any = null;
-    if (form.type === 'CHOOSE') {
-      const options = answers.map(a => a.content.trim()).filter(Boolean);
-      const correctOption = answers
-        .map((a, i) => (a.isCorrect ? i : -1))
-        .filter(i => i !== -1);
+    const payloads = [];
+    for (let index = 0; index < formQuestions.length; index++) {
+      const qItem = formQuestions[index];
+      const diff = Number(qItem.difficulty);
+      const promptTrimmed = qItem.promptText.trim();
 
-      if (options.length === 0) return onToast('Vui lòng điền nội dung các lựa chọn', 'error');
-      if (correctOption.length === 0) return onToast('Vui lòng chọn ít nhất một lựa chọn đúng', 'error');
+      if (!promptTrimmed) {
+        return onToast(`Nội dung câu hỏi số ${index + 1} không được để trống`, 'error');
+      }
+      if (isNaN(diff) || !qItem.answers.length) {
+        return onToast(`Vui lòng điền đầy đủ thông tin hợp lệ ở câu hỏi số ${index + 1}`, 'error');
+      }
 
-      answerDataJson = { options, correctOption };
-    } else if (form.type === 'FILL') {
-      const acceptedAnswers = answers.map(a => a.content.trim()).filter(Boolean);
-      if (acceptedAnswers.length === 0) return onToast('Vui lòng điền các đáp án được chấp nhận', 'error');
+      // Construct answerDataJson based on type
+      let answerDataJson: any = null;
+      if (qItem.type === 'CHOOSE') {
+        const options = qItem.answers.map(a => a.content.trim()).filter(Boolean);
+        const correctOption = qItem.answers
+          .map((a, i) => (a.isCorrect ? i : -1))
+          .filter(i => i !== -1);
 
-      answerDataJson = { acceptedAnswers };
-    } else if (form.type === 'MATCH') {
-      const pairs = answers
-        .filter(a => a.leftText.trim() && a.rightText.trim())
-        .map(a => ({ [a.leftText.trim()]: a.rightText.trim() }));
+        if (options.length === 0) {
+          return onToast(`Câu hỏi số ${index + 1}: Vui lòng điền nội dung các lựa chọn`, 'error');
+        }
+        if (correctOption.length === 0) {
+          return onToast(`Câu hỏi số ${index + 1}: Vui lòng chọn ít nhất một lựa chọn đúng`, 'error');
+        }
 
-      if (pairs.length === 0) return onToast('Vui lòng điền đầy đủ các cặp nối', 'error');
+        answerDataJson = { options, correctOption };
+      } else if (qItem.type === 'FILL') {
+        const acceptedAnswers = qItem.answers.map(a => a.content.trim()).filter(Boolean);
+        if (acceptedAnswers.length === 0) {
+          return onToast(`Câu hỏi số ${index + 1}: Vui lòng điền các đáp án được chấp nhận`, 'error');
+        }
 
-      answerDataJson = { pairs };
+        answerDataJson = { acceptedAnswers };
+      } else if (qItem.type === 'MATCH') {
+        const pairs = qItem.answers
+          .filter(a => a.leftText.trim() && a.rightText.trim())
+          .map(a => ({ [a.leftText.trim()]: a.rightText.trim() }));
+
+        if (pairs.length === 0) {
+          return onToast(`Câu hỏi số ${index + 1}: Vui lòng điền đầy đủ các cặp nối`, 'error');
+        }
+
+        answerDataJson = { pairs };
+      }
+
+      payloads.push({
+        type: qItem.type,
+        difficulty: diff,
+        promptText: promptTrimmed,
+        document: qItem.document.trim() || null,
+        explanation: qItem.explanation.trim() || null,
+        isActive: qItem.isActive,
+        scopeType: scopeState.scopeType,
+        scopeId,
+        answerDataJson,
+        // Legacy backups
+        gradeId: scopeState.gradeId ? Number(scopeState.gradeId) : null,
+        topicId: scopeState.topicId ? Number(scopeState.topicId) : null,
+        lessonId: scopeState.lessonId ? Number(scopeState.lessonId) : null,
+        sectionId: scopeState.sectionId ? Number(scopeState.sectionId) : null,
+        nodeId: scopeState.nodeId ? Number(scopeState.nodeId) : null
+      });
     }
 
     try {
       setSaving(true);
-
-      const payload = {
-        type: form.type,
-        difficulty: diff,
-        promptText: form.promptText,
-        document: form.document || null,
-        explanation: form.explanation || null,
-        isActive: form.isActive,
-        scopeType: form.scopeType,
-        scopeId,
-        answerDataJson,
-        // Legacy backups
-        gradeId: form.gradeId ? Number(form.gradeId) : null,
-        topicId: form.topicId ? Number(form.topicId) : null,
-        lessonId: form.lessonId ? Number(form.lessonId) : null,
-        sectionId: form.sectionId ? Number(form.sectionId) : null,
-        nodeId: form.nodeId ? Number(form.nodeId) : null
-      };
-
       if (editQuestion) {
-        await client.patch(`/api/admin/questions/${editQuestion.id}`, payload);
+        await client.patch(`/api/admin/questions/${editQuestion.id}`, payloads[0]);
         onToast('Đã lưu câu hỏi thành công', 'success');
       } else {
-        await client.post('/api/admin/questions', payload);
-        onToast('Đã tạo câu hỏi thành công', 'success');
+        for (let i = 0; i < payloads.length; i++) {
+          await client.post('/api/admin/questions', payloads[i]);
+        }
+        onToast(`Đã tạo thành công ${payloads.length} câu hỏi`, 'success');
       }
       setModalOpen(false);
       fetchQuestions();
@@ -483,10 +558,10 @@ export function QuestionPanel({ onToast }: QuestionPanelProps) {
                   <td style={{ ...TD_STYLE, fontWeight: 700 }}>#{q.id}</td>
                   <td style={{ ...TD_STYLE, fontWeight: 600, color: '#0f172a', maxWidth: 320 }}>
                     <div>
-                      <div>{q.promptText}</div>
+                      <div dangerouslySetInnerHTML={{ __html: q.promptText }} style={{ maxHeight: 80, overflowY: 'auto' }} />
                       {q.document && (
                         <div style={{ fontSize: 12, color: '#64748b', fontStyle: 'italic', marginTop: 4 }}>
-                          Trích dẫn: "{q.document.substring(0, 60)}..."
+                          Trích dẫn: "{stripHtml(q.document).substring(0, 60)}..."
                         </div>
                       )}
                     </div>
@@ -529,12 +604,12 @@ export function QuestionPanel({ onToast }: QuestionPanelProps) {
       )}
 
       {/* Create / Edit Modal */}
-      <Modal open={modalOpen} title={editQuestion ? `Sửa câu hỏi: #${editQuestion.id}` : 'Thêm câu hỏi mới'} onClose={() => setModalOpen(false)}>
+      <Modal open={modalOpen} title={editQuestion ? `Sửa câu hỏi: #${editQuestion.id}` : 'Thêm câu hỏi mới'} onClose={() => setModalOpen(false)} width={850}>
         
         {/* Scope Type Selection */}
         <div style={{ display: 'flex', gap: 16, marginBottom: 12 }}>
           <div style={{ flex: 1 }}>
-            <Select label="Cấp độ phạm vi (Scope Level)" value={form.scopeType} onChange={(e) => setForm(f => ({ ...f, scopeType: e.target.value as any }))}>
+            <Select label="Cấp độ phạm vi (Scope Level)" value={scopeState.scopeType} onChange={(e) => setScopeState(f => ({ ...f, scopeType: e.target.value as any }))}>
               <option value="NATIONAL">NATIONAL — Quốc gia</option>
               <option value="GRADE">GRADE — Khối lớp</option>
               <option value="TOPIC">TOPIC — Chủ đề</option>
@@ -543,36 +618,25 @@ export function QuestionPanel({ onToast }: QuestionPanelProps) {
               <option value="NODE">NODE — Nút kiến thức</option>
             </Select>
           </div>
-          <div style={{ flex: 1, display: 'flex', alignItems: 'flex-end', paddingBottom: 6 }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, cursor: 'pointer', userSelect: 'none' }}>
-              <input
-                type="checkbox"
-                checked={form.isActive}
-                onChange={(e) => setForm(f => ({ ...f, isActive: e.target.checked }))}
-                style={{ width: 18, height: 18, cursor: 'pointer' }}
-              />
-              <span style={{ fontWeight: 600, color: '#334155' }}>Đang hoạt động (Kích hoạt)</span>
-            </label>
-          </div>
         </div>
 
         {/* Cascade selections depending on Scope Type */}
-        {form.scopeType !== 'NATIONAL' && (
+        {scopeState.scopeType !== 'NATIONAL' && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10, marginBottom: 12 }}>
             <Select
               label="Khối"
-              value={form.gradeId}
-              onChange={(e) => setForm(f => ({ ...f, gradeId: e.target.value, topicId: '', lessonId: '', sectionId: '', nodeId: '' }))}
+              value={scopeState.gradeId}
+              onChange={(e) => setScopeState(f => ({ ...f, gradeId: e.target.value, topicId: '', lessonId: '', sectionId: '', nodeId: '' }))}
             >
               <option value="">Chọn Khối</option>
               {grades.map(g => <option key={g.id} value={g.id}>Khối {g.id}</option>)}
             </Select>
 
-            {['TOPIC', 'LESSON', 'SECTION', 'NODE'].includes(form.scopeType) && (
+            {['TOPIC', 'LESSON', 'SECTION', 'NODE'].includes(scopeState.scopeType) && (
               <Select
                 label="Chủ đề"
-                value={form.topicId}
-                onChange={(e) => setForm(f => ({ ...f, topicId: e.target.value, lessonId: '', sectionId: '', nodeId: '' }))}
+                value={scopeState.topicId}
+                onChange={(e) => setScopeState(f => ({ ...f, topicId: e.target.value, lessonId: '', sectionId: '', nodeId: '' }))}
                 disabled={!formTopics.length}
               >
                 <option value="">Chọn Chủ đề</option>
@@ -580,11 +644,11 @@ export function QuestionPanel({ onToast }: QuestionPanelProps) {
               </Select>
             )}
 
-            {['LESSON', 'SECTION', 'NODE'].includes(form.scopeType) && (
+            {['LESSON', 'SECTION', 'NODE'].includes(scopeState.scopeType) && (
               <Select
                 label="Bài học"
-                value={form.lessonId}
-                onChange={(e) => setForm(f => ({ ...f, lessonId: e.target.value, sectionId: '', nodeId: '' }))}
+                value={scopeState.lessonId}
+                onChange={(e) => setScopeState(f => ({ ...f, lessonId: e.target.value, sectionId: '', nodeId: '' }))}
                 disabled={!formLessons.length}
               >
                 <option value="">Chọn Bài học</option>
@@ -592,11 +656,11 @@ export function QuestionPanel({ onToast }: QuestionPanelProps) {
               </Select>
             )}
 
-            {['SECTION', 'NODE'].includes(form.scopeType) && (
+            {['SECTION', 'NODE'].includes(scopeState.scopeType) && (
               <Select
                 label="Phần"
-                value={form.sectionId}
-                onChange={(e) => setForm(f => ({ ...f, sectionId: e.target.value, nodeId: '' }))}
+                value={scopeState.sectionId}
+                onChange={(e) => setScopeState(f => ({ ...f, sectionId: e.target.value, nodeId: '' }))}
                 disabled={!formSections.length}
               >
                 <option value="">Chọn Phần</option>
@@ -604,11 +668,11 @@ export function QuestionPanel({ onToast }: QuestionPanelProps) {
               </Select>
             )}
 
-            {form.scopeType === 'NODE' && (
+            {scopeState.scopeType === 'NODE' && (
               <Select
                 label="Nút kiến thức"
-                value={form.nodeId}
-                onChange={(e) => setForm(f => ({ ...f, nodeId: e.target.value }))}
+                value={scopeState.nodeId}
+                onChange={(e) => setScopeState(f => ({ ...f, nodeId: e.target.value }))}
                 disabled={!formNodes.length}
               >
                 <option value="">Chọn Nút</option>
@@ -618,121 +682,201 @@ export function QuestionPanel({ onToast }: QuestionPanelProps) {
           </div>
         )}
 
-        <div style={{ display: 'flex', gap: 16, marginBottom: 12 }}>
-          <div style={{ flex: 2 }}>
-            <Select label="Loại câu hỏi" value={form.type} onChange={(e) => {
-              setForm(f => ({ ...f, type: e.target.value as 'CHOOSE' | 'FILL' | 'MATCH' }));
-              setAnswers([EMPTY_ANSWER]);
-            }}>
-              <option value="CHOOSE">CHOOSE — Trắc nghiệm nhiều lựa chọn</option>
-              <option value="FILL">FILL — Điền vào chỗ trống</option>
-              <option value="MATCH">MATCH — Nối cặp tương ứng</option>
-            </Select>
-          </div>
-          <div style={{ flex: 1 }}>
-            <Select label="Độ khó" value={form.difficulty} onChange={(e) => setForm(f => ({ ...f, difficulty: e.target.value }))}>
-              <option value="1">Lớp 1 (Nhận biết)</option>
-              <option value="2">Lớp 2 (Thông hiểu)</option>
-              <option value="3">Lớp 3 (Vận dụng)</option>
-              <option value="4">Lớp 4 (Vận dụng cao)</option>
-            </Select>
-          </div>
-        </div>
-
-        <Textarea label="Nội dung câu hỏi" value={form.promptText} onChange={(e) => setForm(f => ({ ...f, promptText: e.target.value }))} placeholder="Nhập câu hỏi lịch sử..." />
-        <Input label="Tài liệu/Đoạn trích đi kèm (Tùy chọn)" value={form.document} onChange={(e) => setForm(f => ({ ...f, document: e.target.value }))} placeholder="Nhập đoạn văn trích dẫn lịch sử..." />
-        <Textarea label="Giải thích đáp án (Tùy chọn)" value={form.explanation} onChange={(e) => setForm(f => ({ ...f, explanation: e.target.value }))} placeholder="Giải thích vì sao đáp án này chính xác..." />
-
-        {/* Answer section */}
-        <div style={{ marginTop: 16 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-            <span style={{ fontSize: 13, fontWeight: 700, color: '#475569' }}>Danh sách đáp án</span>
-            {(form.type === 'CHOOSE' || form.type === 'MATCH' || form.type === 'FILL') && (
-              <Button variant="secondary" icon={<IconPlus size={12} />} onClick={addAnswerField} style={{ padding: '4px 10px', fontSize: 12 }}>
-                Thêm trường đáp án
-              </Button>
-            )}
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 180, overflowY: 'auto', paddingRight: 4 }}>
-            {answers.map((ans, idx) => (
-              <div key={idx} style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                {form.type === 'CHOOSE' && (
-                  <>
-                    <input
-                      type="checkbox"
-                      checked={ans.isCorrect}
-                      onChange={(e) => updateAnswerField(idx, 'isCorrect', e.target.checked)}
-                      style={{ width: 18, height: 18, cursor: 'pointer' }}
-                    />
-                    <div style={{ flex: 1 }}>
-                      <input
-                        type="text"
-                        placeholder="Nội dung đáp án lựa chọn..."
-                        value={ans.content}
-                        onChange={(e) => updateAnswerField(idx, 'content', e.target.value)}
-                        style={INPUT_STYLE}
-                      />
-                    </div>
-                    {answers.length > 1 && (
-                      <button onClick={() => removeAnswerField(idx)} style={DEL_BTN_STYLE}>
-                        <IconDelete size={16} />
-                      </button>
-                    )}
-                  </>
-                )}
-
-                {form.type === 'FILL' && (
-                  <>
-                    <div style={{ flex: 1 }}>
-                      <input
-                        type="text"
-                        placeholder="Đáp án điền khuyết được chấp nhận (ví dụ: 'Bạch Đằng')..."
-                        value={ans.content}
-                        onChange={(e) => updateAnswerField(idx, 'content', e.target.value)}
-                        style={INPUT_STYLE}
-                      />
-                    </div>
-                    {answers.length > 1 && (
-                      <button onClick={() => removeAnswerField(idx)} style={DEL_BTN_STYLE}>
-                        <IconDelete size={16} />
-                      </button>
-                    )}
-                  </>
-                )}
-
-                {form.type === 'MATCH' && (
-                  <>
-                    <div style={{ flex: 1 }}>
-                      <input
-                        type="text"
-                        placeholder="Vế bên trái (ví dụ: 'Lê Lợi')..."
-                        value={ans.leftText}
-                        onChange={(e) => updateAnswerField(idx, 'leftText', e.target.value)}
-                        style={INPUT_STYLE}
-                      />
-                    </div>
-                    <span style={{ color: '#94a3b8' }}>➔</span>
-                    <div style={{ flex: 1 }}>
-                      <input
-                        type="text"
-                        placeholder="Vế bên phải nối tương ứng (ví dụ: '1428')..."
-                        value={ans.rightText}
-                        onChange={(e) => updateAnswerField(idx, 'rightText', e.target.value)}
-                        style={INPUT_STYLE}
-                      />
-                    </div>
-                    {answers.length > 1 && (
-                      <button onClick={() => removeAnswerField(idx)} style={DEL_BTN_STYLE}>
-                        <IconDelete size={16} />
-                      </button>
-                    )}
-                  </>
+        {/* Questions list */}
+        <div style={{ marginTop: 20 }}>
+          {formQuestions.map((qItem, qIdx) => (
+            <div
+              key={qItem.key}
+              style={{
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                borderRadius: 14,
+                padding: '20px 24px',
+                marginBottom: 20,
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <h4 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#334155' }}>
+                  Câu hỏi {formQuestions.length > 1 ? `#${qIdx + 1}` : ''}
+                </h4>
+                {!editQuestion && formQuestions.length > 1 && (
+                  <Button
+                    variant="danger"
+                    onClick={() => removeQuestionItem(qIdx)}
+                    style={{ padding: '6px 12px', fontSize: 13 }}
+                  >
+                    Xóa câu hỏi này
+                  </Button>
                 )}
               </div>
-            ))}
-          </div>
+
+              <div style={{ display: 'flex', gap: 16, marginBottom: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+                <div style={{ flex: 2, minWidth: 200 }}>
+                  <Select
+                    label="Loại câu hỏi"
+                    value={qItem.type}
+                    onChange={(e) => {
+                      updateQuestionField(qIdx, 'type', e.target.value as any);
+                      // Reset answers list for this question
+                      setFormQuestions(prev => prev.map((q, i) => i === qIdx ? { ...q, answers: [{ ...EMPTY_ANSWER }] } : q));
+                    }}
+                  >
+                    <option value="CHOOSE">CHOOSE — Trắc nghiệm nhiều lựa chọn</option>
+                    <option value="FILL">FILL — Điền vào chỗ trống</option>
+                    <option value="MATCH">MATCH — Nối cặp tương ứng</option>
+                  </Select>
+                </div>
+                <div style={{ flex: 1, minWidth: 120 }}>
+                  <Select
+                    label="Độ khó"
+                    value={qItem.difficulty}
+                    onChange={(e) => updateQuestionField(qIdx, 'difficulty', e.target.value)}
+                  >
+                    <option value="1">Lớp 1 (Nhận biết)</option>
+                    <option value="2">Lớp 2 (Thông hiểu)</option>
+                    <option value="3">Lớp 3 (Vận dụng)</option>
+                    <option value="4">Lớp 4 (Vận dụng cao)</option>
+                  </Select>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: 6 }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, cursor: 'pointer', userSelect: 'none' }}>
+                    <input
+                      type="checkbox"
+                      checked={qItem.isActive}
+                      onChange={(e) => updateQuestionField(qIdx, 'isActive', e.target.checked)}
+                      style={{ width: 18, height: 18, cursor: 'pointer' }}
+                    />
+                    <span style={{ fontWeight: 600, color: '#334155' }}>Đang hoạt động (Kích hoạt)</span>
+                  </label>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <RichTextEditor
+                  label="Nội dung câu hỏi"
+                  value={qItem.promptText}
+                  onChange={(val) => updateQuestionField(qIdx, 'promptText', val)}
+                  placeholder="Nhập câu hỏi lịch sử..."
+                />
+                <RichTextEditor
+                  label="Tài liệu/Đoạn trích đi kèm (Tùy chọn)"
+                  value={qItem.document}
+                  onChange={(val) => updateQuestionField(qIdx, 'document', val)}
+                  placeholder="Nhập đoạn văn trích dẫn lịch sử..."
+                />
+                <RichTextEditor
+                  label="Giải thích đáp án (Tùy chọn)"
+                  value={qItem.explanation}
+                  onChange={(val) => updateQuestionField(qIdx, 'explanation', val)}
+                  placeholder="Giải thích vì sao đáp án này chính xác..."
+                />
+              </div>
+
+              {/* Answer list section inside card */}
+              <div style={{ marginTop: 16 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: '#475569' }}>Danh sách đáp án</span>
+                  <Button variant="secondary" icon={<IconPlus size={12} />} onClick={() => addAnswerField(qIdx)} style={{ padding: '4px 10px', fontSize: 12 }}>
+                    Thêm trường đáp án
+                  </Button>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 180, overflowY: 'auto', paddingRight: 4 }}>
+                  {qItem.answers.map((ans, idx) => (
+                    <div key={idx} style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                      {qItem.type === 'CHOOSE' && (
+                        <>
+                          <input
+                            type="checkbox"
+                            checked={ans.isCorrect}
+                            onChange={(e) => updateAnswerField(qIdx, idx, 'isCorrect', e.target.checked)}
+                            style={{ width: 18, height: 18, cursor: 'pointer' }}
+                          />
+                          <div style={{ flex: 1 }}>
+                            <input
+                              type="text"
+                              placeholder="Nội dung đáp án lựa chọn..."
+                              value={ans.content}
+                              onChange={(e) => updateAnswerField(qIdx, idx, 'content', e.target.value)}
+                              style={INPUT_STYLE}
+                            />
+                          </div>
+                          {qItem.answers.length > 1 && (
+                            <button onClick={() => removeAnswerField(qIdx, idx)} style={DEL_BTN_STYLE}>
+                              <IconDelete size={16} />
+                            </button>
+                          )}
+                        </>
+                      )}
+
+                      {qItem.type === 'FILL' && (
+                        <>
+                          <div style={{ flex: 1 }}>
+                            <input
+                              type="text"
+                              placeholder="Đáp án điền khuyết được chấp nhận (ví dụ: 'Bạch Đằng')..."
+                              value={ans.content}
+                              onChange={(e) => updateAnswerField(qIdx, idx, 'content', e.target.value)}
+                              style={INPUT_STYLE}
+                            />
+                          </div>
+                          {qItem.answers.length > 1 && (
+                            <button onClick={() => removeAnswerField(qIdx, idx)} style={DEL_BTN_STYLE}>
+                              <IconDelete size={16} />
+                            </button>
+                          )}
+                        </>
+                      )}
+
+                      {qItem.type === 'MATCH' && (
+                        <>
+                          <div style={{ flex: 1 }}>
+                            <input
+                              type="text"
+                              placeholder="Vế bên trái (ví dụ: 'Lê Lợi')..."
+                              value={ans.leftText}
+                              onChange={(e) => updateAnswerField(qIdx, idx, 'leftText', e.target.value)}
+                              style={INPUT_STYLE}
+                            />
+                          </div>
+                          <span style={{ color: '#94a3b8' }}>➔</span>
+                          <div style={{ flex: 1 }}>
+                            <input
+                              type="text"
+                              placeholder="Vế bên phải nối tương ứng (ví dụ: '1428')..."
+                              value={ans.rightText}
+                              onChange={(e) => updateAnswerField(qIdx, idx, 'rightText', e.target.value)}
+                              style={INPUT_STYLE}
+                            />
+                          </div>
+                          {qItem.answers.length > 1 && (
+                            <button onClick={() => removeAnswerField(qIdx, idx)} style={DEL_BTN_STYLE}>
+                              <IconDelete size={16} />
+                            </button>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
+
+        {/* Add Another Question Button */}
+        {!editQuestion && (
+          <div style={{ marginBottom: 20 }}>
+            <Button
+              variant="secondary"
+              icon={<IconPlus size={14} />}
+              onClick={addQuestionItem}
+              style={{ width: '100%', padding: '12px', borderStyle: 'dashed', borderRadius: 10, background: '#f8fafc', color: '#6366f1' }}
+            >
+              Thêm câu hỏi khác
+            </Button>
+          </div>
+        )}
 
         <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 20 }}>
           <Button variant="ghost" onClick={() => setModalOpen(false)}>Hủy</Button>
