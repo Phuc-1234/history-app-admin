@@ -7,15 +7,25 @@ interface ModalProps {
   onClose: () => void;
   children: ReactNode;
   width?: number;
+  closeOnOverlayClick?: boolean;
+  closeOnEscape?: boolean;
 }
 
-export function Modal({ open, title, onClose, children, width = 520 }: ModalProps) {
+export function Modal({
+  open,
+  title,
+  onClose,
+  children,
+  width = 520,
+  closeOnOverlayClick = false,
+  closeOnEscape = false
+}: ModalProps) {
   useEffect(() => {
-    if (!open) return;
+    if (!open || !closeOnEscape) return;
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [open, onClose]);
+  }, [open, onClose, closeOnEscape]);
 
   if (!open) return null;
 
@@ -29,7 +39,7 @@ export function Modal({ open, title, onClose, children, width = 520 }: ModalProp
         padding: 16,
         animation: 'fadeIn 0.15s ease',
       }}
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      onClick={(e) => { if (closeOnOverlayClick && e.target === e.currentTarget) onClose(); }}
     >
       <div
         style={{

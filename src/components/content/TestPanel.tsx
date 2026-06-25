@@ -8,6 +8,7 @@ import { Modal } from '../ui/Modal';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { Input, Select } from '../ui/FormField';
 import { Spinner } from '../ui/Spinner';
+import { stripHtml } from '../../utils/html';
 import {
   IconPlus,
   IconEdit,
@@ -446,7 +447,7 @@ export function TestPanel({ onToast }: TestPanelProps) {
                   <span style={{ color: '#64748b', fontWeight: 600 }}>#{q.id}</span>
                   <span style={{ background: '#f1f5f9', fontSize: 10, padding: '1px 4px', borderRadius: 4, fontWeight: 700 }}>{q.type}</span>
                   <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1, color: '#334155' }}>
-                    {q.promptText}
+                    {stripHtml(q.promptText)}
                   </span>
                 </label>
               );
