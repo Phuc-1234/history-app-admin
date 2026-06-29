@@ -8,9 +8,10 @@ import { Modal } from '../ui/Modal';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { Select } from '../ui/FormField';
 import { Spinner } from '../ui/Spinner';
-import { IconPlus, IconEdit, IconDelete, IconQuestion, IconXP } from '../ui/Icons';
+import { IconPlus, IconEdit, IconDelete, IconQuestion, IconXP, IconChevronDown, IconChevronUp, IconDownload, IconUpload } from '../ui/Icons';
 import { RichTextEditor } from '../ui/RichTextEditor';
 import { stripHtml } from '../../utils/html';
+import * as XLSX from 'xlsx';
 
 interface QuestionPanelProps {
   onToast: (msg: string, type: ToastType) => void;
@@ -32,6 +33,7 @@ interface FormQuestionItem {
   document: string;
   explanation: string;
   answers: FormAnswer[];
+  isCollapsed?: boolean;
 }
 
 const EMPTY_ANSWER: FormAnswer = { content: '', isCorrect: false, leftText: '', rightText: '' };
@@ -342,6 +344,269 @@ export function QuestionPanel({ onToast }: QuestionPanelProps) {
       ...q,
       answers: q.answers.map((ans, aIdx) => aIdx === ansIdx ? { ...ans, [field]: val } : ans)
     } : q));
+  };
+
+  const downloadExcelTemplate = () => {
+    const headers = [
+      'Loại câu hỏi (CHOOSE / FILL / MATCH)',
+      'Độ khó (1 - 4)',
+      'Kích hoạt (TRUE / FALSE)',
+      'Nội dung câu hỏi',
+      'Tài liệu đi kèm (Tùy chọn)',
+      'Giải thích đáp án (Tùy chọn)',
+      'Lựa chọn 1 / Vế trái 1',
+      'Lựa chọn 2 / Vế trái 2',
+      'Lựa chọn 3 / Vế trái 3',
+      'Lựa chọn 4 / Vế trái 4',
+      'Lựa chọn 5 / Vế trái 5',
+      'Vế phải 1 (Nối cặp)',
+      'Vế phải 2 (Nối cặp)',
+      'Vế phải 3 (Nối cặp)',
+      'Vế phải 4 (Nối cặp)',
+      'Vế phải 5 (Nối cặp)',
+      'Đáp án đúng'
+    ];
+
+    const instructions = [
+      'CHOOSE, FILL, hoặc MATCH',
+      '1 (Nhận biết) đến 4 (Vận dụng cao)',
+      'TRUE hoặc FALSE (mặc định TRUE)',
+      'Nội dung câu hỏi (chấp nhận thẻ HTML cơ bản)',
+      'Đoạn trích/Tài liệu bổ trợ (nếu có)',
+      'Giải thích lý do chọn đáp án đúng',
+      'Trắc nghiệm: Đáp án A | Nối cặp: Vế trái 1',
+      'Trắc nghiệm: Đáp án B | Nối cặp: Vế trái 2',
+      'Trắc nghiệm: Đáp án C | Nối cặp: Vế trái 3',
+      'Trắc nghiệm: Đáp án D | Nối cặp: Vế trái 4',
+      'Trắc nghiệm: Đáp án E | Nối cặp: Vế trái 5',
+      'Nối cặp: Vế phải tương ứng vế trái 1',
+      'Nối cặp: Vế phải tương ứng vế trái 2',
+      'Nối cặp: Vế phải tương ứng vế trái 3',
+      'Nối cặp: Vế phải tương ứng vế trái 4',
+      'Nối cặp: Vế phải tương ứng vế trái 5',
+      'Trắc nghiệm: Điền số thứ tự của đáp án đúng (VD: 1 hoặc 1,3) hoặc chữ cái tương ứng (VD: A hoặc A,C). Điền khuyết: điền các đáp án được chấp nhận cách nhau bởi dấu chấm phẩy (VD: Bạch Đằng; Sông Bạch Đằng)'
+    ];
+
+    const sample1 = [
+      'CHOOSE',
+      1,
+      'TRUE',
+      'Ai là người lãnh đạo cuộc khởi nghĩa Lam Sơn?',
+      '',
+      'Lê Lợi xưng Bình Định Vương, lãnh đạo cuộc khởi nghĩa Lam Sơn thắng lợi.',
+      'Lê Lợi',
+      'Nguyễn Huệ',
+      'Trần Hưng Đạo',
+      'Ngô Quyền',
+      '',
+      '',
+      '',
+      '',
+      '',
+      '',
+      '1'
+    ];
+
+    const sample2 = [
+      'FILL',
+      2,
+      'TRUE',
+      'Chiến thắng lịch sử trên sông ... năm 938 đã chấm dứt hơn 1000 năm bắc thuộc.',
+      '',
+      'Ngô Quyền đánh bại quân Nam Hán trên sông Bạch Đằng năm 938.',
+      '',
+      '',
+      '',
+      '',
+      '',
+      '',
+      '',
+      '',
+      '',
+      '',
+      'Bạch Đằng; Sông Bạch Đằng'
+    ];
+
+    const sample3 = [
+      'MATCH',
+      3,
+      'TRUE',
+      'Hãy nối các vị anh hùng dân tộc với triều đại tương ứng.',
+      '',
+      '',
+      'Đinh Bộ Lĩnh',
+      'Trần Hưng Đạo',
+      'Lê Lợi',
+      '',
+      '',
+      'Nhà Đinh',
+      'Nhà Trần',
+      'Nhà Lê',
+      '',
+      '',
+      ''
+    ];
+
+    const data = [headers, instructions, sample1, sample2, sample3];
+
+    const worksheet = XLSX.utils.aoa_to_sheet(data);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Template Câu Hỏi');
+
+    XLSX.writeFile(workbook, 'Mau_Import_Cau_Hoi.xlsx');
+  };
+
+  const handleImportExcel = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const ab = event.target?.result;
+        if (!ab) {
+          onToast('Không đọc được dữ liệu tệp tin', 'error');
+          return;
+        }
+
+        const workbook = XLSX.read(ab, { type: 'array' });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+
+        const rows: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        if (rows.length <= 2) {
+          onToast('Tệp excel không chứa dữ liệu câu hỏi hợp lệ', 'error');
+          return;
+        }
+
+        const newQuestions: FormQuestionItem[] = [];
+
+        const parseCorrectChooseOptions = (cellText: string): number[] => {
+          if (!cellText) return [];
+          const parts = String(cellText).split(/[,,;\s]+/).map(p => p.trim().toUpperCase()).filter(Boolean);
+          const result: number[] = [];
+          parts.forEach(part => {
+            if (/^[A-E]$/.test(part)) {
+              result.push(part.charCodeAt(0) - 65);
+            } else {
+              const num = parseInt(part, 10);
+              if (!isNaN(num) && num >= 1 && num <= 5) {
+                result.push(num - 1);
+              }
+            }
+          });
+          return result;
+        };
+
+        for (let i = 2; i < rows.length; i++) {
+          const row = rows[i];
+          if (!row || row.length === 0 || !String(row[3] || '').trim()) {
+            continue;
+          }
+
+          const rawType = String(row[0] || '').trim().toUpperCase();
+          let type: 'CHOOSE' | 'FILL' | 'MATCH' = 'CHOOSE';
+          if (rawType === 'FILL' || rawType === 'ĐIỀN TỪ' || rawType === 'DIEN TU' || rawType === 'ĐIỀN KHUYẾT') {
+            type = 'FILL';
+          } else if (rawType === 'MATCH' || rawType === 'NỐI CẶP' || rawType === 'NOI CAP') {
+            type = 'MATCH';
+          }
+
+          const rawDiff = parseInt(String(row[1] || '').trim(), 10);
+          let difficulty = '1';
+          if (!isNaN(rawDiff) && rawDiff >= 1 && rawDiff <= 4) {
+            difficulty = String(rawDiff);
+          }
+
+          const rawActive = String(row[2] || '').trim().toUpperCase();
+          const isActive = rawActive !== 'FALSE' && rawActive !== 'N' && rawActive !== '0';
+
+          const promptText = String(row[3] || '').trim();
+          const document = String(row[4] || '').trim();
+          const explanation = String(row[5] || '').trim();
+
+          let answers: FormAnswer[] = [];
+          if (type === 'CHOOSE') {
+            const options = [
+              String(row[6] || '').trim(),
+              String(row[7] || '').trim(),
+              String(row[8] || '').trim(),
+              String(row[9] || '').trim(),
+              String(row[10] || '').trim()
+            ].filter(Boolean);
+
+            if (options.length === 0) {
+              options.push('Lựa chọn mặc định');
+            }
+
+            const correctIndices = parseCorrectChooseOptions(String(row[16] || ''));
+            answers = options.map((opt, optIdx) => ({
+              content: opt,
+              isCorrect: correctIndices.includes(optIdx) || (correctIndices.length === 0 && optIdx === 0),
+              leftText: '',
+              rightText: ''
+            }));
+          } else if (type === 'FILL') {
+            const accepted = String(row[16] || '').split(/[;]+/).map(x => x.trim()).filter(Boolean);
+            if (accepted.length === 0) {
+              accepted.push('Đáp án khuyết mặc định');
+            }
+            answers = accepted.map(ans => ({
+              content: ans,
+              isCorrect: true,
+              leftText: '',
+              rightText: ''
+            }));
+          } else if (type === 'MATCH') {
+            for (let k = 0; k < 5; k++) {
+              const left = String(row[6 + k] || '').trim();
+              const right = String(row[11 + k] || '').trim();
+              if (left || right) {
+                answers.push({
+                  content: '',
+                  isCorrect: true,
+                  leftText: left,
+                  rightText: right
+                });
+              }
+            }
+            if (answers.length === 0) {
+              answers.push({
+                content: '',
+                isCorrect: true,
+                leftText: 'Vế trái mặc định',
+                rightText: 'Vế phải mặc định'
+              });
+            }
+          }
+
+          newQuestions.push({
+            key: Math.random().toString(),
+            type,
+            difficulty,
+            isActive,
+            promptText,
+            document,
+            explanation,
+            answers,
+            isCollapsed: true
+          });
+        }
+
+        if (newQuestions.length === 0) {
+          onToast('Không tìm thấy dòng dữ liệu câu hỏi nào hợp lệ trong tệp excel', 'error');
+          return;
+        }
+
+        setFormQuestions(newQuestions);
+        onToast(`Đã tải nhập thành công ${newQuestions.length} câu hỏi vào form. Bạn vui lòng xem lại trước khi lưu!`, 'success');
+      } catch (err: any) {
+        onToast('Đã xảy ra lỗi khi xử lý tệp excel: ' + (err.message || ''), 'error');
+      }
+    };
+
+    reader.readAsArrayBuffer(file);
+    e.target.value = '';
   };
 
   const handleSave = async () => {
@@ -682,6 +947,82 @@ export function QuestionPanel({ onToast }: QuestionPanelProps) {
           </div>
         )}
 
+        {/* Bulk operations row (only when creating) */}
+        {!editQuestion && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '16px 20px',
+            background: 'linear-gradient(135deg, #f5f3ff, #f0fdf4)',
+            borderRadius: 14,
+            border: '1px solid #e9d5ff',
+            marginBottom: 16,
+            boxShadow: '0 2px 8px rgba(108,99,255,0.05)'
+          }}>
+            <div>
+              <span style={{ fontWeight: 700, fontSize: 14, color: '#5b21b6' }}>Nhập câu hỏi nhanh từ Excel</span>
+              <p style={{ margin: '4px 0 0 0', fontSize: 12, color: '#6b7280' }}>Tải file mẫu, điền thông tin và tải lên để tự động nhập vào form.</p>
+            </div>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+              <Button
+                variant="secondary"
+                icon={<IconDownload size={14} />}
+                onClick={downloadExcelTemplate}
+                style={{ padding: '8px 14px', fontSize: 13, background: '#ffffff', border: '1px solid #cbd5e1' }}
+              >
+                Tải Excel mẫu
+              </Button>
+              <label style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '8px 14px',
+                fontSize: 13,
+                fontWeight: 600,
+                color: '#ffffff',
+                background: '#10b981',
+                borderRadius: 8,
+                cursor: 'pointer',
+                userSelect: 'none',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                transition: 'background 0.2s',
+                height: 38,
+                boxSizing: 'border-box'
+              }}>
+                <IconUpload size={14} />
+                Nhập Excel
+                <input
+                  type="file"
+                  accept=".xlsx, .xls"
+                  onChange={handleImportExcel}
+                  style={{ display: 'none' }}
+                />
+              </label>
+            </div>
+          </div>
+        )}
+
+        {/* Expand / Collapse all actions for questions list (only when multiple questions exist) */}
+        {formQuestions.length > 1 && (
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginBottom: 12 }}>
+            <Button
+              variant="ghost"
+              onClick={() => setFormQuestions(prev => prev.map(q => ({ ...q, isCollapsed: true })))}
+              style={{ fontSize: 12, padding: '4px 8px', color: '#64748b' }}
+            >
+              Thu gọn tất cả
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => setFormQuestions(prev => prev.map(q => ({ ...q, isCollapsed: false })))}
+              style={{ fontSize: 12, padding: '4px 8px', color: '#64748b' }}
+            >
+              Mở rộng tất cả
+            </Button>
+          </div>
+        )}
+
         {/* Questions list */}
         <div style={{ marginTop: 20 }}>
           {formQuestions.map((qItem, qIdx) => (
@@ -691,14 +1032,53 @@ export function QuestionPanel({ onToast }: QuestionPanelProps) {
                 background: '#f8fafc',
                 border: '1px solid #e2e8f0',
                 borderRadius: 14,
-                padding: '20px 24px',
+                padding: qItem.isCollapsed ? '12px 24px' : '20px 24px',
                 marginBottom: 20,
+                transition: 'all 0.2s ease-in-out'
               }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                <h4 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#334155' }}>
-                  Câu hỏi {formQuestions.length > 1 ? `#${qIdx + 1}` : ''}
-                </h4>
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: qItem.isCollapsed ? 0 : 16
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, overflow: 'hidden', marginRight: 16 }}>
+                  <button
+                    type="button"
+                    onClick={() => updateQuestionField(qIdx, 'isCollapsed', !qItem.isCollapsed)}
+                    style={{
+                      border: 'none',
+                      background: 'none',
+                      padding: 4,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      color: '#64748b',
+                      borderRadius: 4,
+                      transition: 'background 0.2s'
+                    }}
+                    title={qItem.isCollapsed ? "Mở rộng" : "Thu gọn"}
+                  >
+                    {qItem.isCollapsed ? <IconChevronDown size={18} /> : <IconChevronUp size={18} />}
+                  </button>
+                  <h4 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#334155', whiteSpace: 'nowrap' }}>
+                    Câu hỏi {formQuestions.length > 1 ? `#${qIdx + 1}` : ''}
+                  </h4>
+                  {qItem.isCollapsed && qItem.promptText && (
+                    <span style={{
+                      fontSize: 13,
+                      color: '#64748b',
+                      fontWeight: 400,
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      marginLeft: 8
+                    }}>
+                      — {stripHtml(qItem.promptText).substring(0, 60)}{stripHtml(qItem.promptText).length > 60 ? '...' : ''}
+                    </span>
+                  )}
+                </div>
                 {!editQuestion && formQuestions.length > 1 && (
                   <Button
                     variant="danger"
@@ -710,156 +1090,160 @@ export function QuestionPanel({ onToast }: QuestionPanelProps) {
                 )}
               </div>
 
-              <div style={{ display: 'flex', gap: 16, marginBottom: 16, alignItems: 'center', flexWrap: 'wrap' }}>
-                <div style={{ flex: 2, minWidth: 200 }}>
-                  <Select
-                    label="Loại câu hỏi"
-                    value={qItem.type}
-                    onChange={(e) => {
-                      updateQuestionField(qIdx, 'type', e.target.value as any);
-                      // Reset answers list for this question
-                      setFormQuestions(prev => prev.map((q, i) => i === qIdx ? { ...q, answers: [{ ...EMPTY_ANSWER }] } : q));
-                    }}
-                  >
-                    <option value="CHOOSE">CHOOSE — Trắc nghiệm nhiều lựa chọn</option>
-                    <option value="FILL">FILL — Điền vào chỗ trống</option>
-                    <option value="MATCH">MATCH — Nối cặp tương ứng</option>
-                  </Select>
-                </div>
-                <div style={{ flex: 1, minWidth: 120 }}>
-                  <Select
-                    label="Độ khó"
-                    value={qItem.difficulty}
-                    onChange={(e) => updateQuestionField(qIdx, 'difficulty', e.target.value)}
-                  >
-                    <option value="1">Lớp 1 (Nhận biết)</option>
-                    <option value="2">Lớp 2 (Thông hiểu)</option>
-                    <option value="3">Lớp 3 (Vận dụng)</option>
-                    <option value="4">Lớp 4 (Vận dụng cao)</option>
-                  </Select>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: 6 }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, cursor: 'pointer', userSelect: 'none' }}>
-                    <input
-                      type="checkbox"
-                      checked={qItem.isActive}
-                      onChange={(e) => updateQuestionField(qIdx, 'isActive', e.target.checked)}
-                      style={{ width: 18, height: 18, cursor: 'pointer' }}
-                    />
-                    <span style={{ fontWeight: 600, color: '#334155' }}>Đang hoạt động (Kích hoạt)</span>
-                  </label>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <RichTextEditor
-                  label="Nội dung câu hỏi"
-                  value={qItem.promptText}
-                  onChange={(val) => updateQuestionField(qIdx, 'promptText', val)}
-                  placeholder="Nhập câu hỏi lịch sử..."
-                />
-                <RichTextEditor
-                  label="Tài liệu/Đoạn trích đi kèm (Tùy chọn)"
-                  value={qItem.document}
-                  onChange={(val) => updateQuestionField(qIdx, 'document', val)}
-                  placeholder="Nhập đoạn văn trích dẫn lịch sử..."
-                />
-                <RichTextEditor
-                  label="Giải thích đáp án (Tùy chọn)"
-                  value={qItem.explanation}
-                  onChange={(val) => updateQuestionField(qIdx, 'explanation', val)}
-                  placeholder="Giải thích vì sao đáp án này chính xác..."
-                />
-              </div>
-
-              {/* Answer list section inside card */}
-              <div style={{ marginTop: 16 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: '#475569' }}>Danh sách đáp án</span>
-                  <Button variant="secondary" icon={<IconPlus size={12} />} onClick={() => addAnswerField(qIdx)} style={{ padding: '4px 10px', fontSize: 12 }}>
-                    Thêm trường đáp án
-                  </Button>
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 180, overflowY: 'auto', paddingRight: 4 }}>
-                  {qItem.answers.map((ans, idx) => (
-                    <div key={idx} style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                      {qItem.type === 'CHOOSE' && (
-                        <>
-                          <input
-                            type="checkbox"
-                            checked={ans.isCorrect}
-                            onChange={(e) => updateAnswerField(qIdx, idx, 'isCorrect', e.target.checked)}
-                            style={{ width: 18, height: 18, cursor: 'pointer' }}
-                          />
-                          <div style={{ flex: 1 }}>
-                            <input
-                              type="text"
-                              placeholder="Nội dung đáp án lựa chọn..."
-                              value={ans.content}
-                              onChange={(e) => updateAnswerField(qIdx, idx, 'content', e.target.value)}
-                              style={INPUT_STYLE}
-                            />
-                          </div>
-                          {qItem.answers.length > 1 && (
-                            <button onClick={() => removeAnswerField(qIdx, idx)} style={DEL_BTN_STYLE}>
-                              <IconDelete size={16} />
-                            </button>
-                          )}
-                        </>
-                      )}
-
-                      {qItem.type === 'FILL' && (
-                        <>
-                          <div style={{ flex: 1 }}>
-                            <input
-                              type="text"
-                              placeholder="Đáp án điền khuyết được chấp nhận (ví dụ: 'Bạch Đằng')..."
-                              value={ans.content}
-                              onChange={(e) => updateAnswerField(qIdx, idx, 'content', e.target.value)}
-                              style={INPUT_STYLE}
-                            />
-                          </div>
-                          {qItem.answers.length > 1 && (
-                            <button onClick={() => removeAnswerField(qIdx, idx)} style={DEL_BTN_STYLE}>
-                              <IconDelete size={16} />
-                            </button>
-                          )}
-                        </>
-                      )}
-
-                      {qItem.type === 'MATCH' && (
-                        <>
-                          <div style={{ flex: 1 }}>
-                            <input
-                              type="text"
-                              placeholder="Vế bên trái (ví dụ: 'Lê Lợi')..."
-                              value={ans.leftText}
-                              onChange={(e) => updateAnswerField(qIdx, idx, 'leftText', e.target.value)}
-                              style={INPUT_STYLE}
-                            />
-                          </div>
-                          <span style={{ color: '#94a3b8' }}>➔</span>
-                          <div style={{ flex: 1 }}>
-                            <input
-                              type="text"
-                              placeholder="Vế bên phải nối tương ứng (ví dụ: '1428')..."
-                              value={ans.rightText}
-                              onChange={(e) => updateAnswerField(qIdx, idx, 'rightText', e.target.value)}
-                              style={INPUT_STYLE}
-                            />
-                          </div>
-                          {qItem.answers.length > 1 && (
-                            <button onClick={() => removeAnswerField(qIdx, idx)} style={DEL_BTN_STYLE}>
-                              <IconDelete size={16} />
-                            </button>
-                          )}
-                        </>
-                      )}
+              {!qItem.isCollapsed && (
+                <>
+                  <div style={{ display: 'flex', gap: 16, marginBottom: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <div style={{ flex: 2, minWidth: 200 }}>
+                      <Select
+                        label="Loại câu hỏi"
+                        value={qItem.type}
+                        onChange={(e) => {
+                          updateQuestionField(qIdx, 'type', e.target.value as any);
+                          // Reset answers list for this question
+                          setFormQuestions(prev => prev.map((q, i) => i === qIdx ? { ...q, answers: [{ ...EMPTY_ANSWER }] } : q));
+                        }}
+                      >
+                        <option value="CHOOSE">CHOOSE — Trắc nghiệm nhiều lựa chọn</option>
+                        <option value="FILL">FILL — Điền vào chỗ trống</option>
+                        <option value="MATCH">MATCH — Nối cặp tương ứng</option>
+                      </Select>
                     </div>
-                  ))}
-                </div>
-              </div>
+                    <div style={{ flex: 1, minWidth: 120 }}>
+                      <Select
+                        label="Độ khó"
+                        value={qItem.difficulty}
+                        onChange={(e) => updateQuestionField(qIdx, 'difficulty', e.target.value)}
+                      >
+                        <option value="1">Lớp 1 (Nhận biết)</option>
+                        <option value="2">Lớp 2 (Thông hiểu)</option>
+                        <option value="3">Lớp 3 (Vận dụng)</option>
+                        <option value="4">Lớp 4 (Vận dụng cao)</option>
+                      </Select>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: 6 }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, cursor: 'pointer', userSelect: 'none' }}>
+                        <input
+                          type="checkbox"
+                          checked={qItem.isActive}
+                          onChange={(e) => updateQuestionField(qIdx, 'isActive', e.target.checked)}
+                          style={{ width: 18, height: 18, cursor: 'pointer' }}
+                        />
+                        <span style={{ fontWeight: 600, color: '#334155' }}>Đang hoạt động (Kích hoạt)</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <RichTextEditor
+                      label="Nội dung câu hỏi"
+                      value={qItem.promptText}
+                      onChange={(val) => updateQuestionField(qIdx, 'promptText', val)}
+                      placeholder="Nhập câu hỏi lịch sử..."
+                    />
+                    <RichTextEditor
+                      label="Tài liệu/Đoạn trích đi kèm (Tùy chọn)"
+                      value={qItem.document}
+                      onChange={(val) => updateQuestionField(qIdx, 'document', val)}
+                      placeholder="Nhập đoạn văn trích dẫn lịch sử..."
+                    />
+                    <RichTextEditor
+                      label="Giải thích đáp án (Tùy chọn)"
+                      value={qItem.explanation}
+                      onChange={(val) => updateQuestionField(qIdx, 'explanation', val)}
+                      placeholder="Giải thích vì sao đáp án này chính xác..."
+                    />
+                  </div>
+
+                  {/* Answer list section inside card */}
+                  <div style={{ marginTop: 16 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: '#475569' }}>Danh sách đáp án</span>
+                      <Button variant="secondary" icon={<IconPlus size={12} />} onClick={() => addAnswerField(qIdx)} style={{ padding: '4px 10px', fontSize: 12 }}>
+                        Thêm trường đáp án
+                      </Button>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 180, overflowY: 'auto', paddingRight: 4 }}>
+                      {qItem.answers.map((ans, idx) => (
+                        <div key={idx} style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                          {qItem.type === 'CHOOSE' && (
+                            <>
+                              <input
+                                type="checkbox"
+                                checked={ans.isCorrect}
+                                onChange={(e) => updateAnswerField(qIdx, idx, 'isCorrect', e.target.checked)}
+                                style={{ width: 18, height: 18, cursor: 'pointer' }}
+                              />
+                              <div style={{ flex: 1 }}>
+                                <input
+                                  type="text"
+                                  placeholder="Nội dung đáp án lựa chọn..."
+                                  value={ans.content}
+                                  onChange={(e) => updateAnswerField(qIdx, idx, 'content', e.target.value)}
+                                  style={INPUT_STYLE}
+                                />
+                              </div>
+                              {qItem.answers.length > 1 && (
+                                <button onClick={() => removeAnswerField(qIdx, idx)} style={DEL_BTN_STYLE}>
+                                  <IconDelete size={16} />
+                                </button>
+                              )}
+                            </>
+                          )}
+
+                          {qItem.type === 'FILL' && (
+                            <>
+                              <div style={{ flex: 1 }}>
+                                <input
+                                  type="text"
+                                  placeholder="Đáp án điền khuyết được chấp nhận (ví dụ: 'Bạch Đằng')..."
+                                  value={ans.content}
+                                  onChange={(e) => updateAnswerField(qIdx, idx, 'content', e.target.value)}
+                                  style={INPUT_STYLE}
+                                />
+                              </div>
+                              {qItem.answers.length > 1 && (
+                                <button onClick={() => removeAnswerField(qIdx, idx)} style={DEL_BTN_STYLE}>
+                                  <IconDelete size={16} />
+                                </button>
+                              )}
+                            </>
+                          )}
+
+                          {qItem.type === 'MATCH' && (
+                            <>
+                              <div style={{ flex: 1 }}>
+                                <input
+                                  type="text"
+                                  placeholder="Vế bên trái (ví dụ: 'Lê Lợi')..."
+                                  value={ans.leftText}
+                                  onChange={(e) => updateAnswerField(qIdx, idx, 'leftText', e.target.value)}
+                                  style={INPUT_STYLE}
+                                />
+                              </div>
+                              <span style={{ color: '#94a3b8' }}>➔</span>
+                              <div style={{ flex: 1 }}>
+                                <input
+                                  type="text"
+                                  placeholder="Vế bên phải nối tương ứng (ví dụ: '1428')...."
+                                  value={ans.rightText}
+                                  onChange={(e) => updateAnswerField(qIdx, idx, 'rightText', e.target.value)}
+                                  style={INPUT_STYLE}
+                                />
+                              </div>
+                              {qItem.answers.length > 1 && (
+                                <button onClick={() => removeAnswerField(qIdx, idx)} style={DEL_BTN_STYLE}>
+                                  <IconDelete size={16} />
+                                </button>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           ))}
         </div>
