@@ -111,15 +111,19 @@ const RootNode = ({ data }: any) => {
   );
 };
 
+const depthColors = [
+  { border: '#4f46e5', text: '#ffffff', headerBg: '#4f46e5', tagColor: '#ffffff' }, // 0: Root (Lesson)
+  { border: '#818cf8', text: '#1e1b4b', headerBg: '#f5f3ff', tagColor: '#4f46e5' }, // 1: Cấp 1
+  { border: '#38bdf8', text: '#0c4a6e', headerBg: '#f0f9ff', tagColor: '#0284c7' }, // 2: Cấp 2
+  { border: '#34d399', text: '#064e3b', headerBg: '#ecfdf5', tagColor: '#059669' }, // 3: Cấp 3
+  { border: '#fbbf24', text: '#78350f', headerBg: '#fffbeb', tagColor: '#d97706' }, // 4: Cấp 4
+  { border: '#f472b6', text: '#500724', headerBg: '#fdf2f8', tagColor: '#db2777' }, // 5: Cấp 5
+  { border: '#a78bfa', text: '#2e1065', headerBg: '#faf5ff', tagColor: '#7c3aed' }, // 6: Cấp 6
+];
+
 const SectionNode = ({ data }: any) => {
   const depth = data.depth || 0;
-  const colors = [
-    { border: '#4f46e5', text: '#ffffff' },
-    { border: '#818cf8', text: '#1e1b4b', headerBg: '#f5f3ff', tagColor: '#4f46e5' },
-    { border: '#38bdf8', text: '#0c4a6e', headerBg: '#f0f9ff', tagColor: '#0284c7' },
-    { border: '#34d399', text: '#064e3b', headerBg: '#ecfdf5', tagColor: '#059669' },
-  ];
-  const currentDepthColor = colors[Math.min(depth, colors.length - 1)];
+  const currentDepthColor = depthColors[Math.min(depth, depthColors.length - 1)];
 
   return (
     <div
@@ -473,7 +477,7 @@ function computeTreeLayout(
     );
     childCenterYs.push(cCenterY);
     
-    const edgeColor = depth === 0 ? '#818cf8' : depth === 1 ? '#38bdf8' : '#34d399';
+    const edgeColor = depthColors[Math.min(depth + 1, depthColors.length - 1)].border;
     edgesList.push({
       id: `edge-${node.id}-${child.id}`,
       source: node.id,
