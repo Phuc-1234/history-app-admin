@@ -98,7 +98,7 @@ export function Sidebar({ activeTab, onTabChange, userName, userRole, isMobile, 
           </div>
           <div>
             <div style={{ fontSize: 15, fontWeight: 800, color: '#0f172a', lineHeight: 1.2 }}>
-              Sử Ký
+              Sắc Sử
             </div>
             <div style={{ fontSize: 11, color: '#6c63ff', fontWeight: 700, letterSpacing: '0.05em' }}>
               ADMIN PANEL

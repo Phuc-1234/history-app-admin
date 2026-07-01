@@ -117,7 +117,7 @@ export function LoginPage() {
             <IconHistoryBook size={34} color="#ffffff" />
           </div>
           <h1 style={{ margin: 0, fontSize: 28, fontWeight: 800, color: '#0f172a', letterSpacing: '-0.02em' }}>
-            Sử Ký Admin
+            Sắc Sử admin
           </h1>
           <p style={{ margin: '8px 0 0', color: '#64748b', fontSize: 15 }}>
             Đăng nhập để quản lý nội dung
