@@ -11,7 +11,7 @@ import { Spinner } from '../ui/Spinner';
 import { IconPlus, IconEdit, IconDelete, IconQuestion, IconXP, IconChevronDown, IconChevronUp, IconDownload, IconUpload } from '../ui/Icons';
 import { RichTextEditor } from '../ui/RichTextEditor';
 import { stripHtml } from '../../utils/html';
-import * as XLSX from 'xlsx';
+import XLSX from 'xlsx-js-style';
 
 interface QuestionPanelProps {
   onToast: (msg: string, type: ToastType) => void;
@@ -450,6 +450,107 @@ export function QuestionPanel({ onToast }: QuestionPanelProps) {
     const data = [headers, instructions, sample1, sample2, sample3];
 
     const worksheet = XLSX.utils.aoa_to_sheet(data);
+
+    // Apply custom column widths
+    worksheet['!cols'] = [
+      { wch: 30 }, // Loại câu hỏi
+      { wch: 12 }, // Độ khó
+      { wch: 18 }, // Kích hoạt
+      { wch: 45 }, // Nội dung câu hỏi
+      { wch: 28 }, // Tài liệu đi kèm
+      { wch: 35 }, // Giải thích đáp án
+      { wch: 24 }, // Lựa chọn 1 / Vế trái 1
+      { wch: 24 }, // Lựa chọn 2 / Vế trái 2
+      { wch: 24 }, // Lựa chọn 3 / Vế trái 3
+      { wch: 24 }, // Lựa chọn 4 / Vế trái 4
+      { wch: 24 }, // Lựa chọn 5 / Vế trái 5
+      { wch: 24 }, // Vế phải 1
+      { wch: 24 }, // Vế phải 2
+      { wch: 24 }, // Vế phải 3
+      { wch: 24 }, // Vế phải 4
+      { wch: 24 }, // Vế phải 5
+      { wch: 35 }  // Đáp án đúng
+    ];
+
+    // Apply custom row heights
+    worksheet['!rows'] = [
+      { hpt: 30 }, // Header row
+      { hpt: 45 }, // Instruction row
+      { hpt: 25 }, // Sample 1
+      { hpt: 25 }, // Sample 2
+      { hpt: 25 }  // Sample 3
+    ];
+
+    // Loop through worksheet cells and apply styles
+    for (const key in worksheet) {
+      if (key.startsWith('!')) continue;
+      const cell = worksheet[key];
+      if (!cell) continue;
+
+      const decoded = XLSX.utils.decode_cell(key);
+      const row = decoded.r;
+      const col = decoded.c;
+
+      const style: any = {
+        font: { name: 'Segoe UI', sz: 10 },
+        alignment: { vertical: 'center', wrapText: true },
+        border: {
+          top: { style: 'thin', color: { rgb: 'E2E8F0' } },
+          bottom: { style: 'thin', color: { rgb: 'E2E8F0' } },
+          left: { style: 'thin', color: { rgb: 'E2E8F0' } },
+          right: { style: 'thin', color: { rgb: 'E2E8F0' } }
+        }
+      };
+
+      if (row === 0) {
+        // Title/Header row
+        style.font = { name: 'Segoe UI', sz: 10, bold: true, color: { rgb: 'FFFFFF' } };
+        style.fill = { fgColor: { rgb: '5B21B6' } }; // Purple matching app UI
+        style.alignment = { horizontal: 'center', vertical: 'center', wrapText: true };
+        style.border = {
+          top: { style: 'medium', color: { rgb: '4C1D95' } },
+          bottom: { style: 'medium', color: { rgb: '4C1D95' } },
+          left: { style: 'thin', color: { rgb: '7C3AED' } },
+          right: { style: 'thin', color: { rgb: '7C3AED' } }
+        };
+      } else if (row === 1) {
+        // Instruction row
+        style.font = { name: 'Segoe UI', sz: 9.5, italic: true, color: { rgb: '4B5563' } };
+        style.fill = { fgColor: { rgb: 'F3E8FF' } }; // Light violet background
+        style.alignment = { horizontal: 'left', vertical: 'center', wrapText: true };
+        style.border = {
+          top: { style: 'thin', color: { rgb: 'DDD6FE' } },
+          bottom: { style: 'medium', color: { rgb: 'C084FC' } },
+          left: { style: 'thin', color: { rgb: 'E9D5FF' } },
+          right: { style: 'thin', color: { rgb: 'E9D5FF' } }
+        };
+      } else {
+        // Sample data rows
+        style.font = { name: 'Segoe UI', sz: 10, color: { rgb: '1F2937' } };
+
+        // Center structural columns (Type, Difficulty, Active, Correct Answer)
+        if (col === 0 || col === 1 || col === 2 || col === 16) {
+          style.alignment = { horizontal: 'center', vertical: 'center', wrapText: true };
+        } else {
+          style.alignment = { horizontal: 'left', vertical: 'center', wrapText: true };
+        }
+
+        // Add soft shading for Type column to make it pop slightly
+        if (col === 0) {
+          style.font.bold = true;
+          style.font.color = { rgb: '4C1D95' };
+          style.fill = { fgColor: { rgb: 'F5F3FF' } };
+        } else if (row % 2 === 0) {
+          // Alternating rows
+          style.fill = { fgColor: { rgb: 'F9FAFB' } };
+        } else {
+          style.fill = { fgColor: { rgb: 'FFFFFF' } };
+        }
+      }
+
+      cell.s = style;
+    }
+
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Template Câu Hỏi');
 
