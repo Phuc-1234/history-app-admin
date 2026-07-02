@@ -92,7 +92,7 @@ export function LessonPanel({ onToast, navParams, onNavigate }: LessonPanelProps
     try {
       setSaving(true);
       if (editLesson) {
-        await client.patch(`/api/admin/lessons/${editLesson.id}`, { name: form.name.trim(), summary: form.summary || undefined, position });
+        await client.patch(`/api/admin/lessons/${editLesson.id}`, { name: form.name.trim(), summary: form.summary || undefined, position, topicId });
         onToast('Đã cập nhật bài học', 'success');
       } else {
         await client.post('/api/admin/lessons', { name: form.name.trim(), summary: form.summary || undefined, position, topicId });
@@ -189,7 +189,7 @@ export function LessonPanel({ onToast, navParams, onNavigate }: LessonPanelProps
         <RichTextEditor label="Tóm tắt (tùy chọn)" value={form.summary} onChange={(val) => setForm((f) => ({ ...f, summary: val }))} placeholder="Mô tả ngắn về bài học..." />
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           <Input label="Vị trí" type="number" min={0} value={form.position} onChange={(e) => setForm((f) => ({ ...f, position: e.target.value }))} />
-          <Select label="Chủ đề" value={form.topicId} onChange={(e) => setForm((f) => ({ ...f, topicId: e.target.value }))} disabled={!!editLesson}>
+          <Select label="Chủ đề" value={form.topicId} onChange={(e) => setForm((f) => ({ ...f, topicId: e.target.value }))}>
             {topics.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
           </Select>
         </div>
