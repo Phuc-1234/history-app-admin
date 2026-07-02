@@ -1,13 +1,13 @@
 // src/components/content/MindMapPanel.tsx
 import { useState, useEffect, useCallback, useRef } from 'react';
 import client from '../../api/client';
-import type { GradeDto, TopicDto, LessonDto, SectionDto, NodeDto } from '../../types/api';
+import type { GradeDto, TopicDto, LessonDto, SectionDto, NodeDto, AdminVideoDto } from '../../types/api';
 import type { TabId, NavParams } from '../../pages/DashboardPage';
 import type { ToastType } from '../../hooks/useToast';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
-import { Input, Textarea } from '../ui/FormField';
+import { Input, Textarea, Select } from '../ui/FormField';
 import { Spinner } from '../ui/Spinner';
 import { IconMindMap, IconMagicWand, IconAlert } from '../ui/Icons';
 import { RichTextEditor } from '../ui/RichTextEditor';
@@ -585,7 +585,7 @@ function VisualMindMapDiagramContent({
           id: node.id,
           header: node.header,
           body: node.body,
-          imgUrl: node.imgUrl,
+          videoId: node.videoId,
           position: node.position,
           rawNode: node,
           onToggleExpand: () => toggleNode(nodeKey),
@@ -722,7 +722,8 @@ export function MindMapPanel({ onToast, navParams, onNavigate: _onNavigate }: Mi
   // Node Modal States
   const [nodeModalOpen, setNodeModalOpen] = useState(false);
   const [editNode, setEditNode] = useState<NodeDto | null>(null);
-  const [nodeForm, setNodeForm] = useState({ header: '', body: '', imgUrl: '', position: '', sectionId: '' });
+  const [nodeForm, setNodeForm] = useState({ header: '', body: '', videoId: '', position: '', sectionId: '' });
+  const [videos, setVideos] = useState<AdminVideoDto[]>([]);
 
   // Delete Confirm States
   const [deleteTarget, setDeleteTarget] = useState<{ type: 'section' | 'node'; id: number } | null>(null);
@@ -747,6 +748,7 @@ export function MindMapPanel({ onToast, navParams, onNavigate: _onNavigate }: Mi
         setSelectedGradeId(gs[0].id);
       }
     });
+    client.get('/api/admin/videos').then((r) => { setVideos(r.data.videos ?? []); }).catch(() => {});
   }, [navParams?.gradeId]);
 
   useEffect(() => {
@@ -925,7 +927,7 @@ export function MindMapPanel({ onToast, navParams, onNavigate: _onNavigate }: Mi
     setNodeForm({
       header: '',
       body: '',
-      imgUrl: '',
+      videoId: '',
       position: '1',
       sectionId: String(secId),
     });
@@ -937,7 +939,7 @@ export function MindMapPanel({ onToast, navParams, onNavigate: _onNavigate }: Mi
     setNodeForm({
       header: node.header ?? '',
       body: node.body,
-      imgUrl: node.imgUrl ?? '',
+      videoId: node.videoId ?? '',
       position: String(node.position),
       sectionId: String(node.sectionId),
     });
@@ -977,7 +979,7 @@ export function MindMapPanel({ onToast, navParams, onNavigate: _onNavigate }: Mi
                         header: nodeForm.header.trim() || null,
                         body: nodeForm.body.trim(),
                         position: Number(nodeForm.position) || 1,
-                        imgUrl: nodeForm.imgUrl.trim() || null,
+                        videoId: nodeForm.videoId || null,
                       };
                     }
                     return n;
@@ -999,7 +1001,7 @@ export function MindMapPanel({ onToast, navParams, onNavigate: _onNavigate }: Mi
           header: nodeForm.header.trim() || null,
           body: nodeForm.body.trim(),
           position: Number(nodeForm.position) || 1,
-          imgUrl: nodeForm.imgUrl.trim() || null,
+          videoId: nodeForm.videoId || null,
           sectionId,
         };
 
@@ -1358,12 +1360,16 @@ export function MindMapPanel({ onToast, navParams, onNavigate: _onNavigate }: Mi
             onChange={(val) => setNodeForm({ ...nodeForm, body: val })}
             placeholder="Nhập nội dung tóm tắt chi tiết..."
           />
-          <Input
-            label="Đường dẫn ảnh minh họa (tùy chọn)"
-            value={nodeForm.imgUrl}
-            onChange={(e) => setNodeForm({ ...nodeForm, imgUrl: e.target.value })}
-            placeholder="http://example.com/asset.jpg"
-          />
+          <Select
+            label="Video liên kết (Tùy chọn)"
+            value={nodeForm.videoId}
+            onChange={(e) => setNodeForm({ ...nodeForm, videoId: e.target.value })}
+          >
+            <option value="">— Không liên kết video —</option>
+            {videos.map((v) => (
+              <option key={v.id} value={v.id}>{v.title}</option>
+            ))}
+          </Select>
           <Input
             label="Thứ tự hiển thị"
             type="number"

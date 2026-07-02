@@ -1,7 +1,7 @@
 // src/components/content/NodePanel.tsx
 import { useState, useEffect, useCallback } from 'react';
 import client from '../../api/client';
-import type { NodeDto, GradeDto, TopicDto, LessonDto, SectionDto } from '../../types/api';
+import type { NodeDto, GradeDto, TopicDto, LessonDto, SectionDto, AdminVideoDto } from '../../types/api';
 import type { ToastType } from '../../hooks/useToast';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
@@ -37,12 +37,16 @@ export function NodePanel({ onToast }: NodePanelProps) {
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editNode, setEditNode] = useState<NodeDto | null>(null);
-  const [form, setForm] = useState({ header: '', body: '', imgUrl: '', position: '', sectionId: '' });
+  const [form, setForm] = useState({ header: '', body: '', videoId: '', position: '', sectionId: '' });
+  const [videos, setVideos] = useState<AdminVideoDto[]>([]);
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<NodeDto | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  useEffect(() => { client.get('/api/content/grades').then((r) => { const gs = r.data.grades ?? []; setGrades(gs); if (gs.length) setSelectedGradeId(gs[0].id); }); }, []);
+  useEffect(() => {
+    client.get('/api/content/grades').then((r) => { const gs = r.data.grades ?? []; setGrades(gs); if (gs.length) setSelectedGradeId(gs[0].id); });
+    client.get('/api/admin/videos').then((r) => { setVideos(r.data.videos ?? []); }).catch(() => {});
+  }, []);
   useEffect(() => { if (!selectedGradeId) return; client.get(`/api/content/grades/${selectedGradeId}/topics`).then((r) => { const ts = r.data.topics ?? []; setTopics(ts); setSelectedTopicId(ts.length ? ts[0].id : null); setLessons([]); setSections([]); setNodes([]); }); }, [selectedGradeId]);
   useEffect(() => { if (!selectedTopicId) return; client.get(`/api/content/topics/${selectedTopicId}/lessons`).then((r) => { const ls = r.data.lessons ?? []; setLessons(ls); setSelectedLessonId(ls.length ? ls[0].id : null); setSections([]); setNodes([]); }); }, [selectedTopicId]);
   useEffect(() => {
@@ -71,8 +75,8 @@ export function NodePanel({ onToast }: NodePanelProps) {
 
   const flatSections = flattenSections(sections);
 
-  const openCreate = () => { setEditNode(null); setForm({ header: '', body: '', imgUrl: '', position: String(nodes.length + 1), sectionId: String(selectedSectionId ?? '') }); setModalOpen(true); };
-  const openEdit = (n: NodeDto) => { setEditNode(n); setForm({ header: n.header ?? '', body: n.body, imgUrl: n.imgUrl ?? '', position: String(n.position), sectionId: String(n.sectionId ?? '') }); setModalOpen(true); };
+  const openCreate = () => { setEditNode(null); setForm({ header: '', body: '', videoId: '', position: String(nodes.length + 1), sectionId: String(selectedSectionId ?? '') }); setModalOpen(true); };
+  const openEdit = (n: NodeDto) => { setEditNode(n); setForm({ header: n.header ?? '', body: n.body, videoId: n.videoId ?? '', position: String(n.position), sectionId: String(n.sectionId ?? '') }); setModalOpen(true); };
 
   const handleSave = async () => {
     if (isBodyEmpty(form.body)) { onToast('Nội dung (body) là bắt buộc', 'error'); return; }
@@ -80,11 +84,18 @@ export function NodePanel({ onToast }: NodePanelProps) {
     if (!sectionId) { onToast('Phần là bắt buộc', 'error'); return; }
     try {
       setSaving(true);
+      const payload = {
+        header: form.header || undefined,
+        body: form.body.trim(),
+        videoId: form.videoId || null,
+        position,
+        sectionId
+      };
       if (editNode) {
-        await client.patch(`/api/admin/nodes/${editNode.id}`, { header: form.header || undefined, body: form.body.trim(), imgUrl: form.imgUrl || null, position });
+        await client.patch(`/api/admin/nodes/${editNode.id}`, { header: payload.header, body: payload.body, videoId: payload.videoId, position });
         onToast('Đã cập nhật nút kiến thức', 'success');
       } else {
-        await client.post('/api/admin/nodes', { header: form.header || undefined, body: form.body.trim(), imgUrl: form.imgUrl || undefined, position, sectionId });
+        await client.post('/api/admin/nodes', payload);
         onToast('Đã tạo nút kiến thức mới', 'success');
       }
       setModalOpen(false);
@@ -163,9 +174,9 @@ export function NodePanel({ onToast }: NodePanelProps) {
               <div style={{ flex: 1, minWidth: 0 }}>
                 {n.header && <div style={{ fontSize: 15, fontWeight: 700, color: '#0f172a', marginBottom: 6 }}>{n.header}</div>}
                 <div style={{ fontSize: 14, color: '#475569', lineHeight: 1.7 }} dangerouslySetInnerHTML={{ __html: n.body }} />
-                {n.imgUrl && (
+                {n.videoId && (
                   <div style={{ marginTop: 8, fontSize: 12, color: '#6c63ff', display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <span>🖼</span> <span style={{ textDecoration: 'underline' }}>{n.imgUrl}</span>
+                    <span>🎥 Video:</span> <span>{videos.find(v => v.id === n.videoId)?.title || n.videoId}</span>
                   </div>
                 )}
               </div>
@@ -181,7 +192,10 @@ export function NodePanel({ onToast }: NodePanelProps) {
       <Modal open={modalOpen} title={editNode ? 'Sửa Nút kiến thức' : 'Thêm Nút kiến thức mới'} onClose={() => setModalOpen(false)} width={580}>
         <Input label="Tiêu đề (tùy chọn)" value={form.header} onChange={(e) => setForm((f) => ({ ...f, header: e.target.value }))} placeholder="Ví dụ: Nguyên nhân bùng nổ chiến tranh" />
         <RichTextEditor label="Nội dung *" value={form.body} onChange={(val) => setForm((f) => ({ ...f, body: val }))} placeholder="Nội dung chính của nút kiến thức..." />
-        <Input label="URL hình ảnh (tùy chọn)" value={form.imgUrl} onChange={(e) => setForm((f) => ({ ...f, imgUrl: e.target.value }))} placeholder="https://..." />
+        <Select label="Video liên kết (tùy chọn)" value={form.videoId} onChange={(e) => setForm((f) => ({ ...f, videoId: e.target.value }))}>
+          <option value="">— Không liên kết video —</option>
+          {videos.map((v) => <option key={v.id} value={v.id}>{v.title}</option>)}
+        </Select>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           <Input label="Vị trí" type="number" value={form.position} onChange={(e) => setForm((f) => ({ ...f, position: e.target.value }))} />
           <Select label="Phần" value={form.sectionId} onChange={(e) => setForm((f) => ({ ...f, sectionId: e.target.value }))} disabled={!!editNode}>

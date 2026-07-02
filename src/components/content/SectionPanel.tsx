@@ -1,7 +1,7 @@
 // src/components/content/SectionPanel.tsx
 import { useState, useEffect, useCallback, Fragment } from 'react';
 import client from '../../api/client';
-import type { SectionDto, GradeDto, TopicDto, LessonDto, NodeDto } from '../../types/api';
+import type { SectionDto, GradeDto, TopicDto, LessonDto, NodeDto, AdminVideoDto } from '../../types/api';
 import type { ToastType } from '../../hooks/useToast';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
@@ -46,7 +46,8 @@ export function SectionPanel({ onToast, navParams, onNavigate }: SectionPanelPro
   // Node Management States
   const [nodeModalOpen, setNodeModalOpen] = useState(false);
   const [editNode, setEditNode] = useState<NodeDto | null>(null);
-  const [nodeForm, setNodeForm] = useState({ header: '', body: '', imgUrl: '', position: '', sectionId: '' });
+  const [nodeForm, setNodeForm] = useState({ header: '', body: '', videoId: '', position: '', sectionId: '' });
+  const [videos, setVideos] = useState<AdminVideoDto[]>([]);
   const [nodeDeleteTarget, setNodeDeleteTarget] = useState<NodeDto | null>(null);
   const [nodeDeleting, setNodeDeleting] = useState(false);
 
@@ -72,6 +73,7 @@ export function SectionPanel({ onToast, navParams, onNavigate }: SectionPanelPro
         setSelectedGradeId(gs[0].id);
       }
     }).catch(() => onToast('Không tải được danh sách khối lớp', 'error'));
+    client.get('/api/admin/videos').then((r) => { setVideos(r.data.videos ?? []); }).catch(() => {});
   }, [onToast, navParams?.gradeId]);
 
   useEffect(() => {
@@ -179,13 +181,13 @@ export function SectionPanel({ onToast, navParams, onNavigate }: SectionPanelPro
     setEditNode(null);
     const sec = allFlat.find(s => s.id === secId);
     const nextPos = sec && sec.nodes ? sec.nodes.length + 1 : 1;
-    setNodeForm({ header: '', body: '', imgUrl: '', position: String(nextPos), sectionId: String(secId) });
+    setNodeForm({ header: '', body: '', videoId: '', position: String(nextPos), sectionId: String(secId) });
     setNodeModalOpen(true);
   };
 
   const openEditNode = (n: NodeDto) => {
     setEditNode(n);
-    setNodeForm({ header: n.header ?? '', body: n.body, imgUrl: n.imgUrl ?? '', position: String(n.position), sectionId: String(n.sectionId ?? '') });
+    setNodeForm({ header: n.header ?? '', body: n.body, videoId: n.videoId ?? '', position: String(n.position), sectionId: String(n.sectionId ?? '') });
     setNodeModalOpen(true);
   };
 
@@ -197,11 +199,18 @@ export function SectionPanel({ onToast, navParams, onNavigate }: SectionPanelPro
     if (!sectionId) { onToast('Phần là bắt buộc', 'error'); return; }
     try {
       setSaving(true);
+      const payload = {
+        header: nodeForm.header || undefined,
+        body: nodeForm.body.trim(),
+        videoId: nodeForm.videoId || null,
+        position,
+        sectionId
+      };
       if (editNode) {
-        await client.patch(`/api/admin/nodes/${editNode.id}`, { header: nodeForm.header || null, body: nodeForm.body.trim(), imgUrl: nodeForm.imgUrl || null, position });
+        await client.patch(`/api/admin/nodes/${editNode.id}`, { header: payload.header, body: payload.body, videoId: payload.videoId, position });
         onToast('Đã cập nhật nút kiến thức', 'success');
       } else {
-        await client.post('/api/admin/nodes', { header: nodeForm.header || null, body: nodeForm.body.trim(), imgUrl: nodeForm.imgUrl || null, position, sectionId });
+        await client.post('/api/admin/nodes', payload);
         onToast('Đã tạo nút kiến thức mới', 'success');
       }
       setNodeModalOpen(false);
@@ -342,9 +351,9 @@ export function SectionPanel({ onToast, navParams, onNavigate }: SectionPanelPro
                                     <div style={{ flex: 1, minWidth: 0 }}>
                                       {n.header && <strong style={{ display: 'block', fontSize: 14, color: '#0f172a', marginBottom: 4 }}>{n.header}</strong>}
                                       <div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }} dangerouslySetInnerHTML={{ __html: n.body }} />
-                                      {n.imgUrl && (
-                                        <div style={{ marginTop: 6, fontSize: 11, color: '#6c63ff', textDecoration: 'underline', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                          🖼 {n.imgUrl}
+                                      {n.videoId && (
+                                        <div style={{ marginTop: 6, fontSize: 11, color: '#6c63ff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                          🎥 Video: {videos.find(v => v.id === n.videoId)?.title || n.videoId}
                                         </div>
                                       )}
                                     </div>
@@ -393,7 +402,10 @@ export function SectionPanel({ onToast, navParams, onNavigate }: SectionPanelPro
       <Modal open={nodeModalOpen} title={editNode ? 'Sửa Nút kiến thức' : 'Thêm Nút kiến thức mới'} onClose={() => setNodeModalOpen(false)} width={580}>
         <Input label="Tiêu đề (tùy chọn)" value={nodeForm.header} onChange={(e) => setNodeForm((f) => ({ ...f, header: e.target.value }))} placeholder="Ví dụ: Nguyên nhân bùng nổ chiến tranh" />
         <RichTextEditor label="Nội dung *" value={nodeForm.body} onChange={(val) => setNodeForm((f) => ({ ...f, body: val }))} placeholder="Nội dung chính của nút kiến thức..." />
-        <Input label="URL hình ảnh (tùy chọn)" value={nodeForm.imgUrl} onChange={(e) => setNodeForm((f) => ({ ...f, imgUrl: e.target.value }))} placeholder="https://..." />
+        <Select label="Video liên kết (tùy chọn)" value={nodeForm.videoId} onChange={(e) => setNodeForm((f) => ({ ...f, videoId: e.target.value }))}>
+          <option value="">— Không liên kết video —</option>
+          {videos.map((v) => <option key={v.id} value={v.id}>{v.title}</option>)}
+        </Select>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           <Input label="Vị trí" type="number" min={0} value={nodeForm.position} onChange={(e) => setNodeForm((f) => ({ ...f, position: e.target.value }))} />
           <Select label="Phần" value={nodeForm.sectionId} onChange={(e) => setNodeForm((f) => ({ ...f, sectionId: e.target.value }))} disabled={!!editNode}>
