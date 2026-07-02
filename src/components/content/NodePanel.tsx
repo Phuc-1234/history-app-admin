@@ -92,7 +92,7 @@ export function NodePanel({ onToast }: NodePanelProps) {
         sectionId
       };
       if (editNode) {
-        await client.patch(`/api/admin/nodes/${editNode.id}`, { header: payload.header, body: payload.body, videoId: payload.videoId, position });
+        await client.patch(`/api/admin/nodes/${editNode.id}`, { header: payload.header, body: payload.body, videoId: payload.videoId, position, sectionId: payload.sectionId });
         onToast('Đã cập nhật nút kiến thức', 'success');
       } else {
         await client.post('/api/admin/nodes', payload);
@@ -198,7 +198,7 @@ export function NodePanel({ onToast }: NodePanelProps) {
         </Select>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           <Input label="Vị trí" type="number" value={form.position} onChange={(e) => setForm((f) => ({ ...f, position: e.target.value }))} />
-          <Select label="Phần" value={form.sectionId} onChange={(e) => setForm((f) => ({ ...f, sectionId: e.target.value }))} disabled={!!editNode}>
+          <Select label="Phần" value={form.sectionId} onChange={(e) => setForm((f) => ({ ...f, sectionId: e.target.value }))}>
             {flatSections.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
           </Select>
         </div>
