@@ -226,12 +226,15 @@ export function FlashcardPanel({ onToast, navParams, onNavigate: _onNavigate }: 
     }
     try {
       setSaving(true);
+      const nodeId = form.nodeId ? Number(form.nodeId) : null;
+      const sectionId = !nodeId && form.sectionId ? Number(form.sectionId) : null;
+      const lessonId = !nodeId && !sectionId ? selectedLessonId : null;
       const payload = {
         frontText: form.frontText.trim(),
         backText: form.backText.trim(),
-        lessonId: form.sectionId || form.nodeId ? null : selectedLessonId,
-        sectionId: form.sectionId ? Number(form.sectionId) : null,
-        nodeId: form.nodeId ? Number(form.nodeId) : null,
+        lessonId,
+        sectionId,
+        nodeId,
       };
 
       if (editCard) {
