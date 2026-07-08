@@ -78,6 +78,7 @@ export interface AdminVideoDto {
   hlsUrl: string;
   status: string;
   lessonId: number | null;
+  transcodeProgress?: number | null;
 }
 
 export interface AdminQuestionAnswerDto {
