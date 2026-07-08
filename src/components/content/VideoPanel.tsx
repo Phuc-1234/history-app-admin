@@ -188,11 +188,6 @@ export function VideoPanel({ onToast }: VideoPanelProps) {
       return;
     }
 
-    if (!editVideo && !form.lessonId) {
-      onToast('Vui lòng chọn bài học liên kết cho video này', 'error');
-      return;
-    }
-
     try {
       setSaving(true);
       const positionNum = isNaN(Number(form.position)) ? 0 : Number(form.position);
@@ -421,8 +416,8 @@ export function VideoPanel({ onToast }: VideoPanelProps) {
               </Select>
             </div>
 
-            <Select label="Bài học" value={form.lessonId} onChange={(e) => setForm(f => ({ ...f, lessonId: e.target.value }))} disabled={lessons.length === 0}>
-              {lessons.length === 0 && <option value="">(Không có bài học)</option>}
+            <Select label="Bài học" value={form.lessonId} onChange={(e) => setForm(f => ({ ...f, lessonId: e.target.value }))}>
+              <option value="">Không liên kết bài học</option>
               {lessons.map(l => (
                 <option key={l.id} value={l.id}>Bài {l.position}: {l.name}</option>
               ))}
