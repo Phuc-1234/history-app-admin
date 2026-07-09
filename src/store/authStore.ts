@@ -5,8 +5,10 @@ import type { UserProfile } from '../types/api';
 
 interface AuthState {
   accessToken: string | null;
+  refreshToken: string | null;
   user: UserProfile | null;
-  login: (token: string, user: UserProfile) => void;
+  login: (accessToken: string, refreshToken: string, user: UserProfile) => void;
+  updateTokens: (accessToken: string, refreshToken: string) => void;
   logout: () => void;
 }
 
@@ -14,9 +16,11 @@ export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
       accessToken: null,
+      refreshToken: null,
       user: null,
-      login: (token, user) => set({ accessToken: token, user }),
-      logout: () => set({ accessToken: null, user: null }),
+      login: (accessToken, refreshToken, user) => set({ accessToken, refreshToken, user }),
+      updateTokens: (accessToken, refreshToken) => set({ accessToken, refreshToken }),
+      logout: () => set({ accessToken: null, refreshToken: null, user: null }),
     }),
     { name: 'auth-storage' }
   )
