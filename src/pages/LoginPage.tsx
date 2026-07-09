@@ -63,7 +63,7 @@ export function LoginPage() {
         totalXp: profile.totalXp ?? 0,
       };
 
-      login(data.session.accessToken, userProfile);
+      login(data.session.accessToken, data.session.refreshToken, userProfile);
     } catch (err: any) {
       const msg = err?.response?.data?.error ?? err?.response?.data?.message ?? 'Đăng nhập thất bại';
       setError(msg);
