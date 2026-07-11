@@ -13,7 +13,8 @@ interface FeedbackItem {
   id: string;
   userId: string;
   content: string;
-  type: string; // "BUG" | "FEATURE" | "OTHER"
+  type: string; // "BUG" | "FEATURE" | "OTHER" | "INCORRECT_INFO"
+  targetName?: string | null;
   createdAt: string;
   user: {
     name: string;
@@ -59,6 +60,11 @@ export function FeedbackPanel({ onToast }: FeedbackPanelProps) {
       color = '#dc2626';
       border = 'rgba(239,68,68,0.25)';
       text = 'Báo lỗi';
+    } else if (type === 'INCORRECT_INFO') {
+      bg = 'rgba(239,68,68,0.1)';
+      color = '#dc2626';
+      border = 'rgba(239,68,68,0.25)';
+      text = 'Thông tin sai';
     } else if (type === 'FEATURE') {
       bg = 'rgba(245,158,11,0.1)';
       color = '#d97706';
@@ -138,7 +144,8 @@ export function FeedbackPanel({ onToast }: FeedbackPanelProps) {
         {[
           { key: 'ALL', label: 'Tất cả' },
           { key: 'BUG', label: 'Báo lỗi' },
-          { key: 'FEATURE', label: 'Đóng góp tính năng' },
+          { key: 'INCORRECT_INFO', label: 'Thông tin sai' },
+          { key: 'FEATURE', label: 'Tính năng' },
           { key: 'OTHER', label: 'Ý kiến khác' },
         ].map((btn) => {
           const isActive = filterType === btn.key;
@@ -245,9 +252,31 @@ export function FeedbackPanel({ onToast }: FeedbackPanelProps) {
                 color: '#334155',
                 lineHeight: 1.6,
                 whiteSpace: 'pre-wrap',
+                marginBottom: item.targetName ? 14 : 0,
               }}>
                 {item.content}
               </div>
+
+              {item.targetName && (
+                <div style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '6px 12px',
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: 8,
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: '#64748b',
+                }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
+                    <line x1="4" y1="22" x2="4" y2="15" />
+                  </svg>
+                  <span>{item.targetName}</span>
+                </div>
+              )}
             </div>
           ))}
         </div>
