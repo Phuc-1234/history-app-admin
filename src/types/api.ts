@@ -188,6 +188,14 @@ export type RewardTriggerType =
   | 'STREAK_REACHED'
   | 'TIER_REACHED';
 
+export interface RewardRuleItemDto {
+  id: number;
+  rewardRuleId: number;
+  itemDefinitionId: number;
+  quantity: number;
+  itemDefinition?: ItemDefinitionDto;
+}
+
 export interface RewardRuleDto {
   id: number;
   triggerType: RewardTriggerType;
@@ -196,6 +204,7 @@ export interface RewardRuleDto {
   triggerTimeMax: number | null;
   xp: number;
   gold: number;
+  rewardRuleItems?: RewardRuleItemDto[];
 }
 
 export interface CreateRewardRuleBody {
@@ -205,6 +214,7 @@ export interface CreateRewardRuleBody {
   triggerTimeMax?: number | null;
   xp?: number;
   gold?: number;
+  items?: { itemDefinitionId: number; quantity: number }[];
 }
 
 export interface UpdateRewardRuleBody {
@@ -214,7 +224,30 @@ export interface UpdateRewardRuleBody {
   triggerTimeMax?: number | null;
   xp?: number;
   gold?: number;
+  items?: { itemDefinitionId: number; quantity: number }[];
 }
+
+export type ItemDefinitionType = 'SKIN' | 'BOOST' | 'BADGE';
+export type BoostEffectType = 'XP_MULTIPLIER' | 'GOLD_MULTIPLIER';
+export type EquipmentSlot = 'AVT_FRAME' | 'BACKGROUND';
+
+export interface ItemDefinitionDto {
+  id: number;
+  name: string;
+  maxStackSize: number | null;
+  description: string | null;
+  shownInStore: boolean;
+  price: number;
+  isConsumable: boolean;
+  type: ItemDefinitionType;
+  effectType: BoostEffectType | null;
+  effectValue: number | null;
+  imgUrl: string | null;
+  equipmentSlot: EquipmentSlot | null;
+  durationMinutes: number | null;
+  allowEffectStacking: boolean;
+}
+
 
 
 

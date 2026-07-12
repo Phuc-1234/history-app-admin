@@ -1,7 +1,7 @@
 // src/components/content/RewardRulePanel.tsx
 import { useState, useEffect, useCallback } from 'react';
 import client from '../../api/client';
-import type { RewardRuleDto, RewardTriggerType } from '../../types/api';
+import type { RewardRuleDto, RewardTriggerType, ItemDefinitionDto } from '../../types/api';
 import type { ToastType } from '../../hooks/useToast';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
@@ -59,11 +59,13 @@ const EMPTY_FORM = {
   triggerTimeMin: '1',
   triggerTimeMax: '',
   xp: '10',
-  gold: '5'
+  gold: '5',
+  items: [] as { itemDefinitionId: number; quantity: number }[]
 };
 
 export function RewardRulePanel({ onToast }: RewardRulePanelProps) {
   const [rules, setRules] = useState<RewardRuleDto[]>([]);
+  const [itemDefs, setItemDefs] = useState<ItemDefinitionDto[]>([]);
   const [loading, setLoading] = useState(false);
 
   // Search & Filter
@@ -80,7 +82,7 @@ export function RewardRulePanel({ onToast }: RewardRulePanelProps) {
   const [deleteTarget, setDeleteTarget] = useState<RewardRuleDto | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  // Fetch Rules
+  // Fetch Rules & Item Definitions
   const fetchRules = useCallback(async () => {
     try {
       setLoading(true);
@@ -93,9 +95,19 @@ export function RewardRulePanel({ onToast }: RewardRulePanelProps) {
     }
   }, [onToast]);
 
+  const fetchItemDefs = useCallback(async () => {
+    try {
+      const res = await client.get('/api/admin/item-definitions');
+      setItemDefs(res.data.items ?? []);
+    } catch {
+      // ignore
+    }
+  }, []);
+
   useEffect(() => {
     fetchRules();
-  }, [fetchRules]);
+    fetchItemDefs();
+  }, [fetchRules, fetchItemDefs]);
 
   // Handlers
   const openCreate = () => {
@@ -112,7 +124,11 @@ export function RewardRulePanel({ onToast }: RewardRulePanelProps) {
       triggerTimeMin: String(rule.triggerTimeMin),
       triggerTimeMax: rule.triggerTimeMax !== null ? String(rule.triggerTimeMax) : '',
       xp: String(rule.xp),
-      gold: String(rule.gold)
+      gold: String(rule.gold),
+      items: (rule.rewardRuleItems || []).map(ri => ({
+        itemDefinitionId: ri.itemDefinitionId,
+        quantity: ri.quantity
+      }))
     });
     setModalOpen(true);
   };
@@ -138,6 +154,18 @@ export function RewardRulePanel({ onToast }: RewardRulePanelProps) {
       return;
     }
 
+    // Validate form items
+    for (const item of form.items) {
+      if (!item.itemDefinitionId) {
+        onToast('Vui lòng chọn vật phẩm', 'error');
+        return;
+      }
+      if (isNaN(item.quantity) || item.quantity < 1) {
+        onToast('Số lượng vật phẩm phải lớn hơn hoặc bằng 1', 'error');
+        return;
+      }
+    }
+
     try {
       setSaving(true);
       const payload = {
@@ -149,7 +177,8 @@ export function RewardRulePanel({ onToast }: RewardRulePanelProps) {
         triggerTimeMin: minTime,
         triggerTimeMax: maxTime,
         xp: xpVal,
-        gold: goldVal
+        gold: goldVal,
+        rewardRuleItems: form.items
       };
 
       if (editRule) {
@@ -368,7 +397,7 @@ export function RewardRulePanel({ onToast }: RewardRulePanelProps) {
                       {rule.triggerTimeMax ? ` - ${rule.triggerTimeMax}` : ' trở đi'}
                     </td>
 
-                    {/* Reward XP & Gold */}
+                    {/* Reward XP & Gold & Items */}
                     <td style={{ padding: '16px 20px' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                         {rule.xp > 0 && (
@@ -383,7 +412,17 @@ export function RewardRulePanel({ onToast }: RewardRulePanelProps) {
                             <span>+{rule.gold} vàng</span>
                           </div>
                         )}
-                        {rule.xp === 0 && rule.gold === 0 && (
+                        {rule.rewardRuleItems && rule.rewardRuleItems.length > 0 && (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 4 }}>
+                            {rule.rewardRuleItems.map((ri: any) => (
+                              <div key={ri.id} style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#0d9488', fontWeight: 600, fontSize: 12 }}>
+                                <span>📦</span>
+                                <span>{ri.itemDefinition?.name || `Vật phẩm #${ri.itemDefinitionId}`} x{ri.quantity}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {rule.xp === 0 && rule.gold === 0 && (!rule.rewardRuleItems || rule.rewardRuleItems.length === 0) && (
                           <span style={{ color: '#94a3b8', fontSize: 13 }}>Không có</span>
                         )}
                       </div>
@@ -518,6 +557,97 @@ export function RewardRulePanel({ onToast }: RewardRulePanelProps) {
               value={form.gold}
               onChange={(e) => setForm(prev => ({ ...prev, gold: e.target.value }))}
             />
+          </div>
+
+          {/* Items reward section */}
+          <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: 16 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <span style={{ fontSize: 14, fontWeight: 600, color: '#334155' }}>Vật phẩm thưởng thêm</span>
+              <button
+                type="button"
+                onClick={() => setForm(prev => ({
+                  ...prev,
+                  items: [...prev.items, { itemDefinitionId: itemDefs[0]?.id || 0, quantity: 1 }]
+                }))}
+                disabled={itemDefs.length === 0}
+                style={{
+                  padding: '6px 12px', background: '#f1f5f9', border: '1px solid #e2e8f0',
+                  borderRadius: 8, fontSize: 12, fontWeight: 600, color: '#475569', cursor: 'pointer',
+                  display: 'inline-flex', alignItems: 'center', gap: 4
+                }}
+              >
+                <IconPlus size={12} /> Thêm vật phẩm
+              </button>
+            </div>
+            {form.items.length === 0 ? (
+              <div style={{ fontSize: 13, color: '#94a3b8', fontStyle: 'italic', textAlign: 'center', padding: '12px 0' }}>
+                Chưa có vật phẩm thưởng nào được liên kết.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {form.items.map((item, idx) => (
+                  <div key={idx} style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                    <div style={{ flex: 1 }}>
+                      <select
+                        value={item.itemDefinitionId}
+                        onChange={(e) => {
+                          const val = Number(e.target.value);
+                          setForm(prev => {
+                            const newItems = [...prev.items];
+                            newItems[idx].itemDefinitionId = val;
+                            return { ...prev, items: newItems };
+                          });
+                        }}
+                        style={{
+                          width: '100%', padding: '8px 10px',
+                          background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8,
+                          fontSize: 13, color: '#0f172a', outline: 'none'
+                        }}
+                      >
+                        {itemDefs.map(def => (
+                          <option key={def.id} value={def.id}>{def.name} (ID: {def.id})</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div style={{ width: 100 }}>
+                      <input
+                        type="number"
+                        min="1"
+                        placeholder="SL"
+                        value={item.quantity}
+                        onChange={(e) => {
+                          const val = Number(e.target.value);
+                          setForm(prev => {
+                            const newItems = [...prev.items];
+                            newItems[idx].quantity = val;
+                            return { ...prev, items: newItems };
+                          });
+                        }}
+                        style={{
+                          width: '100%', padding: '8px 10px',
+                          background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8,
+                          fontSize: 13, color: '#0f172a', outline: 'none', boxSizing: 'border-box'
+                        }}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setForm(prev => ({
+                        ...prev,
+                        items: prev.items.filter((_, i) => i !== idx)
+                      }))}
+                      style={{
+                        background: '#fef2f2', border: '1px solid #fecaca', color: '#ef4444',
+                        width: 32, height: 32, borderRadius: 8, cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center'
+                      }}
+                    >
+                      <IconDelete size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Submit */}
