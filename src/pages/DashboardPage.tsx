@@ -15,6 +15,7 @@ import { VideoPanel } from '../components/content/VideoPanel';
 import { QuestionPanel } from '../components/content/QuestionPanel';
 import { TestPanel } from '../components/content/TestPanel';
 import { TestPresetPanel } from '../components/content/TestPresetPanel';
+import { RewardRulePanel } from '../components/content/RewardRulePanel';
 import { FeedbackPanel } from '../components/content/FeedbackPanel';
 import { ToastContainer } from '../components/ui/Toast';
 import { useAuthStore } from '../store/authStore';
@@ -29,10 +30,11 @@ import {
   IconQuestion,
   IconTest,
   IconMindMap,
-  IconFlashcard
+  IconFlashcard,
+  IconSparkles
 } from '../components/ui/Icons';
 
-export type TabId = 'overview' | 'grades' | 'topics' | 'lessons' | 'sections' | 'nodes' | 'mindmaps' | 'flashcards' | 'users' | 'videos' | 'questions' | 'tests' | 'testpresets' | 'feedbacks';
+export type TabId = 'overview' | 'grades' | 'topics' | 'lessons' | 'sections' | 'nodes' | 'mindmaps' | 'flashcards' | 'users' | 'videos' | 'questions' | 'tests' | 'testpresets' | 'feedbacks' | 'rewardrules';
 
 interface OverviewStats {
   grades: number;
@@ -44,6 +46,7 @@ interface OverviewStats {
   questions: number;
   tests: number;
   flashcards: number;
+  rewardRules: number;
 }
 
 function OverviewPanel() {
@@ -53,13 +56,14 @@ function OverviewPanel() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const [gradesRes, usersRes, videosRes, questionsRes, testsRes, flashcardsRes] = await Promise.all([
+        const [gradesRes, usersRes, videosRes, questionsRes, testsRes, flashcardsRes, rewardRulesRes] = await Promise.all([
           client.get('/api/content/grades'),
           client.get('/api/admin/users'),
           client.get('/api/admin/videos'),
           client.get('/api/admin/questions'),
           client.get('/api/admin/tests'),
-          client.get('/api/admin/flashcards')
+          client.get('/api/admin/flashcards'),
+          client.get('/api/admin/reward-rules')
         ]);
 
         const grades = gradesRes.data.grades ?? [];
@@ -68,6 +72,7 @@ function OverviewPanel() {
         const questions = questionsRes.data.questions ?? [];
         const tests = testsRes.data.tests ?? [];
         const flashcards = flashcardsRes.data.flashcards ?? [];
+        const rewardRules = rewardRulesRes.data.rules ?? [];
 
         let totalTopics = 0, totalLessons = 0, totalSections = 0;
 
@@ -103,7 +108,8 @@ function OverviewPanel() {
           videos: videos.length,
           questions: questions.length,
           tests: tests.length,
-          flashcards: flashcards.length
+          flashcards: flashcards.length,
+          rewardRules: rewardRules.length
         });
       } catch {
         // ignore
@@ -124,6 +130,7 @@ function OverviewPanel() {
     { icon: IconVideo, label: 'Video bài học',  value: stats?.videos    ?? '—', accent: '#ea580c', bg: '#fff7ed', border: '#ffedd5' },
     { icon: IconQuestion, label: 'Câu hỏi',       value: stats?.questions ?? '—', accent: '#0d9488', bg: '#f0fdfa', border: '#99f6e4' },
     { icon: IconTest, label: 'Đề thi',        value: stats?.tests     ?? '—', accent: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe' },
+    { icon: IconSparkles, label: 'Phần thưởng', value: stats?.rewardRules ?? '—', accent: '#d97706', bg: '#fffbeb', border: '#fde68a' },
   ];
 
   return (
@@ -236,6 +243,7 @@ export function DashboardPage() {
       case 'questions': return <QuestionPanel onToast={addToast} />;
       case 'tests':     return <TestPanel onToast={addToast} />;
       case 'testpresets': return <TestPresetPanel onToast={addToast} />;
+      case 'rewardrules': return <RewardRulePanel onToast={addToast} />;
       case 'feedbacks': return <FeedbackPanel onToast={addToast} />;
     }
   };
