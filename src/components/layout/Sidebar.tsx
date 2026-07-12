@@ -13,7 +13,8 @@ import {
   IconHistoryBook,
   IconMindMap,
   IconFlashcard,
-  IconTarget
+  IconTarget,
+  IconSparkles
 } from '../ui/Icons';
 
 interface NavItem {
@@ -35,6 +36,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'questions', label: 'Ngân hàng câu hỏi', description: 'Questions' },
   { id: 'tests', label: 'Đề thi', description: 'Tests' },
   { id: 'testpresets', label: 'Cấu hình mẫu đề', description: 'Test Presets' },
+  { id: 'rewardrules', label: 'Quản lý phần thưởng', description: 'Reward Rules' },
 ];
 
 const ICON_MAP: Record<string, any> = {
@@ -50,6 +52,7 @@ const ICON_MAP: Record<string, any> = {
   questions: IconQuestion,
   tests: IconTest,
   testpresets: IconTarget,
+  rewardrules: IconSparkles,
 };
 
 interface SidebarProps {
