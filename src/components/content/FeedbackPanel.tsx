@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import client from '../../api/client';
 import type { ToastType } from '../../hooks/useToast';
 import { Spinner } from '../ui/Spinner';
-import { Badge } from '../ui/Badge';
 import { IconUser } from '../ui/Icons';
 
 interface FeedbackPanelProps {

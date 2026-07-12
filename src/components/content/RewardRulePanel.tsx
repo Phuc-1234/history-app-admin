@@ -8,7 +8,7 @@ import { Modal } from '../ui/Modal';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { Input, Select } from '../ui/FormField';
 import { Spinner } from '../ui/Spinner';
-import { IconPlus, IconEdit, IconDelete, IconXP, IconGold, IconSparkles, IconSearch } from '../ui/Icons';
+import { IconPlus, IconEdit, IconDelete, IconXP, IconGold, IconSearch } from '../ui/Icons';
 
 interface RewardRulePanelProps {
   onToast: (msg: string, type: ToastType) => void;
@@ -21,6 +21,8 @@ const TRIGGER_TYPES: { value: RewardTriggerType; label: string; desc: string }[]
   { value: 'AUTO_LESSON_TEST_COMPLETE', label: 'Tự động (Bài học)', desc: 'Áp dụng cho bài kiểm tra tự động của Bài học (Lesson).' },
   { value: 'AUTO_TOPIC_TEST_COMPLETE', label: 'Tự động (Chủ đề)', desc: 'Áp dụng cho bài kiểm tra tự động của Chủ đề (Topic).' },
   { value: 'AUTO_GRADE_TEST_COMPLETE', label: 'Tự động (Khối lớp)', desc: 'Áp dụng cho bài kiểm tra tự động của Khối lớp (Grade).' },
+  { value: 'AUTO_PERSONAL_PRACTICE_COMPLETE', label: 'Luyện tập cá nhân', desc: 'Áp dụng cho bài luyện tập cá nhân tự động (Personal Practice).' },
+  { value: 'AUTO_WRONG_PRACTICE_COMPLETE', label: 'Luyện tập câu sai', desc: 'Áp dụng cho bài luyện tập các câu trả lời sai (Wrong Practice).' },
   { value: 'STREAK_REACHED', label: 'Đạt chuỗi ngày học', desc: 'Áp dụng khi người dùng đạt cột mốc chuỗi ngày học liên tục.' },
   { value: 'TIER_REACHED', label: 'Lên hạng danh hiệu', desc: 'Áp dụng khi người dùng đạt cột mốc chỉ mục danh hiệu nhất định.' }
 ];
@@ -32,6 +34,8 @@ const TRIGGER_LABELS: Record<RewardTriggerType, string> = {
   AUTO_LESSON_TEST_COMPLETE: 'Tự động (Bài học)',
   AUTO_TOPIC_TEST_COMPLETE: 'Tự động (Chủ đề)',
   AUTO_GRADE_TEST_COMPLETE: 'Tự động (Khối lớp)',
+  AUTO_PERSONAL_PRACTICE_COMPLETE: 'Luyện tập cá nhân',
+  AUTO_WRONG_PRACTICE_COMPLETE: 'Luyện tập câu sai',
   STREAK_REACHED: 'Chuỗi ngày học',
   TIER_REACHED: 'Hạng danh hiệu',
 };
@@ -43,6 +47,8 @@ const TRIGGER_COLORS: Record<RewardTriggerType, { bg: string; color: string; bor
   AUTO_LESSON_TEST_COMPLETE: { bg: 'rgba(16,185,129,0.08)', color: '#059669', border: 'rgba(16,185,129,0.2)' },
   AUTO_TOPIC_TEST_COMPLETE: { bg: 'rgba(16,185,129,0.08)', color: '#059669', border: 'rgba(16,185,129,0.2)' },
   AUTO_GRADE_TEST_COMPLETE: { bg: 'rgba(16,185,129,0.08)', color: '#059669', border: 'rgba(16,185,129,0.2)' },
+  AUTO_PERSONAL_PRACTICE_COMPLETE: { bg: 'rgba(2,132,199,0.08)', color: '#0284c7', border: 'rgba(2,132,199,0.2)' },
+  AUTO_WRONG_PRACTICE_COMPLETE: { bg: 'rgba(239,68,68,0.08)', color: '#dc2626', border: 'rgba(239,68,68,0.2)' },
   STREAK_REACHED: { bg: 'rgba(245,158,11,0.08)', color: '#d97706', border: 'rgba(245,158,11,0.2)' },
   TIER_REACHED: { bg: 'rgba(236,72,153,0.08)', color: '#db2777', border: 'rgba(236,72,153,0.2)' },
 };
@@ -136,7 +142,10 @@ export function RewardRulePanel({ onToast }: RewardRulePanelProps) {
       setSaving(true);
       const payload = {
         triggerType: form.triggerType,
-        triggerTargetId: form.triggerTargetId.trim() || null,
+        triggerTargetId:
+          form.triggerType === 'AUTO_PERSONAL_PRACTICE_COMPLETE' || form.triggerType === 'AUTO_WRONG_PRACTICE_COMPLETE'
+            ? null
+            : form.triggerTargetId.trim() || null,
         triggerTimeMin: minTime,
         triggerTimeMax: maxTime,
         xp: xpVal,
@@ -189,6 +198,9 @@ export function RewardRulePanel({ onToast }: RewardRulePanelProps) {
         return 'Nhập ID (Số) của Chủ đề (Topic) hoặc để trống làm mặc định.';
       case 'AUTO_GRADE_TEST_COMPLETE':
         return 'Nhập ID (Số) của Khối lớp (Grade) hoặc để trống làm mặc định.';
+      case 'AUTO_PERSONAL_PRACTICE_COMPLETE':
+      case 'AUTO_WRONG_PRACTICE_COMPLETE':
+        return 'Không áp dụng cho loại hoạt động này (bắt buộc để trống).';
       case 'STREAK_REACHED':
         return 'BẮT BUỘC: Nhập số ngày đạt chuỗi làm mục tiêu (ví dụ: "7", "30").';
       case 'TIER_REACHED':
@@ -454,9 +466,18 @@ export function RewardRulePanel({ onToast }: RewardRulePanelProps) {
           {/* Trigger Target ID Input */}
           <Input
             label="Mục tiêu (Target ID)"
-            placeholder="Nhập ID, UUID hoặc để trống..."
-            value={form.triggerTargetId}
+            placeholder={
+              form.triggerType === 'AUTO_PERSONAL_PRACTICE_COMPLETE' || form.triggerType === 'AUTO_WRONG_PRACTICE_COMPLETE'
+                ? 'Không áp dụng'
+                : 'Nhập ID, UUID hoặc để trống...'
+            }
+            value={
+              form.triggerType === 'AUTO_PERSONAL_PRACTICE_COMPLETE' || form.triggerType === 'AUTO_WRONG_PRACTICE_COMPLETE'
+                ? ''
+                : form.triggerTargetId
+            }
             onChange={(e) => setForm(prev => ({ ...prev, triggerTargetId: e.target.value }))}
+            disabled={form.triggerType === 'AUTO_PERSONAL_PRACTICE_COMPLETE' || form.triggerType === 'AUTO_WRONG_PRACTICE_COMPLETE'}
             hint={getTargetHelper(form.triggerType)}
           />
 
@@ -489,7 +510,6 @@ export function RewardRulePanel({ onToast }: RewardRulePanelProps) {
               min="0"
               value={form.xp}
               onChange={(e) => setForm(prev => ({ ...prev, xp: e.target.value }))}
-              icon={<IconXP size={16} />}
             />
             <Input
               label="Phần thưởng Vàng"
@@ -497,7 +517,6 @@ export function RewardRulePanel({ onToast }: RewardRulePanelProps) {
               min="0"
               value={form.gold}
               onChange={(e) => setForm(prev => ({ ...prev, gold: e.target.value }))}
-              icon={<IconGold size={16} />}
             />
           </div>
 
