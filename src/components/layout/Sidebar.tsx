@@ -14,7 +14,8 @@ import {
   IconMindMap,
   IconFlashcard,
   IconTarget,
-  IconSparkles
+  IconSparkles,
+  IconFeedback
 } from '../ui/Icons';
 
 interface NavItem {
@@ -37,6 +38,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'tests', label: 'Đề thi', description: 'Tests' },
   { id: 'testpresets', label: 'Cấu hình mẫu đề', description: 'Test Presets' },
   { id: 'rewardrules', label: 'Quản lý phần thưởng', description: 'Reward Rules' },
+  { id: 'feedbacks', label: 'Góp ý người dùng', description: 'User Feedbacks' },
 ];
 
 const ICON_MAP: Record<string, any> = {
@@ -53,6 +55,7 @@ const ICON_MAP: Record<string, any> = {
   tests: IconTest,
   testpresets: IconTarget,
   rewardrules: IconSparkles,
+  feedbacks: IconFeedback,
 };
 
 interface SidebarProps {

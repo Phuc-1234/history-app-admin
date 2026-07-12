@@ -16,6 +16,7 @@ import { QuestionPanel } from '../components/content/QuestionPanel';
 import { TestPanel } from '../components/content/TestPanel';
 import { TestPresetPanel } from '../components/content/TestPresetPanel';
 import { RewardRulePanel } from '../components/content/RewardRulePanel';
+import { FeedbackPanel } from '../components/content/FeedbackPanel';
 import { ToastContainer } from '../components/ui/Toast';
 import { useAuthStore } from '../store/authStore';
 import { useToast } from '../hooks/useToast';
@@ -33,7 +34,7 @@ import {
   IconSparkles
 } from '../components/ui/Icons';
 
-export type TabId = 'overview' | 'grades' | 'topics' | 'lessons' | 'sections' | 'nodes' | 'mindmaps' | 'flashcards' | 'users' | 'videos' | 'questions' | 'tests' | 'testpresets' | 'rewardrules';
+export type TabId = 'overview' | 'grades' | 'topics' | 'lessons' | 'sections' | 'nodes' | 'mindmaps' | 'flashcards' | 'users' | 'videos' | 'questions' | 'tests' | 'testpresets' | 'feedbacks' | 'rewardrules';
 
 interface OverviewStats {
   grades: number;
@@ -243,6 +244,7 @@ export function DashboardPage() {
       case 'tests':     return <TestPanel onToast={addToast} />;
       case 'testpresets': return <TestPresetPanel onToast={addToast} />;
       case 'rewardrules': return <RewardRulePanel onToast={addToast} />;
+      case 'feedbacks': return <FeedbackPanel onToast={addToast} />;
     }
   };
 
