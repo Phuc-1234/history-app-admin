@@ -2,7 +2,9 @@
 import axios from 'axios';
 import { useAuthStore } from '../store/authStore';
 
-export const BASE_URL = import.meta.env.VITE_API_URL_PRODUCTION || 'https://history-app-dev-branch.onrender.com';
+export const BASE_URL = import.meta.env.MODE === 'devlocal'
+  ? (import.meta.env.VITE_API_URL_LOCAL || 'http://localhost:5000')
+  : (import.meta.env.VITE_API_URL_PRODUCTION || 'https://history-app-dev-branch.onrender.com');
 
 const client = axios.create({
   baseURL: BASE_URL,
