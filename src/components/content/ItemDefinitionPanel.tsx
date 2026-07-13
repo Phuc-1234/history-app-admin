@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import client from '../../api/client';
-import type { ItemDefinitionDto, ItemDefinitionType, BoostEffectType, EquipmentSlot } from '../../types/api';
+import type { ItemDefinitionDto, ItemDefinitionType, EquipmentSlot } from '../../types/api';
 import type { ToastType } from '../../hooks/useToast';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
@@ -15,14 +15,9 @@ interface ItemDefinitionPanelProps {
 
 const ITEM_TYPES = [
   { value: 'SKIN', label: 'Trang phục / Skin (SKIN)' },
-  { value: 'BOOST', label: 'Tăng cường / Boost (BOOST)' },
+  { value: 'XP_MUL', label: 'Nhân XP / XP Mul (XP_MUL)' },
+  { value: 'GOLD_MUL', label: 'Nhân vàng / Gold Mul (GOLD_MUL)' },
   { value: 'BADGE', label: 'Huy hiệu / Badge (BADGE)' }
-];
-
-const BOOST_EFFECT_TYPES = [
-  { value: '', label: 'Không có hiệu ứng' },
-  { value: 'XP_MULTIPLIER', label: 'Nhân điểm kinh nghiệm (XP_MULTIPLIER)' },
-  { value: 'GOLD_MULTIPLIER', label: 'Nhân tiền vàng (GOLD_MULTIPLIER)' }
 ];
 
 const EQUIPMENT_SLOTS = [
@@ -35,16 +30,12 @@ const EMPTY_FORM = {
   name: '',
   description: '',
   imgUrl: '',
-  type: 'SKIN' as ItemDefinitionType,
+  itemType: 'SKIN' as ItemDefinitionType,
   price: '10',
-  maxStackSize: '',
-  isConsumable: false,
   shownInStore: true,
-  effectType: '' as BoostEffectType | '',
   effectValue: '',
   equipmentSlot: '' as EquipmentSlot | '',
-  durationMinutes: '',
-  allowEffectStacking: true
+  durationMinutes: ''
 };
 
 export function ItemDefinitionPanel({ onToast }: ItemDefinitionPanelProps) {
@@ -90,16 +81,12 @@ export function ItemDefinitionPanel({ onToast }: ItemDefinitionPanelProps) {
       name: item.name,
       description: item.description ?? '',
       imgUrl: item.imgUrl ?? '',
-      type: item.type,
+      itemType: item.itemType,
       price: String(item.price),
-      maxStackSize: item.maxStackSize !== null ? String(item.maxStackSize) : '',
-      isConsumable: item.isConsumable,
       shownInStore: item.shownInStore,
-      effectType: item.effectType ?? '',
       effectValue: item.effectValue !== null ? String(item.effectValue) : '',
       equipmentSlot: item.equipmentSlot ?? '',
-      durationMinutes: item.durationMinutes !== null ? String(item.durationMinutes) : '',
-      allowEffectStacking: item.allowEffectStacking
+      durationMinutes: item.durationMinutes !== null ? String(item.durationMinutes) : ''
     });
     setModalOpen(true);
   };
@@ -111,17 +98,11 @@ export function ItemDefinitionPanel({ onToast }: ItemDefinitionPanelProps) {
     }
 
     const priceVal = Number(form.price);
-    const maxStack = form.maxStackSize ? Number(form.maxStackSize) : null;
     const effectVal = form.effectValue ? Number(form.effectValue) : null;
     const durMin = form.durationMinutes ? Number(form.durationMinutes) : null;
 
     if (isNaN(priceVal) || priceVal < 0) {
       onToast('Giá vật phẩm phải là số không âm', 'error');
-      return;
-    }
-
-    if (maxStack !== null && (isNaN(maxStack) || maxStack < 1)) {
-      onToast('Kích thước ngăn chứa tối đa phải lớn hơn hoặc bằng 1', 'error');
       return;
     }
 
@@ -137,20 +118,19 @@ export function ItemDefinitionPanel({ onToast }: ItemDefinitionPanelProps) {
 
     try {
       setSaving(true);
+      const isMul = form.itemType === 'XP_MUL' || form.itemType === 'GOLD_MUL';
+      const isSkin = form.itemType === 'SKIN';
+
       const payload = {
         name: form.name.trim(),
         description: form.description.trim() || null,
         imgUrl: form.imgUrl.trim() || null,
-        type: form.type,
+        itemType: form.itemType,
         price: priceVal,
-        maxStackSize: maxStack,
-        isConsumable: form.isConsumable,
         shownInStore: form.shownInStore,
-        effectType: form.type === 'BOOST' && form.effectType ? form.effectType : null,
-        effectValue: form.type === 'BOOST' ? effectVal : null,
-        equipmentSlot: form.type === 'SKIN' && form.equipmentSlot ? form.equipmentSlot : null,
-        durationMinutes: form.type === 'BOOST' ? durMin : null,
-        allowEffectStacking: form.allowEffectStacking
+        effectValue: isMul ? effectVal : null,
+        equipmentSlot: isSkin && form.equipmentSlot ? form.equipmentSlot : null,
+        durationMinutes: isMul ? durMin : null
       };
 
       if (editItem) {
@@ -257,7 +237,6 @@ export function ItemDefinitionPanel({ onToast }: ItemDefinitionPanelProps) {
                 <th style={{ padding: '16px 20px', fontWeight: 600, color: '#475569' }}>Mô tả / Chi tiết cấu hình</th>
                 <th style={{ padding: '16px 20px', fontWeight: 600, color: '#475569', width: 150 }}>Loại</th>
                 <th style={{ padding: '16px 20px', fontWeight: 600, color: '#475569', width: 120 }}>Giá bán</th>
-                <th style={{ padding: '16px 20px', fontWeight: 600, color: '#475569', width: 120 }}>Ngăn chứa tối đa</th>
                 <th style={{ padding: '16px 20px', fontWeight: 600, color: '#475569', width: 100, textAlign: 'right' }}>Thao tác</th>
               </tr>
             </thead>
@@ -277,10 +256,13 @@ export function ItemDefinitionPanel({ onToast }: ItemDefinitionPanelProps) {
                     <div>
                       <div>{item.description ?? 'Không có mô tả'}</div>
                       <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>
-                        {item.type === 'BOOST' && item.effectType && (
-                          <span>Hiệu ứng: {item.effectType} (x{item.effectValue}) | {item.durationMinutes} phút</span>
+                        {item.itemType === 'XP_MUL' && (
+                          <span>Nhân XP (x{item.effectValue}) | {item.durationMinutes} phút</span>
                         )}
-                        {item.type === 'SKIN' && item.equipmentSlot && (
+                        {item.itemType === 'GOLD_MUL' && (
+                          <span>Nhân Vàng (x{item.effectValue}) | {item.durationMinutes} phút</span>
+                        )}
+                        {item.itemType === 'SKIN' && item.equipmentSlot && (
                           <span>Vị trí: {item.equipmentSlot}</span>
                         )}
                       </div>
@@ -290,13 +272,10 @@ export function ItemDefinitionPanel({ onToast }: ItemDefinitionPanelProps) {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                       <span style={{
                         padding: '4px 8px', borderRadius: 12, fontSize: 12, fontWeight: 600, width: 'fit-content',
-                        background: item.type === 'SKIN' ? '#dbeafe' : item.type === 'BOOST' ? '#fef9c3' : '#fee2e2',
-                        color: item.type === 'SKIN' ? '#3b82f6' : item.type === 'BOOST' ? '#eab308' : '#ef4444'
+                        background: item.itemType === 'SKIN' ? '#dbeafe' : (item.itemType === 'XP_MUL' || item.itemType === 'GOLD_MUL') ? '#fef9c3' : '#fee2e2',
+                        color: item.itemType === 'SKIN' ? '#3b82f6' : (item.itemType === 'XP_MUL' || item.itemType === 'GOLD_MUL') ? '#eab308' : '#ef4444'
                       }}>
-                        {item.type}
-                      </span>
-                      <span style={{ fontSize: 11, color: '#64748b' }}>
-                        {item.isConsumable ? 'Tiêu thụ được' : 'Không tiêu thụ'}
+                        {item.itemType}
                       </span>
                     </div>
                   </td>
@@ -306,7 +285,6 @@ export function ItemDefinitionPanel({ onToast }: ItemDefinitionPanelProps) {
                       <span>{item.price}</span>
                     </div>
                   </td>
-                  <td style={{ padding: '16px 20px', color: '#475569' }}>{item.maxStackSize ?? 'Vô hạn'}</td>
                   <td style={{ padding: '16px 20px', textAlign: 'right' }}>
                     <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
                       <button
@@ -367,24 +345,16 @@ export function ItemDefinitionPanel({ onToast }: ItemDefinitionPanelProps) {
           
           <Select
             label="Loại vật phẩm"
-            value={form.type}
-            onChange={(e) => setForm(prev => ({ ...prev, type: e.target.value as ItemDefinitionType }))}
+            value={form.itemType}
+            onChange={(e) => setForm(prev => ({ ...prev, itemType: e.target.value as ItemDefinitionType }))}
           >
             {ITEM_TYPES.map(t => (
               <option key={t.value} value={t.value}>{t.label}</option>
             ))}
           </Select>
 
-          {/* isConsumable & shownInStore Booleans */}
+          {/* shownInStore Boolean */}
           <div style={{ display: 'flex', gap: 24, padding: '4px 0' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer', color: '#475569' }}>
-              <input
-                type="checkbox"
-                checked={form.isConsumable}
-                onChange={(e) => setForm(prev => ({ ...prev, isConsumable: e.target.checked }))}
-              />
-              Vật phẩm tiêu thụ (isConsumable)
-            </label>
             <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer', color: '#475569' }}>
               <input
                 type="checkbox"
@@ -403,29 +373,12 @@ export function ItemDefinitionPanel({ onToast }: ItemDefinitionPanelProps) {
               value={form.price}
               onChange={(e) => setForm(prev => ({ ...prev, price: e.target.value }))}
             />
-            <Input
-              label="Ngăn chứa tối đa (maxStackSize)"
-              type="number"
-              min="1"
-              value={form.maxStackSize}
-              onChange={(e) => setForm(prev => ({ ...prev, maxStackSize: e.target.value }))}
-              placeholder="Vô hạn (để trống)"
-            />
           </div>
 
           {/* Conditional properties based on type */}
-          {form.type === 'BOOST' && (
+          {(form.itemType === 'XP_MUL' || form.itemType === 'GOLD_MUL') && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: 16, border: '1px solid #e2e8f0', borderRadius: 12, background: '#f8fafc' }}>
               <h4 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#0f172a' }}>Cấu hình hiệu ứng Boost</h4>
-              <Select
-                label="Loại hiệu ứng"
-                value={form.effectType}
-                onChange={(e) => setForm(prev => ({ ...prev, effectType: e.target.value as BoostEffectType }))}
-              >
-                {BOOST_EFFECT_TYPES.map(t => (
-                  <option key={t.value} value={t.value}>{t.label}</option>
-                ))}
-              </Select>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                 <Input
                   label="Giá trị hiệu ứng (ví dụ: 1.5)"
@@ -442,18 +395,10 @@ export function ItemDefinitionPanel({ onToast }: ItemDefinitionPanelProps) {
                   onChange={(e) => setForm(prev => ({ ...prev, durationMinutes: e.target.value }))}
                 />
               </div>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer', color: '#475569' }}>
-                <input
-                  type="checkbox"
-                  checked={form.allowEffectStacking}
-                  onChange={(e) => setForm(prev => ({ ...prev, allowEffectStacking: e.target.checked }))}
-                />
-                Cho phép cộng dồn thời gian hiệu ứng
-              </label>
             </div>
           )}
 
-          {form.type === 'SKIN' && (
+          {form.itemType === 'SKIN' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: 16, border: '1px solid #e2e8f0', borderRadius: 12, background: '#f8fafc' }}>
               <h4 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#0f172a' }}>Cấu hình Trang phục / Skin</h4>
               <Select
