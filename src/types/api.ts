@@ -5,6 +5,7 @@ export interface GradeDto {
   id: number;
   state: HierarchyState;
   isPro?: boolean;
+  imgUrl?: string | null;
 }
 
 export interface TopicDto {
@@ -21,6 +22,7 @@ export interface LessonDto {
   position: number;
   topicId: number;
   isPro?: boolean;
+  imgUrl?: string | null;
 }
 
 export interface SectionDto {
@@ -121,6 +123,7 @@ export interface AdminTestDto {
   scopeType: string | null;
   isNationalTest: boolean;
   isPro: boolean;
+  imgUrl: string | null;
   questionIds: number[];
   // Backup
   isManual: boolean;

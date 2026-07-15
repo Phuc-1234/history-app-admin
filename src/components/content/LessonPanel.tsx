@@ -7,6 +7,7 @@ import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { Input, Select } from '../ui/FormField';
+import { ImageUploadInput } from '../ui/ImageUploadInput';
 import { RichTextEditor } from '../ui/RichTextEditor';
 import { Spinner } from '../ui/Spinner';
 import { IconPlus, IconEdit, IconDelete, IconLesson } from '../ui/Icons';
@@ -27,7 +28,7 @@ export function LessonPanel({ onToast, navParams, onNavigate }: LessonPanelProps
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editLesson, setEditLesson] = useState<LessonDto | null>(null);
-  const [form, setForm] = useState({ name: '', summary: '', position: '', topicId: '', isPro: false });
+  const [form, setForm] = useState({ name: '', summary: '', position: '', topicId: '', isPro: false, imgUrl: '' });
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<LessonDto | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -82,8 +83,8 @@ export function LessonPanel({ onToast, navParams, onNavigate }: LessonPanelProps
 
   useEffect(() => { if (selectedTopicId) fetchLessons(selectedTopicId); }, [selectedTopicId, fetchLessons]);
 
-  const openCreate = () => { setEditLesson(null); setForm({ name: '', summary: '', position: String(lessons.length + 1), topicId: String(selectedTopicId ?? ''), isPro: false }); setModalOpen(true); };
-  const openEdit = (l: LessonDto) => { setEditLesson(l); setForm({ name: l.name, summary: l.summary ?? '', position: String(l.position), topicId: String(l.topicId), isPro: !!l.isPro }); setModalOpen(true); };
+  const openCreate = () => { setEditLesson(null); setForm({ name: '', summary: '', position: String(lessons.length + 1), topicId: String(selectedTopicId ?? ''), isPro: false, imgUrl: '' }); setModalOpen(true); };
+  const openEdit = (l: LessonDto) => { setEditLesson(l); setForm({ name: l.name, summary: l.summary ?? '', position: String(l.position), topicId: String(l.topicId), isPro: !!l.isPro, imgUrl: l.imgUrl ?? '' }); setModalOpen(true); };
 
   const handleSave = async () => {
     if (!form.name.trim()) { onToast('Tên bài học là bắt buộc', 'error'); return; }
@@ -92,10 +93,10 @@ export function LessonPanel({ onToast, navParams, onNavigate }: LessonPanelProps
     try {
       setSaving(true);
       if (editLesson) {
-        await client.patch(`/api/admin/lessons/${editLesson.id}`, { name: form.name.trim(), summary: form.summary || undefined, position, topicId, isPro: form.isPro });
+        await client.patch(`/api/admin/lessons/${editLesson.id}`, { name: form.name.trim(), summary: form.summary || undefined, position, topicId, isPro: form.isPro, imgUrl: form.imgUrl.trim() || null });
         onToast('Đã cập nhật bài học', 'success');
       } else {
-        await client.post('/api/admin/lessons', { name: form.name.trim(), summary: form.summary || undefined, position, topicId, isPro: form.isPro });
+        await client.post('/api/admin/lessons', { name: form.name.trim(), summary: form.summary || undefined, position, topicId, isPro: form.isPro, imgUrl: form.imgUrl.trim() || null });
         onToast('Đã tạo bài học mới', 'success');
       }
       setModalOpen(false);
@@ -159,6 +160,9 @@ export function LessonPanel({ onToast, navParams, onNavigate }: LessonPanelProps
                   </Td>
                   <Td>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      {l.imgUrl && (
+                        <img src={l.imgUrl} alt={l.name} style={{ width: 32, height: 32, objectFit: 'cover', borderRadius: 6, border: '1px solid #e2e8f0' }} />
+                      )}
                       <span style={{ color: '#0f172a', fontWeight: 600 }}>{l.name}</span>
                       {l.isPro && (
                         <span style={{ padding: '2px 8px', fontSize: 10, fontWeight: 800, background: 'linear-gradient(135deg, #fbbf24, #f59e0b)', color: '#ffffff', borderRadius: 6, textTransform: 'uppercase', boxShadow: '0 2px 4px rgba(245,158,11,0.3)' }}>PRO</span>
@@ -193,6 +197,7 @@ export function LessonPanel({ onToast, navParams, onNavigate }: LessonPanelProps
 
       <Modal open={modalOpen} title={editLesson ? 'Sửa Bài học' : 'Thêm Bài học mới'} onClose={() => setModalOpen(false)}>
         <Input label="Tên bài học" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="Ví dụ: Bài 1: Cách mạng tháng Tám" />
+        <ImageUploadInput label="Hình ảnh bài học" value={form.imgUrl} onChange={(val) => setForm((f) => ({ ...f, imgUrl: val }))} placeholder="Đường dẫn ảnh hoặc tải lên..." />
         <RichTextEditor label="Tóm tắt (tùy chọn)" value={form.summary} onChange={(val) => setForm((f) => ({ ...f, summary: val }))} placeholder="Mô tả ngắn về bài học..." />
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           <Input label="Vị trí" type="number" min={0} value={form.position} onChange={(e) => setForm((f) => ({ ...f, position: e.target.value }))} />
