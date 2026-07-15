@@ -31,7 +31,8 @@ const EMPTY_FORM = {
   topicId: '',
   lessonId: '',
   sectionId: '',
-  isNationalTest: false
+  isNationalTest: false,
+  isPro: false
 };
 
 export function TestPanel({ onToast }: TestPanelProps) {
@@ -155,7 +156,8 @@ export function TestPanel({ onToast }: TestPanelProps) {
       topicId,
       lessonId,
       sectionId,
-      isNationalTest: t.isNationalTest !== false
+      isNationalTest: t.isNationalTest !== false,
+      isPro: !!t.isPro
     });
     setSelectedQIds(t.questionIds ?? []);
     setModalOpen(true);
@@ -198,6 +200,7 @@ export function TestPanel({ onToast }: TestPanelProps) {
         scopeType: form.scopeType,
         scopeId,
         isNationalTest: form.isNationalTest,
+        isPro: form.isPro,
         questionIds: selectedQIds,
         // legacy backups
         gradeId: form.gradeId ? Number(form.gradeId) : null,
@@ -297,7 +300,12 @@ export function TestPanel({ onToast }: TestPanelProps) {
                   <tr key={t.id} style={{ background: idx % 2 === 0 ? '#ffffff' : '#fafbff', borderTop: '1px solid #f1f5f9' }}>
                     <td style={TD_STYLE}>
                       <div>
-                        <div style={{ fontWeight: 700, color: '#0f172a', fontSize: 15 }}>{t.title}</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <div style={{ fontWeight: 700, color: '#0f172a', fontSize: 15 }}>{t.title}</div>
+                          {t.isPro && (
+                            <span style={{ padding: '2px 8px', fontSize: 10, fontWeight: 800, background: 'linear-gradient(135deg, #fbbf24, #f59e0b)', color: '#ffffff', borderRadius: 6, textTransform: 'uppercase', boxShadow: '0 2px 4px rgba(245,158,11,0.3)' }}>PRO</span>
+                          )}
+                        </div>
                         <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>{t.summary ?? 'Không có tóm tắt'}</div>
                       </div>
                     </td>
@@ -426,6 +434,18 @@ export function TestPanel({ onToast }: TestPanelProps) {
             <option value="false">Không</option>
             <option value="true">Đúng (National Test)</option>
           </Select>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 24 }}>
+            <input 
+              type="checkbox" 
+              id="test-is-pro"
+              checked={form.isPro} 
+              onChange={(e) => setForm(f => ({ ...f, isPro: e.target.checked }))}
+              style={{ width: 16, height: 16, cursor: 'pointer' }}
+            />
+            <label htmlFor="test-is-pro" style={{ fontSize: 14, fontWeight: 600, color: '#334155', cursor: 'pointer' }}>
+              Chỉ dành cho tài khoản PRO
+            </label>
+          </div>
         </div>
 
         {/* Question mapper */}

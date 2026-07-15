@@ -4,6 +4,7 @@ export type HierarchyState = 'PUBLIC' | 'PRIVATE';
 export interface GradeDto {
   id: number;
   state: HierarchyState;
+  isPro?: boolean;
 }
 
 export interface TopicDto {
@@ -19,6 +20,7 @@ export interface LessonDto {
   summary?: string | null;
   position: number;
   topicId: number;
+  isPro?: boolean;
 }
 
 export interface SectionDto {
@@ -118,6 +120,7 @@ export interface AdminTestDto {
   scopeId: number | null;
   scopeType: string | null;
   isNationalTest: boolean;
+  isPro: boolean;
   questionIds: number[];
   // Backup
   isManual: boolean;
