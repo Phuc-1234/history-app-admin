@@ -27,7 +27,7 @@ export function LessonPanel({ onToast, navParams, onNavigate }: LessonPanelProps
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editLesson, setEditLesson] = useState<LessonDto | null>(null);
-  const [form, setForm] = useState({ name: '', summary: '', position: '', topicId: '' });
+  const [form, setForm] = useState({ name: '', summary: '', position: '', topicId: '', isPro: false });
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<LessonDto | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -82,8 +82,8 @@ export function LessonPanel({ onToast, navParams, onNavigate }: LessonPanelProps
 
   useEffect(() => { if (selectedTopicId) fetchLessons(selectedTopicId); }, [selectedTopicId, fetchLessons]);
 
-  const openCreate = () => { setEditLesson(null); setForm({ name: '', summary: '', position: String(lessons.length + 1), topicId: String(selectedTopicId ?? '') }); setModalOpen(true); };
-  const openEdit = (l: LessonDto) => { setEditLesson(l); setForm({ name: l.name, summary: l.summary ?? '', position: String(l.position), topicId: String(l.topicId) }); setModalOpen(true); };
+  const openCreate = () => { setEditLesson(null); setForm({ name: '', summary: '', position: String(lessons.length + 1), topicId: String(selectedTopicId ?? ''), isPro: false }); setModalOpen(true); };
+  const openEdit = (l: LessonDto) => { setEditLesson(l); setForm({ name: l.name, summary: l.summary ?? '', position: String(l.position), topicId: String(l.topicId), isPro: !!l.isPro }); setModalOpen(true); };
 
   const handleSave = async () => {
     if (!form.name.trim()) { onToast('Tên bài học là bắt buộc', 'error'); return; }
@@ -92,10 +92,10 @@ export function LessonPanel({ onToast, navParams, onNavigate }: LessonPanelProps
     try {
       setSaving(true);
       if (editLesson) {
-        await client.patch(`/api/admin/lessons/${editLesson.id}`, { name: form.name.trim(), summary: form.summary || undefined, position, topicId });
+        await client.patch(`/api/admin/lessons/${editLesson.id}`, { name: form.name.trim(), summary: form.summary || undefined, position, topicId, isPro: form.isPro });
         onToast('Đã cập nhật bài học', 'success');
       } else {
-        await client.post('/api/admin/lessons', { name: form.name.trim(), summary: form.summary || undefined, position, topicId });
+        await client.post('/api/admin/lessons', { name: form.name.trim(), summary: form.summary || undefined, position, topicId, isPro: form.isPro });
         onToast('Đã tạo bài học mới', 'success');
       }
       setModalOpen(false);
@@ -157,7 +157,14 @@ export function LessonPanel({ onToast, navParams, onNavigate }: LessonPanelProps
                       {l.position}
                     </span>
                   </Td>
-                  <Td><span style={{ color: '#0f172a', fontWeight: 600 }}>{l.name}</span></Td>
+                  <Td>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ color: '#0f172a', fontWeight: 600 }}>{l.name}</span>
+                      {l.isPro && (
+                        <span style={{ padding: '2px 8px', fontSize: 10, fontWeight: 800, background: 'linear-gradient(135deg, #fbbf24, #f59e0b)', color: '#ffffff', borderRadius: 6, textTransform: 'uppercase', boxShadow: '0 2px 4px rgba(245,158,11,0.3)' }}>PRO</span>
+                      )}
+                    </div>
+                  </Td>
                   <Td>
                     {l.summary ? (
                       <div 
@@ -192,6 +199,18 @@ export function LessonPanel({ onToast, navParams, onNavigate }: LessonPanelProps
           <Select label="Chủ đề" value={form.topicId} onChange={(e) => setForm((f) => ({ ...f, topicId: e.target.value }))}>
             {topics.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
           </Select>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '14px 0 6px' }}>
+          <input 
+            type="checkbox" 
+            id="lesson-is-pro"
+            checked={form.isPro} 
+            onChange={(e) => setForm((f) => ({ ...f, isPro: e.target.checked }))}
+            style={{ width: 16, height: 16, cursor: 'pointer' }}
+          />
+          <label htmlFor="lesson-is-pro" style={{ fontSize: 14, fontWeight: 600, color: '#334155', cursor: 'pointer' }}>
+            Chỉ dành cho tài khoản PRO
+          </label>
         </div>
         <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 8 }}>
           <Button variant="ghost" onClick={() => setModalOpen(false)}>Hủy</Button>

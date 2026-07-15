@@ -18,7 +18,7 @@ interface GradePanelProps {
   onNavigate?: (tab: TabId, params?: NavParams) => void;
 }
 
-const EMPTY_FORM = { id: '', state: 'PRIVATE' as 'PUBLIC' | 'PRIVATE' };
+const EMPTY_FORM = { id: '', state: 'PRIVATE' as 'PUBLIC' | 'PRIVATE', isPro: false };
 
 export function GradePanel({ onToast, onNavigate }: GradePanelProps) {
   const [grades, setGrades] = useState<GradeDto[]>([]);
@@ -45,7 +45,7 @@ export function GradePanel({ onToast, onNavigate }: GradePanelProps) {
   useEffect(() => { fetchGrades(); }, [fetchGrades]);
 
   const openCreate = () => { setEditGrade(null); setForm(EMPTY_FORM); setModalOpen(true); };
-  const openEdit = (g: GradeDto) => { setEditGrade(g); setForm({ id: String(g.id), state: g.state }); setModalOpen(true); };
+  const openEdit = (g: GradeDto) => { setEditGrade(g); setForm({ id: String(g.id), state: g.state, isPro: !!g.isPro }); setModalOpen(true); };
 
   const handleSave = async () => {
     const id = Number(form.id);
@@ -53,10 +53,10 @@ export function GradePanel({ onToast, onNavigate }: GradePanelProps) {
     try {
       setSaving(true);
       if (editGrade) {
-        await client.patch(`/api/admin/grades/${editGrade.id}`, { state: form.state });
+        await client.patch(`/api/admin/grades/${editGrade.id}`, { state: form.state, isPro: form.isPro });
         onToast(`Đã cập nhật Khối ${editGrade.id}`, 'success');
       } else {
-        await client.post('/api/admin/grades', { id, state: form.state });
+        await client.post('/api/admin/grades', { id, state: form.state, isPro: form.isPro });
         onToast(`Đã tạo Khối ${id}`, 'success');
       }
       setModalOpen(false);
@@ -106,14 +106,17 @@ export function GradePanel({ onToast, onNavigate }: GradePanelProps) {
             <tbody>
               {grades.map((g, i) => (
                 <tr key={g.id} style={{ background: i % 2 === 0 ? '#ffffff' : '#fafbff', borderTop: '1px solid #f1f5f9' }}>
-                  <Td>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10, fontWeight: 700, fontSize: 15, color: '#0f172a' }}>
-                      <span style={{ width: 32, height: 32, borderRadius: 8, background: '#f5f3ff', border: '1px solid #ddd6fe', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <IconGrade size={18} color="#6c63ff" />
-                      </span>
-                      Khối {g.id}
-                    </span>
-                  </Td>
+                    <Td>
+                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10, fontWeight: 700, fontSize: 15, color: '#0f172a' }}>
+                       <span style={{ width: 32, height: 32, borderRadius: 8, background: '#f5f3ff', border: '1px solid #ddd6fe', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                         <IconGrade size={18} color="#6c63ff" />
+                       </span>
+                       Khối {g.id}
+                       {g.isPro && (
+                         <span style={{ padding: '2px 8px', fontSize: 10, fontWeight: 800, background: 'linear-gradient(135deg, #fbbf24, #f59e0b)', color: '#ffffff', borderRadius: 6, textTransform: 'uppercase', boxShadow: '0 2px 4px rgba(245,158,11,0.3)' }}>PRO</span>
+                       )}
+                     </span>
+                   </Td>
                   <Td><Badge value={g.state} /></Td>
                   <Td align="right">
                     <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
@@ -135,6 +138,18 @@ export function GradePanel({ onToast, onNavigate }: GradePanelProps) {
           <option value="PRIVATE">PRIVATE — Ẩn với học sinh</option>
           <option value="PUBLIC">PUBLIC — Hiển thị công khai</option>
         </Select>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '14px 0' }}>
+          <input 
+            type="checkbox" 
+            id="grade-is-pro"
+            checked={form.isPro} 
+            onChange={(e) => setForm((f) => ({ ...f, isPro: e.target.checked }))}
+            style={{ width: 16, height: 16, cursor: 'pointer' }}
+          />
+          <label htmlFor="grade-is-pro" style={{ fontSize: 14, fontWeight: 600, color: '#334155', cursor: 'pointer' }}>
+            Chỉ dành cho tài khoản PRO
+          </label>
+        </div>
         <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 8 }}>
           <Button variant="ghost" onClick={() => setModalOpen(false)}>Hủy</Button>
           <Button onClick={handleSave} loading={saving}>{editGrade ? 'Lưu thay đổi' : 'Tạo mới'}</Button>
