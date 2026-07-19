@@ -451,10 +451,32 @@ export function TierPanel({ onToast }: TierPanelProps) {
             </label>
             <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
               <div style={{ flex: 1 }}>
-                <Input
+                <input
+                  type="text"
                   placeholder="https://... hoặc tải ảnh lên"
                   value={form.badgeImgUrl}
                   onChange={(e) => setForm(prev => ({ ...prev, badgeImgUrl: e.target.value }))}
+                  style={{
+                    width: '100%',
+                    background: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: 10,
+                    padding: '10px 14px',
+                    color: '#0f172a',
+                    fontSize: 14,
+                    outline: 'none',
+                    fontFamily: 'inherit',
+                    boxSizing: 'border-box',
+                    transition: 'border-color 0.2s, box-shadow 0.2s',
+                  }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.borderColor = '#6c63ff';
+                    e.currentTarget.style.boxShadow = '0 0 0 3px rgba(108,99,255,0.12)';
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.borderColor = '#e2e8f0';
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
                 />
               </div>
               <label style={{
