@@ -249,6 +249,34 @@ export interface ItemDefinitionDto {
   durationMinutes: number | null;
 }
 
+// ─── Tier ────────────────────────────────────────────────────────────────────
 
+export interface TierDto {
+  index: number;
+  name: string;
+  badgeImgUrl: string | null;
+  description: string | null;
+  xpThreshold: number;
+  rewardRule?: RewardRuleDto | null;
+}
 
+export interface CreateTierBody {
+  index: number;
+  name: string;
+  badgeImgUrl?: string | null;
+  description?: string | null;
+  xpThreshold: number;
+  xpReward?: number;
+  goldReward?: number;
+  rewardRuleItems?: { itemDefinitionId: number; quantity: number }[];
+}
 
+export interface UpdateTierBody {
+  name?: string;
+  badgeImgUrl?: string | null;
+  description?: string | null;
+  xpThreshold?: number;
+  xpReward?: number;
+  goldReward?: number;
+  rewardRuleItems?: { itemDefinitionId: number; quantity: number }[];
+}
