@@ -245,6 +245,7 @@ export interface ItemDefinitionDto {
   itemType: ItemDefinitionType;
   effectValue: number | null;
   imgUrl: string | null;
+  shopImgUrl: string | null;
   equipmentSlot: EquipmentSlot | null;
   durationMinutes: number | null;
 }

@@ -6,6 +6,7 @@ import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { Input, Select } from '../ui/FormField';
+import { ImageUploadInput } from '../ui/ImageUploadInput';
 import { Spinner } from '../ui/Spinner';
 import { IconPlus, IconEdit, IconDelete, IconSearch, IconGold } from '../ui/Icons';
 
@@ -30,6 +31,7 @@ const EMPTY_FORM = {
   name: '',
   description: '',
   imgUrl: '',
+  shopImgUrl: '',
   itemType: 'SKIN' as ItemDefinitionType,
   price: '10',
   shownInStore: true,
@@ -81,6 +83,7 @@ export function ItemDefinitionPanel({ onToast }: ItemDefinitionPanelProps) {
       name: item.name,
       description: item.description ?? '',
       imgUrl: item.imgUrl ?? '',
+      shopImgUrl: item.shopImgUrl ?? '',
       itemType: item.itemType,
       price: String(item.price),
       shownInStore: item.shownInStore,
@@ -125,6 +128,7 @@ export function ItemDefinitionPanel({ onToast }: ItemDefinitionPanelProps) {
         name: form.name.trim(),
         description: form.description.trim() || null,
         imgUrl: form.imgUrl.trim() || null,
+        shopImgUrl: form.shopImgUrl.trim() || null,
         itemType: form.itemType,
         price: priceVal,
         shownInStore: form.shownInStore,
@@ -245,8 +249,8 @@ export function ItemDefinitionPanel({ onToast }: ItemDefinitionPanelProps) {
                 <tr key={item.id} style={{ borderBottom: '1px solid #f1f5f9', transition: 'background 0.15s' }}>
                   <td style={{ padding: '16px 20px', fontWeight: 600, color: '#64748b' }}>{item.id}</td>
                   <td style={{ padding: '16px 20px' }}>
-                    {item.imgUrl ? (
-                      <img src={item.imgUrl} alt={item.name} style={{ width: 40, height: 40, objectFit: 'contain', borderRadius: 8 }} />
+                    {item.shopImgUrl ?? item.imgUrl ? (
+                      <img src={item.shopImgUrl ?? item.imgUrl!} alt={item.name} style={{ width: 40, height: 40, objectFit: 'contain', borderRadius: 8 }} />
                     ) : (
                       <div style={{ width: 40, height: 40, background: '#f1f5f9', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>📦</div>
                     )}
@@ -336,11 +340,18 @@ export function ItemDefinitionPanel({ onToast }: ItemDefinitionPanelProps) {
             onChange={(e) => setForm(prev => ({ ...prev, description: e.target.value }))}
             placeholder="Mô tả tác dụng của vật phẩm..."
           />
-          <Input
-            label="Đường dẫn hình ảnh (imgUrl)"
+          <ImageUploadInput
+            label="Hình ảnh gốc / Icon (imgUrl)"
             value={form.imgUrl}
-            onChange={(e) => setForm(prev => ({ ...prev, imgUrl: e.target.value }))}
-            placeholder="http://example.com/item.png"
+            onChange={(val) => setForm(prev => ({ ...prev, imgUrl: val }))}
+            placeholder="Đường dẫn ảnh hoặc tải lên Cloudinary..."
+          />
+          <ImageUploadInput
+            label="Hình ảnh Cửa hàng (shopImgUrl)"
+            value={form.shopImgUrl}
+            onChange={(val) => setForm(prev => ({ ...prev, shopImgUrl: val }))}
+            placeholder="Đường dẫn ảnh hoặc tải lên Cloudinary..."
+            hint="Nếu để trống, ứng dụng sẽ dùng Hình ảnh gốc (imgUrl)"
           />
           
           <Select
