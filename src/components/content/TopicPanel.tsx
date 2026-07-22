@@ -31,35 +31,63 @@ export function TopicPanel({ onToast, navParams, onNavigate }: TopicPanelProps) 
   const [deleteTarget, setDeleteTarget] = useState<TopicDto | null>(null);
   const [deleting, setDeleting] = useState(false);
 
+  // 1. Sequential & Parallel Cascade Select Fetches
   useEffect(() => {
-    client.get('/api/content/grades').then((r) => {
-      const gs = r.data.grades ?? [];
-      setGrades(gs);
-      if (navParams?.gradeId) {
-        setSelectedGradeId(navParams.gradeId);
-      } else if (gs.length > 0) {
-        setSelectedGradeId(gs[0].id);
+    let isMounted = true;
+    const targetGradeId = navParams?.gradeId ? Number(navParams.gradeId) : null;
+
+    async function loadTopics() {
+      try {
+        setLoading(true);
+        const gRes = await client.get('/api/content/grades');
+        if (!isMounted) return;
+        const gs: GradeDto[] = gRes.data.grades ?? [];
+        setGrades(gs);
+
+        const activeGradeId = targetGradeId && gs.some(g => g.id === targetGradeId)
+          ? targetGradeId
+          : (gs.length ? gs[0].id : null);
+
+        setSelectedGradeId(activeGradeId);
+
+        if (activeGradeId) {
+          const tRes = await client.get(`/api/content/grades/${activeGradeId}/topics`);
+          if (isMounted) {
+            setTopics(tRes.data.topics ?? []);
+          }
+        } else {
+          setTopics([]);
+        }
+      } catch {
+        if (isMounted) onToast('Không tải được danh sách chủ đề', 'error');
+      } finally {
+        if (isMounted) setLoading(false);
       }
-    }).catch(() => onToast('Không tải được danh sách khối lớp', 'error'));
-  }, [onToast, navParams?.gradeId]);
-
-  useEffect(() => {
-    if (navParams?.gradeId) {
-      setSelectedGradeId(navParams.gradeId);
     }
-  }, [navParams?.gradeId]);
 
-  const fetchTopics = useCallback(async (gradeId: number) => {
+    loadTopics();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [navParams?.gradeId, onToast]);
+
+  const handleGradeChange = async (gId: number | null) => {
+    setSelectedGradeId(gId);
+    if (!gId) {
+      setTopics([]);
+      return;
+    }
     try {
       setLoading(true);
-      const res = await client.get(`/api/content/grades/${gradeId}/topics`);
+      const res = await client.get(`/api/content/grades/${gId}/topics`);
       setTopics(res.data.topics ?? []);
     } catch {
       onToast('Không tải được danh sách chủ đề', 'error');
-    } finally { setLoading(false); }
-  }, [onToast]);
-
-  useEffect(() => { if (selectedGradeId) fetchTopics(selectedGradeId); }, [selectedGradeId, fetchTopics]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const openCreate = () => { setEditTopic(null); setForm({ name: '', position: String(topics.length + 1), gradeId: String(selectedGradeId ?? '') }); setModalOpen(true); };
   const openEdit = (t: TopicDto) => { setEditTopic(t); setForm({ name: t.name, position: String(t.position), gradeId: String(t.gradeId) }); setModalOpen(true); };
@@ -78,7 +106,7 @@ export function TopicPanel({ onToast, navParams, onNavigate }: TopicPanelProps) 
         onToast('Đã tạo chủ đề mới', 'success');
       }
       setModalOpen(false);
-      if (selectedGradeId) fetchTopics(selectedGradeId);
+      if (selectedGradeId) handleGradeChange(selectedGradeId);
     } catch (err: any) {
       onToast(err?.response?.data?.error ?? 'Lỗi khi lưu', 'error');
     } finally { setSaving(false); }
@@ -91,7 +119,7 @@ export function TopicPanel({ onToast, navParams, onNavigate }: TopicPanelProps) 
       await client.delete(`/api/admin/topics/${deleteTarget.id}`);
       onToast('Đã xóa chủ đề', 'success');
       setDeleteTarget(null);
-      if (selectedGradeId) fetchTopics(selectedGradeId);
+      if (selectedGradeId) handleGradeChange(selectedGradeId);
     } catch (err: any) {
       onToast(err?.response?.data?.error ?? 'Lỗi khi xóa', 'error');
     } finally { setDeleting(false); }
@@ -105,7 +133,7 @@ export function TopicPanel({ onToast, navParams, onNavigate }: TopicPanelProps) 
           <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: 14 }}>{topics.length} chủ đề</p>
         </div>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-          <select id="topic-grade-filter" value={selectedGradeId ?? ''} onChange={(e) => setSelectedGradeId(Number(e.target.value))} style={filterSelectStyle}>
+          <select id="topic-grade-filter" value={selectedGradeId ?? ''} onChange={(e) => handleGradeChange(Number(e.target.value) || null)} style={filterSelectStyle}>
             {grades.map((g) => <option key={g.id} value={g.id}>Khối {g.id}</option>)}
           </select>
           <Button icon={<IconPlus size={16} />} onClick={openCreate} id="create-topic-btn">Thêm Chủ đề</Button>

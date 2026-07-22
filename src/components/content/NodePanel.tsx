@@ -43,35 +43,175 @@ export function NodePanel({ onToast }: NodePanelProps) {
   const [deleteTarget, setDeleteTarget] = useState<NodeDto | null>(null);
   const [deleting, setDeleting] = useState(false);
 
+  // 1. Sequential Cascade Select Fetches
   useEffect(() => {
-    client.get('/api/content/grades').then((r) => { const gs = r.data.grades ?? []; setGrades(gs); if (gs.length) setSelectedGradeId(gs[0].id); });
-    client.get('/api/admin/videos').then((r) => { setVideos(r.data.videos ?? []); }).catch(() => {});
-  }, []);
-  useEffect(() => { if (!selectedGradeId) return; client.get(`/api/content/grades/${selectedGradeId}/topics`).then((r) => { const ts = r.data.topics ?? []; setTopics(ts); setSelectedTopicId(ts.length ? ts[0].id : null); setLessons([]); setSections([]); setNodes([]); }); }, [selectedGradeId]);
-  useEffect(() => { if (!selectedTopicId) return; client.get(`/api/content/topics/${selectedTopicId}/lessons`).then((r) => { const ls = r.data.lessons ?? []; setLessons(ls); setSelectedLessonId(ls.length ? ls[0].id : null); setSections([]); setNodes([]); }); }, [selectedTopicId]);
-  useEffect(() => {
-    if (!selectedLessonId) return;
-    client.get(`/api/content/lessons/${selectedLessonId}/sections`).then((r) => {
-      const ss = r.data.sections ?? [];
-      setSections(ss);
-      const flat = flattenSections(ss);
-      setSelectedSectionId(flat.length ? flat[0].id : null);
-      setNodes([]);
-    });
-  }, [selectedLessonId]);
+    let isMounted = true;
 
-  const fetchNodes = useCallback(async (lessonId: number) => {
+    async function loadCascade() {
+      try {
+        setLoading(true);
+        const gRes = await client.get('/api/content/grades');
+        if (!isMounted) return;
+        const gs: GradeDto[] = gRes.data.grades ?? [];
+        setGrades(gs);
+
+        const activeGradeId = gs.length ? gs[0].id : null;
+        setSelectedGradeId(activeGradeId);
+
+        if (!activeGradeId) {
+          setTopics([]);
+          setLessons([]);
+          setSections([]);
+          setNodes([]);
+          setSelectedTopicId(null);
+          setSelectedLessonId(null);
+          setSelectedSectionId(null);
+          return;
+        }
+
+        const tRes = await client.get(`/api/content/grades/${activeGradeId}/topics`);
+        if (!isMounted) return;
+        const ts: TopicDto[] = tRes.data.topics ?? [];
+        setTopics(ts);
+
+        const activeTopicId = ts.length ? ts[0].id : null;
+        setSelectedTopicId(activeTopicId);
+
+        if (!activeTopicId) {
+          setLessons([]);
+          setSections([]);
+          setNodes([]);
+          setSelectedLessonId(null);
+          setSelectedSectionId(null);
+          return;
+        }
+
+        const lRes = await client.get(`/api/content/topics/${activeTopicId}/lessons`);
+        if (!isMounted) return;
+        const ls: LessonDto[] = lRes.data.lessons ?? [];
+        setLessons(ls);
+
+        const activeLessonId = ls.length ? ls[0].id : null;
+        setSelectedLessonId(activeLessonId);
+
+        if (!activeLessonId) {
+          setSections([]);
+          setNodes([]);
+          setSelectedSectionId(null);
+          return;
+        }
+
+        const sRes = await client.get(`/api/content/lessons/${activeLessonId}/sections`);
+        if (!isMounted) return;
+        const ss: SectionDto[] = sRes.data.sections ?? [];
+        setSections(ss);
+        const flat = flattenSections(ss);
+
+        const activeSectionId = flat.length ? flat[0].id : null;
+        setSelectedSectionId(activeSectionId);
+
+        if (activeLessonId && activeSectionId) {
+          const treeRes = await client.get(`/api/content/lessons/${activeLessonId}/tree`);
+          if (isMounted) {
+            const allSections: SectionDto[] = flattenSections(treeRes.data.sections ?? []);
+            const selectedSec = allSections.find((s) => s.id === activeSectionId);
+            setNodes(selectedSec?.nodes ?? []);
+          }
+        }
+      } catch (err) {
+        console.error('NodePanel cascade error:', err);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    }
+
+    loadCascade();
+    client.get('/api/admin/videos').then((r) => { if (isMounted) setVideos(r.data.videos ?? []); }).catch(() => {});
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const handleGradeChange = async (gId: number | null) => {
+    setSelectedGradeId(gId);
+    if (!gId) {
+      setTopics([]); setLessons([]); setSections([]); setNodes([]);
+      setSelectedTopicId(null); setSelectedLessonId(null); setSelectedSectionId(null);
+      return;
+    }
     try {
       setLoading(true);
-      const res = await client.get(`/api/content/lessons/${lessonId}/tree`);
+      const res = await client.get(`/api/content/grades/${gId}/topics`);
+      const ts: TopicDto[] = res.data.topics ?? [];
+      setTopics(ts);
+      if (ts.length > 0) {
+        handleTopicChange(ts[0].id);
+      } else {
+        setSelectedTopicId(null); setLessons([]); setSections([]); setNodes([]);
+        setSelectedLessonId(null); setSelectedSectionId(null);
+      }
+    } catch { onToast('Không tải được chủ đề', 'error'); }
+    finally { setLoading(false); }
+  };
+
+  const handleTopicChange = async (tId: number | null) => {
+    setSelectedTopicId(tId);
+    if (!tId) {
+      setLessons([]); setSections([]); setNodes([]);
+      setSelectedLessonId(null); setSelectedSectionId(null);
+      return;
+    }
+    try {
+      setLoading(true);
+      const res = await client.get(`/api/content/topics/${tId}/lessons`);
+      const ls: LessonDto[] = res.data.lessons ?? [];
+      setLessons(ls);
+      if (ls.length > 0) {
+        handleLessonChange(ls[0].id);
+      } else {
+        setSelectedLessonId(null); setSections([]); setNodes([]); setSelectedSectionId(null);
+      }
+    } catch { onToast('Không tải được bài học', 'error'); }
+    finally { setLoading(false); }
+  };
+
+  const handleLessonChange = async (lId: number | null) => {
+    setSelectedLessonId(lId);
+    if (!lId) {
+      setSections([]); setNodes([]); setSelectedSectionId(null);
+      return;
+    }
+    try {
+      setLoading(true);
+      const res = await client.get(`/api/content/lessons/${lId}/sections`);
+      const ss: SectionDto[] = res.data.sections ?? [];
+      setSections(ss);
+      const flat = flattenSections(ss);
+      if (flat.length > 0) {
+        handleSectionChange(lId, flat[0].id);
+      } else {
+        setSelectedSectionId(null); setNodes([]);
+      }
+    } catch { onToast('Không tải được phần bài học', 'error'); }
+    finally { setLoading(false); }
+  };
+
+  const handleSectionChange = async (lId: number | null, sId: number | null) => {
+    setSelectedSectionId(sId);
+    if (!lId || !sId) {
+      setNodes([]);
+      return;
+    }
+    try {
+      setLoading(true);
+      const res = await client.get(`/api/content/lessons/${lId}/tree`);
       const allSections: SectionDto[] = flattenSections(res.data.sections ?? []);
-      const selectedSec = allSections.find((s) => s.id === selectedSectionId);
+      const selectedSec = allSections.find((s) => s.id === sId);
       setNodes(selectedSec?.nodes ?? []);
     } catch { onToast('Không tải được nút kiến thức', 'error'); }
     finally { setLoading(false); }
-  }, [onToast, selectedSectionId]);
-
-  useEffect(() => { if (selectedLessonId && selectedSectionId) fetchNodes(selectedLessonId); }, [selectedLessonId, selectedSectionId, fetchNodes]);
+  };
 
   const flatSections = flattenSections(sections);
 
@@ -92,14 +232,14 @@ export function NodePanel({ onToast }: NodePanelProps) {
         sectionId
       };
       if (editNode) {
-        await client.patch(`/api/admin/nodes/${editNode.id}`, { header: payload.header, body: payload.body, videoId: payload.videoId, position, sectionId: payload.sectionId });
+        await client.patch(`/api/admin/nodes/${editNode.id}`, payload);
         onToast('Đã cập nhật nút kiến thức', 'success');
       } else {
         await client.post('/api/admin/nodes', payload);
         onToast('Đã tạo nút kiến thức mới', 'success');
       }
       setModalOpen(false);
-      if (selectedLessonId) fetchNodes(selectedLessonId);
+      if (selectedLessonId && selectedSectionId) handleSectionChange(selectedLessonId, selectedSectionId);
     } catch (err: any) {
       onToast(err?.response?.data?.error ?? 'Lỗi khi lưu', 'error');
     } finally { setSaving(false); }
@@ -112,7 +252,7 @@ export function NodePanel({ onToast }: NodePanelProps) {
       await client.delete(`/api/admin/nodes/${deleteTarget.id}`);
       onToast('Đã xóa nút kiến thức', 'success');
       setDeleteTarget(null);
-      if (selectedLessonId) fetchNodes(selectedLessonId);
+      if (selectedLessonId && selectedSectionId) handleSectionChange(selectedLessonId, selectedSectionId);
     } catch (err: any) {
       onToast(err?.response?.data?.error ?? 'Lỗi khi xóa', 'error');
     } finally { setDeleting(false); }
@@ -127,12 +267,12 @@ export function NodePanel({ onToast }: NodePanelProps) {
         </div>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
           {[
-            { id: 'node-grade',   value: selectedGradeId,   onChange: setSelectedGradeId,   items: grades.map(g => ({ value: g.id, label: `Khối ${g.id}` })) },
-            { id: 'node-topic',   value: selectedTopicId,   onChange: setSelectedTopicId,   items: topics.map(t => ({ value: t.id, label: t.name })) },
-            { id: 'node-lesson',  value: selectedLessonId,  onChange: setSelectedLessonId,  items: lessons.map(l => ({ value: l.id, label: l.name })) },
-            { id: 'node-section', value: selectedSectionId, onChange: setSelectedSectionId, items: flatSections.map(s => ({ value: s.id, label: s.name })) },
+            { id: 'node-grade',   value: selectedGradeId,   onChange: (v: number | null) => handleGradeChange(v),   items: grades.map(g => ({ value: g.id, label: `Khối ${g.id}` })) },
+            { id: 'node-topic',   value: selectedTopicId,   onChange: (v: number | null) => handleTopicChange(v),   items: topics.map(t => ({ value: t.id, label: t.name })) },
+            { id: 'node-lesson',  value: selectedLessonId,  onChange: (v: number | null) => handleLessonChange(v),  items: lessons.map(l => ({ value: l.id, label: l.name })) },
+            { id: 'node-section', value: selectedSectionId, onChange: (v: number | null) => handleSectionChange(selectedLessonId, v), items: flatSections.map(s => ({ value: s.id, label: s.name })) },
           ].map(({ id, value, onChange, items }) => (
-            <select key={id} id={id} value={value ?? ''} onChange={(e) => onChange(Number(e.target.value))} style={{ ...filterSelectStyle, maxWidth: 160 }}>
+            <select key={id} id={id} value={value ?? ''} onChange={(e) => onChange(Number(e.target.value) || null)} style={{ ...filterSelectStyle, maxWidth: 160 }}>
               {items.length === 0 && <option value="">—</option>}
               {items.map((i) => <option key={i.value} value={i.value}>{i.label}</option>)}
             </select>
