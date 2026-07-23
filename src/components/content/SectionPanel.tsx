@@ -63,65 +63,102 @@ export function SectionPanel({ onToast, navParams, onNavigate }: SectionPanelPro
     });
   };
 
+  // 1. Sequential Cascade Select Fetches
   useEffect(() => {
-    client.get('/api/content/grades').then((r) => {
-      const gs = r.data.grades ?? [];
-      setGrades(gs);
-      if (navParams?.gradeId) {
-        setSelectedGradeId(navParams.gradeId);
-      } else if (gs.length) {
-        setSelectedGradeId(gs[0].id);
+    let isMounted = true;
+    const targetGradeId = navParams?.gradeId ? Number(navParams.gradeId) : null;
+    const targetTopicId = navParams?.topicId ? Number(navParams.topicId) : null;
+    const targetLessonId = navParams?.lessonId ? Number(navParams.lessonId) : null;
+
+    async function loadCascade() {
+      try {
+        // High-speed parallel fetch if targetGradeId & targetTopicId are provided in navParams
+        if (targetGradeId && targetTopicId) {
+          const [gRes, tRes, lRes] = await Promise.all([
+            client.get('/api/content/grades'),
+            client.get(`/api/content/grades/${targetGradeId}/topics`),
+            client.get(`/api/content/topics/${targetTopicId}/lessons`)
+          ]);
+          if (!isMounted) return;
+
+          const gs: GradeDto[] = gRes.data.grades ?? [];
+          const ts: TopicDto[] = tRes.data.topics ?? [];
+          const ls: LessonDto[] = lRes.data.lessons ?? [];
+
+          setGrades(gs);
+          setTopics(ts);
+          setLessons(ls);
+
+          setSelectedGradeId(targetGradeId);
+          setSelectedTopicId(targetTopicId);
+
+          const activeLessonId = targetLessonId && ls.some(l => l.id === targetLessonId)
+            ? targetLessonId
+            : (ls.length ? ls[0].id : null);
+
+          setSelectedLessonId(activeLessonId);
+          return;
+        }
+
+        const gRes = await client.get('/api/content/grades');
+        if (!isMounted) return;
+        const gs: GradeDto[] = gRes.data.grades ?? [];
+        setGrades(gs);
+
+        const activeGradeId = targetGradeId && gs.some(g => g.id === targetGradeId)
+          ? targetGradeId
+          : (gs.length ? gs[0].id : null);
+
+        setSelectedGradeId(activeGradeId);
+
+        if (!activeGradeId) {
+          setTopics([]);
+          setLessons([]);
+          setSelectedTopicId(null);
+          setSelectedLessonId(null);
+          return;
+        }
+
+        const tRes = await client.get(`/api/content/grades/${activeGradeId}/topics`);
+        if (!isMounted) return;
+        const ts: TopicDto[] = tRes.data.topics ?? [];
+        setTopics(ts);
+
+        const activeTopicId = targetTopicId && ts.some(t => t.id === targetTopicId)
+          ? targetTopicId
+          : (ts.length ? ts[0].id : null);
+
+        setSelectedTopicId(activeTopicId);
+
+        if (!activeTopicId) {
+          setLessons([]);
+          setSelectedLessonId(null);
+          return;
+        }
+
+        const lRes = await client.get(`/api/content/topics/${activeTopicId}/lessons`);
+        if (!isMounted) return;
+        const ls: LessonDto[] = lRes.data.lessons ?? [];
+        setLessons(ls);
+
+        const activeLessonId = targetLessonId && ls.some(l => l.id === targetLessonId)
+          ? targetLessonId
+          : (ls.length ? ls[0].id : null);
+
+        setSelectedLessonId(activeLessonId);
+
+      } catch (err) {
+        console.error('Error loading Section cascade:', err);
       }
-    }).catch(() => onToast('Không tải được danh sách khối lớp', 'error'));
-    client.get('/api/admin/videos').then((r) => { setVideos(r.data.videos ?? []); }).catch(() => {});
-  }, [onToast, navParams?.gradeId]);
-
-  useEffect(() => {
-    if (!selectedGradeId) return;
-    client.get(`/api/content/grades/${selectedGradeId}/topics`).then((r) => {
-      const ts = r.data.topics ?? [];
-      setTopics(ts);
-      if (navParams?.topicId && ts.some((t: any) => t.id === navParams.topicId)) {
-        setSelectedTopicId(navParams.topicId);
-      } else {
-        setSelectedTopicId(ts.length ? ts[0].id : null);
-      }
-      setLessons([]);
-      setSections([]);
-    }).catch(() => onToast('Không tải được danh sách chủ đề', 'error'));
-  }, [selectedGradeId, onToast, navParams?.topicId]);
-
-  useEffect(() => {
-    if (!selectedTopicId) return;
-    client.get(`/api/content/topics/${selectedTopicId}/lessons`).then((r) => {
-      const ls = r.data.lessons ?? [];
-      setLessons(ls);
-      if (navParams?.lessonId && ls.some((l: any) => l.id === navParams.lessonId)) {
-        setSelectedLessonId(navParams.lessonId);
-      } else {
-        setSelectedLessonId(ls.length ? ls[0].id : null);
-      }
-      setSections([]);
-    }).catch(() => onToast('Không tải được danh sách bài học', 'error'));
-  }, [selectedTopicId, onToast, navParams?.lessonId]);
-
-  useEffect(() => {
-    if (navParams?.gradeId) {
-      setSelectedGradeId(navParams.gradeId);
     }
-  }, [navParams?.gradeId]);
 
-  useEffect(() => {
-    if (navParams?.topicId) {
-      setSelectedTopicId(navParams.topicId);
-    }
-  }, [navParams?.topicId]);
+    loadCascade();
+    client.get('/api/admin/videos').then((r) => { if (isMounted) setVideos(r.data.videos ?? []); }).catch(() => {});
 
-  useEffect(() => {
-    if (navParams?.lessonId) {
-      setSelectedLessonId(navParams.lessonId);
-    }
-  }, [navParams?.lessonId]);
+    return () => {
+      isMounted = false;
+    };
+  }, [navParams?.gradeId, navParams?.topicId, navParams?.lessonId]);
 
   const fetchSections = useCallback(async (lessonId: number) => {
     try {

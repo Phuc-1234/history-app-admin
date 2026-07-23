@@ -737,66 +737,154 @@ export function MindMapPanel({ onToast, navParams, onNavigate: _onNavigate }: Mi
 
   const [aiSaveConfirmOpen, setAiSaveConfirmOpen] = useState(false);
 
-  // 1. Cascade Select Fetches
+  // 1. Sequential Cascade Select Fetches
   useEffect(() => {
-    client.get('/api/content/grades').then((r) => {
-      const gs = r.data.grades ?? [];
-      setGrades(gs);
-      if (navParams?.gradeId) {
-        setSelectedGradeId(navParams.gradeId);
-      } else if (gs.length) {
-        setSelectedGradeId(gs[0].id);
-      }
-    });
-    client.get('/api/admin/videos').then((r) => { setVideos(r.data.videos ?? []); }).catch(() => {});
-  }, [navParams?.gradeId]);
+    let isMounted = true;
+    const targetGradeId = navParams?.gradeId ? Number(navParams.gradeId) : null;
+    const targetTopicId = navParams?.topicId ? Number(navParams.topicId) : null;
+    const targetLessonId = navParams?.lessonId ? Number(navParams.lessonId) : null;
 
-  useEffect(() => {
-    if (!selectedGradeId) return;
-    client.get(`/api/content/grades/${selectedGradeId}/topics`).then((r) => {
-      const ts = r.data.topics ?? [];
-      setTopics(ts);
-      if (navParams?.topicId && ts.some((t: any) => t.id === navParams.topicId)) {
-        setSelectedTopicId(navParams.topicId);
-      } else {
-        setSelectedTopicId(ts.length ? ts[0].id : null);
+    async function loadCascade() {
+      try {
+        // High-speed parallel fetch if targetGradeId & targetTopicId are provided in navParams
+        if (targetGradeId && targetTopicId) {
+          const [gRes, tRes, lRes] = await Promise.all([
+            client.get('/api/content/grades'),
+            client.get(`/api/content/grades/${targetGradeId}/topics`),
+            client.get(`/api/content/topics/${targetTopicId}/lessons`)
+          ]);
+          if (!isMounted) return;
+
+          const gs: GradeDto[] = gRes.data.grades ?? [];
+          const ts: TopicDto[] = tRes.data.topics ?? [];
+          const ls: LessonDto[] = lRes.data.lessons ?? [];
+
+          setGrades(gs);
+          setTopics(ts);
+          setLessons(ls);
+
+          setSelectedGradeId(targetGradeId);
+          setSelectedTopicId(targetTopicId);
+
+          const activeLessonId = targetLessonId && ls.some(l => l.id === targetLessonId)
+            ? targetLessonId
+            : (ls.length ? ls[0].id : null);
+
+          setSelectedLessonId(activeLessonId);
+          return;
+        }
+
+        // Step 1: Fetch Grades
+        const gRes = await client.get('/api/content/grades');
+        if (!isMounted) return;
+        const gs: GradeDto[] = gRes.data.grades ?? [];
+        setGrades(gs);
+
+        const activeGradeId = targetGradeId && gs.some(g => g.id === targetGradeId)
+          ? targetGradeId
+          : (gs.length ? gs[0].id : null);
+
+        setSelectedGradeId(activeGradeId);
+
+        if (!activeGradeId) {
+          setTopics([]);
+          setLessons([]);
+          setSelectedTopicId(null);
+          setSelectedLessonId(null);
+          return;
+        }
+
+        // Step 2: Fetch Topics for activeGradeId
+        const tRes = await client.get(`/api/content/grades/${activeGradeId}/topics`);
+        if (!isMounted) return;
+        const ts: TopicDto[] = tRes.data.topics ?? [];
+        setTopics(ts);
+
+        const activeTopicId = targetTopicId && ts.some(t => t.id === targetTopicId)
+          ? targetTopicId
+          : (ts.length ? ts[0].id : null);
+
+        setSelectedTopicId(activeTopicId);
+
+        if (!activeTopicId) {
+          setLessons([]);
+          setSelectedLessonId(null);
+          return;
+        }
+
+        // Step 3: Fetch Lessons for activeTopicId
+        const lRes = await client.get(`/api/content/topics/${activeTopicId}/lessons`);
+        if (!isMounted) return;
+        const ls: LessonDto[] = lRes.data.lessons ?? [];
+        setLessons(ls);
+
+        const activeLessonId = targetLessonId && ls.some(l => l.id === targetLessonId)
+          ? targetLessonId
+          : (ls.length ? ls[0].id : null);
+
+        setSelectedLessonId(activeLessonId);
+
+      } catch (err) {
+        console.error('Error loading MindMap cascade:', err);
       }
+    }
+
+    loadCascade();
+    client.get('/api/admin/videos').then((r) => { if (isMounted) setVideos(r.data.videos ?? []); }).catch(() => {});
+
+    return () => {
+      isMounted = false;
+    };
+  }, [navParams?.gradeId, navParams?.topicId, navParams?.lessonId]);
+
+  const handleGradeChange = async (gId: number | null) => {
+    setSelectedGradeId(gId);
+    setLessonTree(null);
+    if (!gId) {
+      setTopics([]);
       setLessons([]);
-      setLessonTree(null);
-    });
-  }, [selectedGradeId, navParams?.topicId]);
-
-  useEffect(() => {
-    if (!selectedTopicId) return;
-    client.get(`/api/content/topics/${selectedTopicId}/lessons`).then((r) => {
-      const ls = r.data.lessons ?? [];
-      setLessons(ls);
-      if (navParams?.lessonId && ls.some((l: any) => l.id === navParams.lessonId)) {
-        setSelectedLessonId(navParams.lessonId);
+      setSelectedTopicId(null);
+      setSelectedLessonId(null);
+      return;
+    }
+    try {
+      const res = await client.get(`/api/content/grades/${gId}/topics`);
+      const ts: TopicDto[] = res.data.topics ?? [];
+      setTopics(ts);
+      if (ts.length > 0) {
+        const firstTopicId = ts[0].id;
+        setSelectedTopicId(firstTopicId);
+        const lRes = await client.get(`/api/content/topics/${firstTopicId}/lessons`);
+        const ls: LessonDto[] = lRes.data.lessons ?? [];
+        setLessons(ls);
+        setSelectedLessonId(ls.length > 0 ? ls[0].id : null);
       } else {
-        setSelectedLessonId(ls.length ? ls[0].id : null);
+        setSelectedTopicId(null);
+        setLessons([]);
+        setSelectedLessonId(null);
       }
-      setLessonTree(null);
-    });
-  }, [selectedTopicId, navParams?.lessonId]);
-
-  useEffect(() => {
-    if (navParams?.gradeId) {
-      setSelectedGradeId(navParams.gradeId);
+    } catch {
+      onToast('Không tải được danh sách chủ đề', 'error');
     }
-  }, [navParams?.gradeId]);
+  };
 
-  useEffect(() => {
-    if (navParams?.topicId) {
-      setSelectedTopicId(navParams.topicId);
+  const handleTopicChange = async (tId: number | null) => {
+    setSelectedTopicId(tId);
+    setLessonTree(null);
+    if (!tId) {
+      setLessons([]);
+      setSelectedLessonId(null);
+      return;
     }
-  }, [navParams?.topicId]);
-
-  useEffect(() => {
-    if (navParams?.lessonId) {
-      setSelectedLessonId(navParams.lessonId);
+    try {
+      const res = await client.get(`/api/content/topics/${tId}/lessons`);
+      const ls: LessonDto[] = res.data.lessons ?? [];
+      setLessons(ls);
+      setSelectedLessonId(ls.length > 0 ? ls[0].id : null);
+    } catch {
+      onToast('Không tải được danh sách bài học', 'error');
     }
-  }, [navParams?.lessonId]);
+  };
 
   const fetchLessonTree = useCallback(async (lessonId: number) => {
     try {
@@ -1155,7 +1243,7 @@ export function MindMapPanel({ onToast, navParams, onNavigate: _onNavigate }: Mi
           <label style={{ fontSize: 13, fontWeight: 600, color: '#475569', whiteSpace: 'nowrap' }}>Khối lớp:</label>
           <select
             value={selectedGradeId ?? ''}
-            onChange={(e) => setSelectedGradeId(Number(e.target.value))}
+            onChange={(e) => handleGradeChange(Number(e.target.value) || null)}
             style={{
               background: '#f8fafc',
               border: '1px solid #e2e8f0',
@@ -1177,7 +1265,7 @@ export function MindMapPanel({ onToast, navParams, onNavigate: _onNavigate }: Mi
           <label style={{ fontSize: 13, fontWeight: 600, color: '#475569', whiteSpace: 'nowrap' }}>Chủ đề:</label>
           <select
             value={selectedTopicId ?? ''}
-            onChange={(e) => setSelectedTopicId(Number(e.target.value) || null)}
+            onChange={(e) => handleTopicChange(Number(e.target.value) || null)}
             disabled={topics.length === 0}
             style={{
               width: '100%',

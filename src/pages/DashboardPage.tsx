@@ -78,28 +78,17 @@ function OverviewPanel() {
 
         let totalTopics = 0, totalLessons = 0, totalSections = 0;
 
-        await Promise.all(
-          grades.map(async (g: { id: number }) => {
-            const topicsRes = await client.get(`/api/content/grades/${g.id}/topics`);
-            const topics = topicsRes.data.topics ?? [];
-            totalTopics += topics.length;
-
-            await Promise.all(
-              topics.map(async (t: { id: number }) => {
-                const lessonsRes = await client.get(`/api/content/topics/${t.id}/lessons`);
-                const lessons = lessonsRes.data.lessons ?? [];
-                totalLessons += lessons.length;
-
-                await Promise.all(
-                  lessons.map(async (l: { id: number }) => {
-                    const sectionsRes = await client.get(`/api/content/lessons/${l.id}/sections`);
-                    totalSections += (sectionsRes.data.sections ?? []).length;
-                  })
-                );
-              })
-            );
-          })
+        const topicsResponses = await Promise.all(
+          grades.map((g: { id: number }) => client.get(`/api/content/grades/${g.id}/topics`))
         );
+        const allTopics = topicsResponses.flatMap((r) => r.data.topics ?? []);
+        totalTopics = allTopics.length;
+
+        const lessonsResponses = await Promise.all(
+          allTopics.map((t: { id: number }) => client.get(`/api/content/topics/${t.id}/lessons`))
+        );
+        const allLessons = lessonsResponses.flatMap((r) => r.data.lessons ?? []);
+        totalLessons = allLessons.length;
 
         setStats({
           grades: grades.length,
@@ -195,14 +184,52 @@ export interface NavParams {
   nodeId?: number | null;
 }
 
+const VALID_TABS: TabId[] = [
+  'overview', 'grades', 'topics', 'lessons', 'sections', 'nodes',
+  'mindmaps', 'flashcards', 'users', 'videos', 'questions', 'tests',
+  'testpresets', 'tiers', 'feedbacks', 'rewardrules', 'itemdefinitions'
+];
+
+function getInitialTab(): TabId {
+  const hash = window.location.hash.replace('#', '') as TabId;
+  if (hash && VALID_TABS.includes(hash)) {
+    return hash;
+  }
+  const saved = localStorage.getItem('admin_active_tab') as TabId;
+  if (saved && VALID_TABS.includes(saved)) {
+    return saved;
+  }
+  return 'overview';
+}
+
 export function DashboardPage() {
-  const [activeTab, setActiveTab] = useState<TabId>('overview');
+  const [activeTab, setActiveTabState] = useState<TabId>(getInitialTab);
   const [navParams, setNavParams] = useState<NavParams>({});
+
+  const setActiveTab = (tab: TabId) => {
+    setActiveTabState(tab);
+    window.location.hash = tab;
+    localStorage.setItem('admin_active_tab', tab);
+  };
+
   const { logout, user } = useAuthStore();
   const { toasts, addToast, removeToast } = useToast();
 
   const [isMobile, setIsMobile] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Sync hash changes if user uses browser back/forward buttons
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace('#', '') as TabId;
+      if (hash && VALID_TABS.includes(hash)) {
+        setActiveTabState(hash);
+        localStorage.setItem('admin_active_tab', hash);
+      }
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
 
   // Initialize and handle resize on client
   useEffect(() => {
