@@ -637,6 +637,7 @@ export function RewardRulePanel({ onToast }: RewardRulePanelProps) {
                         min="1"
                         placeholder="SL"
                         value={item.quantity}
+                        onWheel={(e) => e.currentTarget.blur()}
                         onChange={(e) => {
                           const val = Number(e.target.value);
                           setForm(prev => {
