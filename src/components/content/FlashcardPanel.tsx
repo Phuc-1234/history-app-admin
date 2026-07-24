@@ -216,36 +216,6 @@ export function FlashcardPanel({ onToast, navParams, onNavigate: _onNavigate }: 
     });
   }, [selectedLessonId, navParams?.sectionId, navParams?.nodeId]);
 
-  useEffect(() => {
-    if (navParams?.gradeId) {
-      setSelectedGradeId(navParams.gradeId);
-    }
-  }, [navParams?.gradeId]);
-
-  useEffect(() => {
-    if (navParams?.topicId) {
-      setSelectedTopicId(navParams.topicId);
-    }
-  }, [navParams?.topicId]);
-
-  useEffect(() => {
-    if (navParams?.lessonId) {
-      setSelectedLessonId(navParams.lessonId);
-    }
-  }, [navParams?.lessonId]);
-
-  useEffect(() => {
-    if (navParams?.sectionId) {
-      setSelectedSectionId(navParams.sectionId);
-    }
-  }, [navParams?.sectionId]);
-
-  useEffect(() => {
-    if (navParams?.nodeId) {
-      setSelectedNodeId(navParams.nodeId);
-    }
-  }, [navParams?.nodeId]);
-
   // 2. Individual CRUD Handlers
   const openCreate = () => {
     setEditCard(null);

@@ -58,50 +58,8 @@ function OverviewPanel() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const [gradesRes, usersRes, videosRes, questionsRes, testsRes, flashcardsRes, rewardRulesRes] = await Promise.all([
-          client.get('/api/content/grades'),
-          client.get('/api/admin/users'),
-          client.get('/api/admin/videos'),
-          client.get('/api/admin/questions'),
-          client.get('/api/admin/tests'),
-          client.get('/api/admin/flashcards'),
-          client.get('/api/admin/reward-rules')
-        ]);
-
-        const grades = gradesRes.data.grades ?? [];
-        const users = usersRes.data.users ?? [];
-        const videos = videosRes.data.videos ?? [];
-        const questions = questionsRes.data.questions ?? [];
-        const tests = testsRes.data.tests ?? [];
-        const flashcards = flashcardsRes.data.flashcards ?? [];
-        const rewardRules = rewardRulesRes.data.rules ?? [];
-
-        let totalTopics = 0, totalLessons = 0, totalSections = 0;
-
-        const topicsResponses = await Promise.all(
-          grades.map((g: { id: number }) => client.get(`/api/content/grades/${g.id}/topics`))
-        );
-        const allTopics = topicsResponses.flatMap((r) => r.data.topics ?? []);
-        totalTopics = allTopics.length;
-
-        const lessonsResponses = await Promise.all(
-          allTopics.map((t: { id: number }) => client.get(`/api/content/topics/${t.id}/lessons`))
-        );
-        const allLessons = lessonsResponses.flatMap((r) => r.data.lessons ?? []);
-        totalLessons = allLessons.length;
-
-        setStats({
-          grades: grades.length,
-          topics: totalTopics,
-          lessons: totalLessons,
-          sections: totalSections,
-          users: users.length,
-          videos: videos.length,
-          questions: questions.length,
-          tests: tests.length,
-          flashcards: flashcards.length,
-          rewardRules: rewardRules.length
-        });
+        const res = await client.get('/api/admin/stats');
+        setStats(res.data);
       } catch {
         // ignore
       } finally {

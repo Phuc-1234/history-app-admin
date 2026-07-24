@@ -1,5 +1,5 @@
 // src/components/content/NodePanel.tsx
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import client from '../../api/client';
 import type { NodeDto, GradeDto, TopicDto, LessonDto, SectionDto, AdminVideoDto } from '../../types/api';
 import type { ToastType } from '../../hooks/useToast';

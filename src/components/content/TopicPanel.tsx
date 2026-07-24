@@ -1,5 +1,5 @@
 // src/components/content/TopicPanel.tsx
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import client from '../../api/client';
 import type { TopicDto, GradeDto } from '../../types/api';
 import type { ToastType } from '../../hooks/useToast';

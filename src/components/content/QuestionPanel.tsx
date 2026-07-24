@@ -93,37 +93,57 @@ export function QuestionPanel({ onToast }: QuestionPanelProps) {
 
   // 2. Cascade load for filter topics
   useEffect(() => {
-    if (!selGradeId) { setTopics([]); setSelTopicId(''); return; }
+    setSelTopicId('');
+    setSelLessonId('');
+    setSelSectionId('');
+    setSelNodeId('');
+    setTopics([]);
+    setLessons([]);
+    setSections([]);
+    setNodes([]);
+    if (!selGradeId) return;
+
     client.get(`/api/content/grades/${selGradeId}/topics`).then((r) => {
       setTopics(r.data.topics ?? []);
-      setSelTopicId('');
     });
   }, [selGradeId]);
 
   // 3. Cascade load for filter lessons
   useEffect(() => {
-    if (!selTopicId) { setLessons([]); setSelLessonId(''); return; }
+    setSelLessonId('');
+    setSelSectionId('');
+    setSelNodeId('');
+    setLessons([]);
+    setSections([]);
+    setNodes([]);
+    if (!selTopicId) return;
+
     client.get(`/api/content/topics/${selTopicId}/lessons`).then((r) => {
       setLessons(r.data.lessons ?? []);
-      setSelLessonId('');
     });
   }, [selTopicId]);
 
   // 4. Cascade load for filter sections
   useEffect(() => {
-    if (!selLessonId) { setSections([]); setSelSectionId(''); return; }
+    setSelSectionId('');
+    setSelNodeId('');
+    setSections([]);
+    setNodes([]);
+    if (!selLessonId) return;
+
     client.get(`/api/content/lessons/${selLessonId}/sections`).then((r) => {
       setSections(r.data.sections ?? []);
-      setSelSectionId('');
     });
   }, [selLessonId]);
 
   // 5. Cascade load for filter nodes
   useEffect(() => {
-    if (!selSectionId) { setNodes([]); setSelNodeId(''); return; }
+    setSelNodeId('');
+    setNodes([]);
+    if (!selSectionId) return;
+
     client.get(`/api/content/sections/${selSectionId}/nodes`).then((r) => {
       setNodes(r.data.nodes ?? []);
-      setSelNodeId('');
     });
   }, [selSectionId]);
 
