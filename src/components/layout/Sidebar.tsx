@@ -16,7 +16,8 @@ import {
   IconTarget,
   IconSparkles,
   IconFeedback,
-  IconInventory
+  IconInventory,
+  IconTier
 } from '../ui/Icons';
 
 interface NavItem {
@@ -38,6 +39,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'questions', label: 'Ngân hàng câu hỏi', description: 'Questions' },
   { id: 'tests', label: 'Đề thi', description: 'Tests' },
   { id: 'testpresets', label: 'Cấu hình mẫu đề', description: 'Test Presets' },
+  { id: 'tiers', label: 'Cấp danh hiệu', description: 'Tiers' },
   { id: 'rewardrules', label: 'Quản lý phần thưởng', description: 'Reward Rules' },
   { id: 'itemdefinitions', label: 'Danh mục vật phẩm', description: 'Item Definitions' },
   { id: 'feedbacks', label: 'Góp ý người dùng', description: 'User Feedbacks' },
@@ -56,6 +58,7 @@ const ICON_MAP: Record<string, any> = {
   questions: IconQuestion,
   tests: IconTest,
   testpresets: IconTarget,
+  tiers: IconTier,
   rewardrules: IconSparkles,
   itemdefinitions: IconInventory,
   feedbacks: IconFeedback,

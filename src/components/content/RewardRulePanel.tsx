@@ -526,18 +526,40 @@ export function RewardRulePanel({ onToast }: RewardRulePanelProps) {
               label="Lượt thực hiện tối thiểu"
               type="number"
               min="1"
-              value={form.triggerTimeMin}
+              value={
+                form.triggerType === 'AUTO_PERSONAL_PRACTICE_COMPLETE' || form.triggerType === 'AUTO_WRONG_PRACTICE_COMPLETE'
+                  ? '1'
+                  : form.triggerTimeMin
+              }
               onChange={(e) => setForm(prev => ({ ...prev, triggerTimeMin: e.target.value }))}
-              hint="Lượt áp dụng tối thiểu (ví dụ: 1)"
+              disabled={form.triggerType === 'AUTO_PERSONAL_PRACTICE_COMPLETE' || form.triggerType === 'AUTO_WRONG_PRACTICE_COMPLETE'}
+              hint={
+                form.triggerType === 'AUTO_PERSONAL_PRACTICE_COMPLETE' || form.triggerType === 'AUTO_WRONG_PRACTICE_COMPLETE'
+                  ? 'Tự động bỏ qua lượt (áp dụng cho mọi lần thực hiện)'
+                  : 'Lượt áp dụng tối thiểu (ví dụ: 1)'
+              }
             />
             <Input
               label="Lượt thực hiện tối đa"
               type="number"
               min="1"
-              placeholder="Vô hạn (để trống)"
-              value={form.triggerTimeMax}
+              placeholder={
+                form.triggerType === 'AUTO_PERSONAL_PRACTICE_COMPLETE' || form.triggerType === 'AUTO_WRONG_PRACTICE_COMPLETE'
+                  ? 'Không giới hạn'
+                  : 'Vô hạn (để trống)'
+              }
+              value={
+                form.triggerType === 'AUTO_PERSONAL_PRACTICE_COMPLETE' || form.triggerType === 'AUTO_WRONG_PRACTICE_COMPLETE'
+                  ? ''
+                  : form.triggerTimeMax
+              }
               onChange={(e) => setForm(prev => ({ ...prev, triggerTimeMax: e.target.value }))}
-              hint="Bỏ trống nếu áp dụng mãi mãi"
+              disabled={form.triggerType === 'AUTO_PERSONAL_PRACTICE_COMPLETE' || form.triggerType === 'AUTO_WRONG_PRACTICE_COMPLETE'}
+              hint={
+                form.triggerType === 'AUTO_PERSONAL_PRACTICE_COMPLETE' || form.triggerType === 'AUTO_WRONG_PRACTICE_COMPLETE'
+                  ? 'Không áp dụng giới hạn lượt'
+                  : 'Bỏ trống nếu áp dụng mãi mãi'
+              }
             />
           </div>
 
@@ -615,6 +637,7 @@ export function RewardRulePanel({ onToast }: RewardRulePanelProps) {
                         min="1"
                         placeholder="SL"
                         value={item.quantity}
+                        onWheel={(e) => e.currentTarget.blur()}
                         onChange={(e) => {
                           const val = Number(e.target.value);
                           setForm(prev => {

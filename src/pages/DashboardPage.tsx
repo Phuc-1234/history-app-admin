@@ -18,6 +18,7 @@ import { TestPresetPanel } from '../components/content/TestPresetPanel';
 import { RewardRulePanel } from '../components/content/RewardRulePanel';
 import { FeedbackPanel } from '../components/content/FeedbackPanel';
 import { ItemDefinitionPanel } from '../components/content/ItemDefinitionPanel';
+import { TierPanel } from '../components/content/TierPanel';
 import { ToastContainer } from '../components/ui/Toast';
 import { useAuthStore } from '../store/authStore';
 import { useToast } from '../hooks/useToast';
@@ -35,7 +36,7 @@ import {
   IconSparkles
 } from '../components/ui/Icons';
 
-export type TabId = 'overview' | 'grades' | 'topics' | 'lessons' | 'sections' | 'nodes' | 'mindmaps' | 'flashcards' | 'users' | 'videos' | 'questions' | 'tests' | 'testpresets' | 'feedbacks' | 'rewardrules' | 'itemdefinitions';
+export type TabId = 'overview' | 'grades' | 'topics' | 'lessons' | 'sections' | 'nodes' | 'mindmaps' | 'flashcards' | 'users' | 'videos' | 'questions' | 'tests' | 'testpresets' | 'tiers' | 'feedbacks' | 'rewardrules' | 'itemdefinitions';
 
 interface OverviewStats {
   grades: number;
@@ -57,61 +58,8 @@ function OverviewPanel() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const [gradesRes, usersRes, videosRes, questionsRes, testsRes, flashcardsRes, rewardRulesRes] = await Promise.all([
-          client.get('/api/content/grades'),
-          client.get('/api/admin/users'),
-          client.get('/api/admin/videos'),
-          client.get('/api/admin/questions'),
-          client.get('/api/admin/tests'),
-          client.get('/api/admin/flashcards'),
-          client.get('/api/admin/reward-rules')
-        ]);
-
-        const grades = gradesRes.data.grades ?? [];
-        const users = usersRes.data.users ?? [];
-        const videos = videosRes.data.videos ?? [];
-        const questions = questionsRes.data.questions ?? [];
-        const tests = testsRes.data.tests ?? [];
-        const flashcards = flashcardsRes.data.flashcards ?? [];
-        const rewardRules = rewardRulesRes.data.rules ?? [];
-
-        let totalTopics = 0, totalLessons = 0, totalSections = 0;
-
-        await Promise.all(
-          grades.map(async (g: { id: number }) => {
-            const topicsRes = await client.get(`/api/content/grades/${g.id}/topics`);
-            const topics = topicsRes.data.topics ?? [];
-            totalTopics += topics.length;
-
-            await Promise.all(
-              topics.map(async (t: { id: number }) => {
-                const lessonsRes = await client.get(`/api/content/topics/${t.id}/lessons`);
-                const lessons = lessonsRes.data.lessons ?? [];
-                totalLessons += lessons.length;
-
-                await Promise.all(
-                  lessons.map(async (l: { id: number }) => {
-                    const sectionsRes = await client.get(`/api/content/lessons/${l.id}/sections`);
-                    totalSections += (sectionsRes.data.sections ?? []).length;
-                  })
-                );
-              })
-            );
-          })
-        );
-
-        setStats({
-          grades: grades.length,
-          topics: totalTopics,
-          lessons: totalLessons,
-          sections: totalSections,
-          users: users.length,
-          videos: videos.length,
-          questions: questions.length,
-          tests: tests.length,
-          flashcards: flashcards.length,
-          rewardRules: rewardRules.length
-        });
+        const res = await client.get('/api/admin/stats');
+        setStats(res.data);
       } catch {
         // ignore
       } finally {
@@ -194,14 +142,52 @@ export interface NavParams {
   nodeId?: number | null;
 }
 
+const VALID_TABS: TabId[] = [
+  'overview', 'grades', 'topics', 'lessons', 'sections', 'nodes',
+  'mindmaps', 'flashcards', 'users', 'videos', 'questions', 'tests',
+  'testpresets', 'tiers', 'feedbacks', 'rewardrules', 'itemdefinitions'
+];
+
+function getInitialTab(): TabId {
+  const hash = window.location.hash.replace('#', '') as TabId;
+  if (hash && VALID_TABS.includes(hash)) {
+    return hash;
+  }
+  const saved = localStorage.getItem('admin_active_tab') as TabId;
+  if (saved && VALID_TABS.includes(saved)) {
+    return saved;
+  }
+  return 'overview';
+}
+
 export function DashboardPage() {
-  const [activeTab, setActiveTab] = useState<TabId>('overview');
+  const [activeTab, setActiveTabState] = useState<TabId>(getInitialTab);
   const [navParams, setNavParams] = useState<NavParams>({});
+
+  const setActiveTab = (tab: TabId) => {
+    setActiveTabState(tab);
+    window.location.hash = tab;
+    localStorage.setItem('admin_active_tab', tab);
+  };
+
   const { logout, user } = useAuthStore();
   const { toasts, addToast, removeToast } = useToast();
 
   const [isMobile, setIsMobile] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Sync hash changes if user uses browser back/forward buttons
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace('#', '') as TabId;
+      if (hash && VALID_TABS.includes(hash)) {
+        setActiveTabState(hash);
+        localStorage.setItem('admin_active_tab', hash);
+      }
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
 
   // Initialize and handle resize on client
   useEffect(() => {
@@ -244,6 +230,7 @@ export function DashboardPage() {
       case 'questions': return <QuestionPanel onToast={addToast} />;
       case 'tests':     return <TestPanel onToast={addToast} />;
       case 'testpresets': return <TestPresetPanel onToast={addToast} />;
+      case 'tiers':     return <TierPanel onToast={addToast} />;
       case 'rewardrules': return <RewardRulePanel onToast={addToast} />;
       case 'itemdefinitions': return <ItemDefinitionPanel onToast={addToast} />;
       case 'feedbacks': return <FeedbackPanel onToast={addToast} />;

@@ -5,6 +5,7 @@ export interface GradeDto {
   id: number;
   state: HierarchyState;
   isPro?: boolean;
+  imgUrl?: string | null;
 }
 
 export interface TopicDto {
@@ -21,6 +22,7 @@ export interface LessonDto {
   position: number;
   topicId: number;
   isPro?: boolean;
+  imgUrl?: string | null;
 }
 
 export interface SectionDto {
@@ -121,6 +123,7 @@ export interface AdminTestDto {
   scopeType: string | null;
   isNationalTest: boolean;
   isPro: boolean;
+  imgUrl: string | null;
   questionIds: number[];
   // Backup
   isManual: boolean;
@@ -242,10 +245,39 @@ export interface ItemDefinitionDto {
   itemType: ItemDefinitionType;
   effectValue: number | null;
   imgUrl: string | null;
+  shopImgUrl: string | null;
   equipmentSlot: EquipmentSlot | null;
   durationMinutes: number | null;
 }
 
+// ─── Tier ────────────────────────────────────────────────────────────────────
 
+export interface TierDto {
+  index: number;
+  name: string;
+  badgeImgUrl: string | null;
+  description: string | null;
+  xpThreshold: number;
+  rewardRule?: RewardRuleDto | null;
+}
 
+export interface CreateTierBody {
+  index: number;
+  name: string;
+  badgeImgUrl?: string | null;
+  description?: string | null;
+  xpThreshold: number;
+  xpReward?: number;
+  goldReward?: number;
+  rewardRuleItems?: { itemDefinitionId: number; quantity: number }[];
+}
 
+export interface UpdateTierBody {
+  name?: string;
+  badgeImgUrl?: string | null;
+  description?: string | null;
+  xpThreshold?: number;
+  xpReward?: number;
+  goldReward?: number;
+  rewardRuleItems?: { itemDefinitionId: number; quantity: number }[];
+}

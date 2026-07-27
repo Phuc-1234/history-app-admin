@@ -39,6 +39,12 @@ export function Input({ label, hint, ...props }: InputHTMLAttributes<HTMLInputEl
       <input
         {...props}
         style={{ ...inputStyle, ...props.style }}
+        onWheel={(e) => {
+          if (props.type === 'number') {
+            e.currentTarget.blur();
+          }
+          props.onWheel?.(e);
+        }}
         onFocus={(e) => {
           e.target.style.borderColor = '#6c63ff';
           e.target.style.boxShadow = '0 0 0 3px rgba(108,99,255,0.12)';

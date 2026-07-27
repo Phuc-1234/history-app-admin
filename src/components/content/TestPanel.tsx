@@ -7,6 +7,7 @@ import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { Input, Select } from '../ui/FormField';
+import { ImageUploadInput } from '../ui/ImageUploadInput';
 import { Spinner } from '../ui/Spinner';
 import { stripHtml } from '../../utils/html';
 import {
@@ -32,7 +33,8 @@ const EMPTY_FORM = {
   lessonId: '',
   sectionId: '',
   isNationalTest: false,
-  isPro: false
+  isPro: false,
+  imgUrl: ''
 };
 
 export function TestPanel({ onToast }: TestPanelProps) {
@@ -157,7 +159,8 @@ export function TestPanel({ onToast }: TestPanelProps) {
       lessonId,
       sectionId,
       isNationalTest: t.isNationalTest !== false,
-      isPro: !!t.isPro
+      isPro: !!t.isPro,
+      imgUrl: t.imgUrl ?? ''
     });
     setSelectedQIds(t.questionIds ?? []);
     setModalOpen(true);
@@ -201,6 +204,7 @@ export function TestPanel({ onToast }: TestPanelProps) {
         scopeId,
         isNationalTest: form.isNationalTest,
         isPro: form.isPro,
+        imgUrl: form.imgUrl.trim() || null,
         questionIds: selectedQIds,
         // legacy backups
         gradeId: form.gradeId ? Number(form.gradeId) : null,
@@ -299,14 +303,19 @@ export function TestPanel({ onToast }: TestPanelProps) {
                 return (
                   <tr key={t.id} style={{ background: idx % 2 === 0 ? '#ffffff' : '#fafbff', borderTop: '1px solid #f1f5f9' }}>
                     <td style={TD_STYLE}>
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <div style={{ fontWeight: 700, color: '#0f172a', fontSize: 15 }}>{t.title}</div>
-                          {t.isPro && (
-                            <span style={{ padding: '2px 8px', fontSize: 10, fontWeight: 800, background: 'linear-gradient(135deg, #fbbf24, #f59e0b)', color: '#ffffff', borderRadius: 6, textTransform: 'uppercase', boxShadow: '0 2px 4px rgba(245,158,11,0.3)' }}>PRO</span>
-                          )}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        {t.imgUrl && (
+                          <img src={t.imgUrl} alt={t.title} style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: 8, border: '1px solid #e2e8f0' }} />
+                        )}
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <div style={{ fontWeight: 700, color: '#0f172a', fontSize: 15 }}>{t.title}</div>
+                            {t.isPro && (
+                              <span style={{ padding: '2px 8px', fontSize: 10, fontWeight: 800, background: 'linear-gradient(135deg, #fbbf24, #f59e0b)', color: '#ffffff', borderRadius: 6, textTransform: 'uppercase', boxShadow: '0 2px 4px rgba(245,158,11,0.3)' }}>PRO</span>
+                            )}
+                          </div>
+                          <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>{t.summary ?? 'Không có tóm tắt'}</div>
                         </div>
-                        <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>{t.summary ?? 'Không có tóm tắt'}</div>
                       </div>
                     </td>
                     <td style={TD_STYLE}>
@@ -359,7 +368,7 @@ export function TestPanel({ onToast }: TestPanelProps) {
 
       {/* Create / Edit Modal */}
       <Modal open={modalOpen} title={editTest ? `Sửa đề thi: ${editTest.title}` : 'Tạo đề thi mới'} onClose={() => setModalOpen(false)}>
-        
+
         {/* Scope Type & Test Preset */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
           <Select label="Mẫu cấu hình đề thi (Preset)" value={form.presetId} onChange={(e) => setForm(f => ({ ...f, presetId: e.target.value }))}>
@@ -428,6 +437,7 @@ export function TestPanel({ onToast }: TestPanelProps) {
 
         <Input label="Tiêu đề đề thi" value={form.title} onChange={(e) => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Ví dụ: Đề thi thử học kỳ II lớp 10" />
         <Input label="Mô tả tóm tắt" value={form.summary} onChange={(e) => setForm(f => ({ ...f, summary: e.target.value }))} placeholder="Mô tả ngắn gọn..." />
+        <ImageUploadInput label="Hình ảnh đề thi" value={form.imgUrl} onChange={(val) => setForm(f => ({ ...f, imgUrl: val }))} placeholder="Đường dẫn ảnh hoặc tải lên..." />
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
           <Select label="Đề thi quốc gia" value={form.isNationalTest ? 'true' : 'false'} onChange={(e) => setForm(f => ({ ...f, isNationalTest: e.target.value === 'true' }))}>
@@ -435,10 +445,10 @@ export function TestPanel({ onToast }: TestPanelProps) {
             <option value="true">Đúng (National Test)</option>
           </Select>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 24 }}>
-            <input 
-              type="checkbox" 
+            <input
+              type="checkbox"
               id="test-is-pro"
-              checked={form.isPro} 
+              checked={form.isPro}
               onChange={(e) => setForm(f => ({ ...f, isPro: e.target.checked }))}
               style={{ width: 16, height: 16, cursor: 'pointer' }}
             />
