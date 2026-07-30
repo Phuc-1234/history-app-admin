@@ -4,11 +4,12 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "node .qldatn-tracker/run-dev.mjs",
     "dev:local": "vite --mode devlocal",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "qldatn:dev:original": "vite"
   },
   "dependencies": {
     "@ckeditor/ckeditor5-react": "^11.2.0",
