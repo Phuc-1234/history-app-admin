@@ -334,7 +334,6 @@ export function RewardRulePanel({ onToast }: RewardRulePanelProps) {
           textAlign: 'center', padding: '60px 20px', background: '#ffffff',
           borderRadius: 20, border: '1px solid #e2e8f0', color: '#64748b'
         }}>
-          <div style={{ fontSize: 40, marginBottom: 12 }}>✨</div>
           <h3 style={{ margin: '0 0 4px', fontSize: 16, fontWeight: 700, color: '#0f172a' }}>Không tìm thấy quy tắc nào</h3>
           <p style={{ margin: 0, fontSize: 14 }}>Hãy thử thay đổi bộ lọc hoặc thêm một quy tắc phần thưởng mới.</p>
         </div>
@@ -416,7 +415,6 @@ export function RewardRulePanel({ onToast }: RewardRulePanelProps) {
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 4 }}>
                             {rule.rewardRuleItems.map((ri: any) => (
                               <div key={ri.id} style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#0d9488', fontWeight: 600, fontSize: 12 }}>
-                                <span>📦</span>
                                 <span>{ri.itemDefinition?.name || `Vật phẩm #${ri.itemDefinitionId}`} x{ri.quantity}</span>
                               </div>
                             ))}

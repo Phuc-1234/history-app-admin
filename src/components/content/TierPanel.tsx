@@ -256,7 +256,6 @@ export function TierPanel({ onToast }: TierPanelProps) {
           textAlign: 'center', padding: '60px 20px', background: '#ffffff',
           borderRadius: 20, border: '1px solid #e2e8f0', color: '#64748b'
         }}>
-          <div style={{ fontSize: 40, marginBottom: 12 }}>🏆</div>
           <h3 style={{ margin: '0 0 4px', fontSize: 16, fontWeight: 700, color: '#0f172a' }}>Chưa có danh hiệu nào</h3>
           <p style={{ margin: 0, fontSize: 14 }}>Hãy tạo danh hiệu đầu tiên để bắt đầu hệ thống hạng.</p>
         </div>
@@ -300,9 +299,9 @@ export function TierPanel({ onToast }: TierPanelProps) {
                       ) : (
                         <div style={{
                           width: 40, height: 40, borderRadius: 8, background: '#f1f5f9',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, color: '#94a3b8'
                         }}>
-                          🎖️
+                          —
                         </div>
                       )}
                     </td>
@@ -317,7 +316,7 @@ export function TierPanel({ onToast }: TierPanelProps) {
 
                     {/* XP Threshold */}
                     <td style={{ padding: '16px 20px', fontWeight: 600, color: '#059669' }}>
-                      ⚡ {tier.xpThreshold.toLocaleString()} XP
+                      {tier.xpThreshold.toLocaleString()} XP
                     </td>
 
                     {/* Reward Rule */}
@@ -339,7 +338,6 @@ export function TierPanel({ onToast }: TierPanelProps) {
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 2 }}>
                             {rule.rewardRuleItems.map((ri) => (
                               <div key={ri.id} style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#0d9488', fontWeight: 600, fontSize: 12 }}>
-                                <span>📦</span>
                                 <span>{ri.itemDefinition?.name || `Vật phẩm #${ri.itemDefinitionId}`} x{ri.quantity}</span>
                               </div>
                             ))}
@@ -510,7 +508,7 @@ export function TierPanel({ onToast }: TierPanelProps) {
           {/* Embedded Tier Reward Section */}
           <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: 16 }}>
             <h4 style={{ margin: '0 0 12px', fontSize: 15, fontWeight: 700, color: '#0f172a' }}>
-              🎁 Phần thưởng khi đạt Danh hiệu này
+              Phần thưởng khi đạt Danh hiệu này
             </h4>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>

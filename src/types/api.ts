@@ -281,3 +281,32 @@ export interface UpdateTierBody {
   goldReward?: number;
   rewardRuleItems?: { itemDefinitionId: number; quantity: number }[];
 }
+
+// ─── Packages ─────────────────────────────────────────────────────────────────
+
+export interface GoldPackageDto {
+  id: string;
+  name: string;
+  goldAmount: number;
+  bonusGold: number;
+  priceVnd: number;
+  isActive: boolean;
+  displayOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProPackageDto {
+  id: string;
+  name: string;
+  durationDays: number;
+  priceVnd: number;
+  originalPriceVnd: number | null;
+  description: string | null;
+  isRecommended: boolean;
+  isActive: boolean;
+  displayOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
