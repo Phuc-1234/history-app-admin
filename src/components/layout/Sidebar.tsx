@@ -14,10 +14,11 @@ import {
   IconMindMap,
   IconFlashcard,
   IconTarget,
-  IconSparkles,
   IconFeedback,
   IconInventory,
-  IconTier
+  IconTier,
+  IconPackagePricing,
+  IconSparkles
 } from '../ui/Icons';
 
 interface NavItem {
@@ -42,6 +43,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'tiers', label: 'Cấp danh hiệu', description: 'Tiers' },
   { id: 'rewardrules', label: 'Quản lý phần thưởng', description: 'Reward Rules' },
   { id: 'itemdefinitions', label: 'Danh mục vật phẩm', description: 'Item Definitions' },
+  { id: 'packages', label: 'Bảng giá & Gói nạp', description: 'Gold & Pro Packages' },
   { id: 'feedbacks', label: 'Góp ý người dùng', description: 'User Feedbacks' },
 ];
 
@@ -61,6 +63,7 @@ const ICON_MAP: Record<string, any> = {
   tiers: IconTier,
   rewardrules: IconSparkles,
   itemdefinitions: IconInventory,
+  packages: IconPackagePricing,
   feedbacks: IconFeedback,
 };
 

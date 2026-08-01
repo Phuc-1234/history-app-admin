@@ -368,7 +368,7 @@ export function TestPanel({ onToast }: TestPanelProps) {
 
       {/* Create / Edit Modal */}
       <Modal open={modalOpen} title={editTest ? `Sửa đề thi: ${editTest.title}` : 'Tạo đề thi mới'} onClose={() => setModalOpen(false)}>
-        
+
         {/* Scope Type & Test Preset */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
           <Select label="Mẫu cấu hình đề thi (Preset)" value={form.presetId} onChange={(e) => setForm(f => ({ ...f, presetId: e.target.value }))}>
@@ -445,10 +445,10 @@ export function TestPanel({ onToast }: TestPanelProps) {
             <option value="true">Đúng (National Test)</option>
           </Select>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 24 }}>
-            <input 
-              type="checkbox" 
+            <input
+              type="checkbox"
               id="test-is-pro"
-              checked={form.isPro} 
+              checked={form.isPro}
               onChange={(e) => setForm(f => ({ ...f, isPro: e.target.checked }))}
               style={{ width: 16, height: 16, cursor: 'pointer' }}
             />

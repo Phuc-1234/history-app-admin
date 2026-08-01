@@ -18,6 +18,7 @@ import { TestPresetPanel } from '../components/content/TestPresetPanel';
 import { RewardRulePanel } from '../components/content/RewardRulePanel';
 import { FeedbackPanel } from '../components/content/FeedbackPanel';
 import { ItemDefinitionPanel } from '../components/content/ItemDefinitionPanel';
+import { PackagePricingPanel } from '../components/content/PackagePricingPanel';
 import { TierPanel } from '../components/content/TierPanel';
 import { ToastContainer } from '../components/ui/Toast';
 import { useAuthStore } from '../store/authStore';
@@ -36,7 +37,7 @@ import {
   IconSparkles
 } from '../components/ui/Icons';
 
-export type TabId = 'overview' | 'grades' | 'topics' | 'lessons' | 'sections' | 'nodes' | 'mindmaps' | 'flashcards' | 'users' | 'videos' | 'questions' | 'tests' | 'testpresets' | 'tiers' | 'feedbacks' | 'rewardrules' | 'itemdefinitions';
+export type TabId = 'overview' | 'grades' | 'topics' | 'lessons' | 'sections' | 'nodes' | 'mindmaps' | 'flashcards' | 'users' | 'videos' | 'questions' | 'tests' | 'testpresets' | 'tiers' | 'feedbacks' | 'rewardrules' | 'itemdefinitions' | 'packages';
 
 interface OverviewStats {
   grades: number;
@@ -145,7 +146,7 @@ export interface NavParams {
 const VALID_TABS: TabId[] = [
   'overview', 'grades', 'topics', 'lessons', 'sections', 'nodes',
   'mindmaps', 'flashcards', 'users', 'videos', 'questions', 'tests',
-  'testpresets', 'tiers', 'feedbacks', 'rewardrules', 'itemdefinitions'
+  'testpresets', 'tiers', 'feedbacks', 'rewardrules', 'itemdefinitions', 'packages'
 ];
 
 function getInitialTab(): TabId {
@@ -233,6 +234,7 @@ export function DashboardPage() {
       case 'tiers':     return <TierPanel onToast={addToast} />;
       case 'rewardrules': return <RewardRulePanel onToast={addToast} />;
       case 'itemdefinitions': return <ItemDefinitionPanel onToast={addToast} />;
+      case 'packages':  return <PackagePricingPanel onToast={addToast} />;
       case 'feedbacks': return <FeedbackPanel onToast={addToast} />;
     }
   };

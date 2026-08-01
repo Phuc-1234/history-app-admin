@@ -256,9 +256,9 @@ export function LessonPanel({ onToast, navParams, onNavigate }: LessonPanelProps
                   </Td>
                   <Td>
                     {l.summary ? (
-                      <div 
-                        style={{ color: '#64748b', fontSize: 13, maxHeight: '60px', overflow: 'hidden' }} 
-                        dangerouslySetInnerHTML={{ __html: l.summary }} 
+                      <div
+                        style={{ color: '#64748b', fontSize: 13, maxHeight: '60px', overflow: 'hidden' }}
+                        dangerouslySetInnerHTML={{ __html: l.summary }}
                       />
                     ) : (
                       <span style={{ color: '#94a3b8', fontSize: 13, fontStyle: 'italic' }}>—</span>
@@ -291,10 +291,10 @@ export function LessonPanel({ onToast, navParams, onNavigate }: LessonPanelProps
           </Select>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '14px 0 6px' }}>
-          <input 
-            type="checkbox" 
+          <input
+            type="checkbox"
             id="lesson-is-pro"
-            checked={form.isPro} 
+            checked={form.isPro}
             onChange={(e) => setForm((f) => ({ ...f, isPro: e.target.checked }))}
             style={{ width: 16, height: 16, cursor: 'pointer' }}
           />
