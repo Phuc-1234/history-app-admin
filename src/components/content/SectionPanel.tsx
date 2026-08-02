@@ -160,6 +160,72 @@ export function SectionPanel({ onToast, navParams, onNavigate }: SectionPanelPro
     };
   }, [navParams?.gradeId, navParams?.topicId, navParams?.lessonId]);
 
+  const handleGradeChange = async (gId: number | null) => {
+    setSelectedGradeId(gId);
+    if (!gId) {
+      setTopics([]);
+      setLessons([]);
+      setSections([]);
+      setSelectedTopicId(null);
+      setSelectedLessonId(null);
+      return;
+    }
+    try {
+      setLoading(true);
+      const res = await client.get(`/api/content/grades/${gId}/topics`);
+      const ts: TopicDto[] = res.data.topics ?? [];
+      setTopics(ts);
+      if (ts.length > 0) {
+        const firstTopicId = ts[0].id;
+        setSelectedTopicId(firstTopicId);
+        const lRes = await client.get(`/api/content/topics/${firstTopicId}/lessons`);
+        const ls: LessonDto[] = lRes.data.lessons ?? [];
+        setLessons(ls);
+        if (ls.length > 0) {
+          setSelectedLessonId(ls[0].id);
+        } else {
+          setSelectedLessonId(null);
+          setSections([]);
+        }
+      } else {
+        setSelectedTopicId(null);
+        setLessons([]);
+        setSelectedLessonId(null);
+        setSections([]);
+      }
+    } catch {
+      onToast('Không tải được danh sách chủ đề', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleTopicChange = async (tId: number | null) => {
+    setSelectedTopicId(tId);
+    if (!tId) {
+      setLessons([]);
+      setSections([]);
+      setSelectedLessonId(null);
+      return;
+    }
+    try {
+      setLoading(true);
+      const res = await client.get(`/api/content/topics/${tId}/lessons`);
+      const ls: LessonDto[] = res.data.lessons ?? [];
+      setLessons(ls);
+      if (ls.length > 0) {
+        setSelectedLessonId(ls[0].id);
+      } else {
+        setSelectedLessonId(null);
+        setSections([]);
+      }
+    } catch {
+      onToast('Không tải được danh sách bài học', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const fetchSections = useCallback(async (lessonId: number) => {
     try {
       setLoading(true);
@@ -172,7 +238,13 @@ export function SectionPanel({ onToast, navParams, onNavigate }: SectionPanelPro
     }
   }, [onToast]);
 
-  useEffect(() => { if (selectedLessonId) fetchSections(selectedLessonId); }, [selectedLessonId, fetchSections]);
+  useEffect(() => {
+    if (selectedLessonId) {
+      fetchSections(selectedLessonId);
+    } else {
+      setSections([]);
+    }
+  }, [selectedLessonId, fetchSections]);
 
   const allFlat = flattenSections(sections);
 
@@ -283,11 +355,11 @@ export function SectionPanel({ onToast, navParams, onNavigate }: SectionPanelPro
         </div>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
           {[
-            { id: 'section-grade', value: selectedGradeId, onChange: setSelectedGradeId, items: grades.map(g => ({ value: g.id, label: `Khối ${g.id}` })) },
-            { id: 'section-topic', value: selectedTopicId, onChange: setSelectedTopicId, items: topics.map(t => ({ value: t.id, label: t.name })) },
-            { id: 'section-lesson', value: selectedLessonId, onChange: setSelectedLessonId, items: lessons.map(l => ({ value: l.id, label: l.name })) },
+            { id: 'section-grade', value: selectedGradeId, onChange: (v: number | null) => handleGradeChange(v), items: grades.map(g => ({ value: g.id, label: `Khối ${g.id}` })) },
+            { id: 'section-topic', value: selectedTopicId, onChange: (v: number | null) => handleTopicChange(v), items: topics.map(t => ({ value: t.id, label: t.name })) },
+            { id: 'section-lesson', value: selectedLessonId, onChange: (v: number | null) => setSelectedLessonId(v), items: lessons.map(l => ({ value: l.id, label: l.name })) },
           ].map(({ id, value, onChange, items }) => (
-            <select key={id} id={id} value={value ?? ''} onChange={(e) => onChange(Number(e.target.value))} style={{ ...filterSelectStyle, maxWidth: 180 }}>
+            <select key={id} id={id} value={value ?? ''} onChange={(e) => onChange(e.target.value ? Number(e.target.value) : null)} style={{ ...filterSelectStyle, maxWidth: 180 }}>
               {items.length === 0 && <option value="">—</option>}
               {items.map((i) => <option key={i.value} value={i.value}>{i.label}</option>)}
             </select>

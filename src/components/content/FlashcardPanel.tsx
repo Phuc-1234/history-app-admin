@@ -142,6 +142,97 @@ export function FlashcardPanel({ onToast, navParams, onNavigate: _onNavigate }: 
     };
   }, [navParams?.gradeId, navParams?.topicId, navParams?.lessonId]);
 
+  const handleGradeChange = async (gId: number | null) => {
+    setSelectedGradeId(gId);
+    setSelectedSectionId(null);
+    setSelectedNodeId(null);
+    if (!gId) {
+      setTopics([]);
+      setLessons([]);
+      setFlashcards([]);
+      setSections([]);
+      setNodes([]);
+      setSelectedTopicId(null);
+      setSelectedLessonId(null);
+      return;
+    }
+    try {
+      setLoading(true);
+      const res = await client.get(`/api/content/grades/${gId}/topics`);
+      const ts: TopicDto[] = res.data.topics ?? [];
+      setTopics(ts);
+      if (ts.length > 0) {
+        const firstTopicId = ts[0].id;
+        setSelectedTopicId(firstTopicId);
+        const lRes = await client.get(`/api/content/topics/${firstTopicId}/lessons`);
+        const ls: LessonDto[] = lRes.data.lessons ?? [];
+        setLessons(ls);
+        if (ls.length > 0) {
+          setSelectedLessonId(ls[0].id);
+        } else {
+          setSelectedLessonId(null);
+          setFlashcards([]);
+          setSections([]);
+          setNodes([]);
+        }
+      } else {
+        setSelectedTopicId(null);
+        setLessons([]);
+        setSelectedLessonId(null);
+        setFlashcards([]);
+        setSections([]);
+        setNodes([]);
+      }
+    } catch {
+      onToast('Không tải được danh sách chủ đề', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleTopicChange = async (tId: number | null) => {
+    setSelectedTopicId(tId);
+    setSelectedSectionId(null);
+    setSelectedNodeId(null);
+    if (!tId) {
+      setLessons([]);
+      setFlashcards([]);
+      setSections([]);
+      setNodes([]);
+      setSelectedLessonId(null);
+      return;
+    }
+    try {
+      setLoading(true);
+      const res = await client.get(`/api/content/topics/${tId}/lessons`);
+      const ls: LessonDto[] = res.data.lessons ?? [];
+      setLessons(ls);
+      if (ls.length > 0) {
+        setSelectedLessonId(ls[0].id);
+      } else {
+        setSelectedLessonId(null);
+        setFlashcards([]);
+        setSections([]);
+        setNodes([]);
+      }
+    } catch {
+      onToast('Không tải được danh sách bài học', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLessonChange = (lId: number | null) => {
+    setSelectedLessonId(lId);
+    setSelectedSectionId(null);
+    setSelectedNodeId(null);
+    if (!lId) {
+      setFlashcards([]);
+      setSections([]);
+      setNodes([]);
+    }
+  };
+
   const fetchFlashcards = useCallback(async (lessonId: number) => {
     try {
       setLoading(true);
@@ -158,6 +249,7 @@ export function FlashcardPanel({ onToast, navParams, onNavigate: _onNavigate }: 
     if (selectedLessonId) {
       fetchFlashcards(selectedLessonId);
     } else {
+      setFlashcards([]);
       setSections([]);
       setNodes([]);
     }
@@ -241,35 +333,38 @@ export function FlashcardPanel({ onToast, navParams, onNavigate: _onNavigate }: 
 
   const handleSave = async () => {
     if (!form.frontText.trim() || !form.backText.trim()) {
-      onToast('Vui lòng điền đầy đủ cả hai mặt thẻ', 'error');
+      onToast('Mặt trước và mặt sau không được để trống', 'error');
       return;
     }
-    if (!selectedLessonId) {
-      onToast('Bài học là bắt buộc', 'error');
-      return;
-    }
+    const sectionId = form.sectionId ? Number(form.sectionId) : undefined;
+    const nodeId = form.nodeId ? Number(form.nodeId) : undefined;
+
     try {
       setSaving(true);
-      const nodeId = form.nodeId ? Number(form.nodeId) : null;
-      const sectionId = !nodeId && form.sectionId ? Number(form.sectionId) : null;
-      const lessonId = !nodeId && !sectionId ? selectedLessonId : null;
-      const payload = {
-        frontText: form.frontText.trim(),
-        backText: form.backText.trim(),
-        lessonId,
-        sectionId,
-        nodeId,
-      };
-
       if (editCard) {
-        await client.patch(`/api/admin/flashcards/${editCard.id}`, payload);
+        await client.patch(`/api/admin/flashcards/${editCard.id}`, {
+          frontText: form.frontText.trim(),
+          backText: form.backText.trim(),
+          sectionId: sectionId ?? null,
+          nodeId: nodeId ?? null,
+        });
         onToast('Đã cập nhật thẻ ghi nhớ', 'success');
       } else {
-        await client.post('/api/admin/flashcards', payload);
+        if (!selectedLessonId) {
+          onToast('Vui lòng chọn bài học trước', 'error');
+          return;
+        }
+        await client.post('/api/admin/flashcards', {
+          frontText: form.frontText.trim(),
+          backText: form.backText.trim(),
+          lessonId: selectedLessonId,
+          sectionId,
+          nodeId,
+        });
         onToast('Đã tạo thẻ ghi nhớ mới', 'success');
       }
       setModalOpen(false);
-      fetchFlashcards(selectedLessonId);
+      if (selectedLessonId) fetchFlashcards(selectedLessonId);
     } catch (err: any) {
       onToast(err?.response?.data?.error ?? 'Lỗi khi lưu', 'error');
     } finally {
@@ -278,13 +373,13 @@ export function FlashcardPanel({ onToast, navParams, onNavigate: _onNavigate }: 
   };
 
   const handleDelete = async () => {
-    if (!deleteTarget || !selectedLessonId) return;
+    if (!deleteTarget) return;
     try {
       setDeleting(true);
       await client.delete(`/api/admin/flashcards/${deleteTarget.id}`);
       onToast('Đã xóa thẻ ghi nhớ', 'success');
       setDeleteTarget(null);
-      fetchFlashcards(selectedLessonId);
+      if (selectedLessonId) fetchFlashcards(selectedLessonId);
     } catch (err: any) {
       onToast(err?.response?.data?.error ?? 'Lỗi khi xóa', 'error');
     } finally {
@@ -380,9 +475,8 @@ export function FlashcardPanel({ onToast, navParams, onNavigate: _onNavigate }: 
           label="Khối lớp"
           value={selectedGradeId ?? ''}
           onChange={(e) => {
-            setSelectedGradeId(Number(e.target.value));
-            setSelectedSectionId(null);
-            setSelectedNodeId(null);
+            const gId = e.target.value ? Number(e.target.value) : null;
+            handleGradeChange(gId);
           }}
         >
           {grades.map((g) => (
@@ -394,9 +488,8 @@ export function FlashcardPanel({ onToast, navParams, onNavigate: _onNavigate }: 
           label="Chủ đề"
           value={selectedTopicId ?? ''}
           onChange={(e) => {
-            setSelectedTopicId(Number(e.target.value) || null);
-            setSelectedSectionId(null);
-            setSelectedNodeId(null);
+            const tId = e.target.value ? Number(e.target.value) : null;
+            handleTopicChange(tId);
           }}
           disabled={topics.length === 0}
         >
@@ -410,9 +503,8 @@ export function FlashcardPanel({ onToast, navParams, onNavigate: _onNavigate }: 
           label="Bài học"
           value={selectedLessonId ?? ''}
           onChange={(e) => {
-            setSelectedLessonId(Number(e.target.value) || null);
-            setSelectedSectionId(null);
-            setSelectedNodeId(null);
+            const lId = e.target.value ? Number(e.target.value) : null;
+            handleLessonChange(lId);
           }}
           disabled={lessons.length === 0}
         >
