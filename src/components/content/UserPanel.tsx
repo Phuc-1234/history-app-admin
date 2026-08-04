@@ -3,34 +3,18 @@ import { useState, useEffect, useCallback } from 'react';
 import client from '../../api/client';
 import type { AdminUserDto } from '../../types/api';
 import type { ToastType } from '../../hooks/useToast';
-import { Button } from '../ui/Button';
-import { Modal } from '../ui/Modal';
-import { ConfirmDialog } from '../ui/ConfirmDialog';
-import { Select } from '../ui/FormField';
 import { Spinner } from '../ui/Spinner';
-import { Badge } from '../ui/Badge';
-import { IconEdit, IconDelete, IconUser, IconXP, IconGold } from '../ui/Icons';
+import { IconUser, IconXP, IconGold } from '../ui/Icons';
 
 interface UserPanelProps {
   onToast: (msg: string, type: ToastType) => void;
 }
-
-const EMPTY_FORM = {
-  role: 'STUDENT',
-  isHidden: false,
-};
 
 export function UserPanel({ onToast }: UserPanelProps) {
   const [users, setUsers] = useState<AdminUserDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editUser, setEditUser] = useState<AdminUserDto | null>(null);
-  const [form, setForm] = useState(EMPTY_FORM);
-  const [saving, setSaving] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<AdminUserDto | null>(null);
-  const [deleting, setDeleting] = useState(false);
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -54,45 +38,23 @@ export function UserPanel({ onToast }: UserPanelProps) {
     return () => clearTimeout(delayDebounce);
   }, [fetchUsers]);
 
-  const openEdit = (u: AdminUserDto) => {
-    setEditUser(u);
-    setForm({
-      role: u.role,
-      isHidden: u.isHidden,
-    });
-    setModalOpen(true);
-  };
-
-  const handleSave = async () => {
-    if (!editUser) return;
+  const handleRoleChange = async (userId: string, newRole: string) => {
     try {
-      setSaving(true);
-      await client.patch(`/api/admin/users/${editUser.id}`, {
-        role: form.role,
-        isHidden: form.isHidden,
-      });
-      onToast(`Đã cập nhật người dùng ${editUser.name}`, 'success');
-      setModalOpen(false);
-      fetchUsers();
+      await client.patch(`/api/admin/users/${userId}`, { role: newRole });
+      setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, role: newRole as any } : u)));
+      onToast('Đã cập nhật vai trò', 'success');
     } catch (err: any) {
-      onToast(err?.response?.data?.error ?? 'Lỗi khi lưu người dùng', 'error');
-    } finally {
-      setSaving(false);
+      onToast(err?.response?.data?.error ?? 'Lỗi khi cập nhật vai trò', 'error');
     }
   };
 
-  const handleDelete = async () => {
-    if (!deleteTarget) return;
+  const handleVisibilityChange = async (userId: string, isHidden: boolean) => {
     try {
-      setDeleting(true);
-      await client.delete(`/api/admin/users/${deleteTarget.id}`);
-      onToast(`Đã xóa người dùng ${deleteTarget.name}`, 'success');
-      setDeleteTarget(null);
-      fetchUsers();
+      await client.patch(`/api/admin/users/${userId}`, { isHidden });
+      setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, isHidden } : u)));
+      onToast('Đã cập nhật trạng thái hiển thị', 'success');
     } catch (err: any) {
-      onToast(err?.response?.data?.error ?? 'Lỗi khi xóa người dùng', 'error');
-    } finally {
-      setDeleting(false);
+      onToast(err?.response?.data?.error ?? 'Lỗi khi cập nhật trạng thái', 'error');
     }
   };
 
@@ -166,7 +128,6 @@ export function UserPanel({ onToast }: UserPanelProps) {
                 <th style={TH_STYLE}>Vai trò</th>
                 <th style={TH_STYLE}>XP / Vàng</th>
                 <th style={TH_STYLE}>Trạng thái</th>
-                <th style={{ ...TH_STYLE, textAlign: 'right' }}>Thao tác</th>
               </tr>
             </thead>
             <tbody>
@@ -187,7 +148,15 @@ export function UserPanel({ onToast }: UserPanelProps) {
                   </td>
                   <td style={TD_STYLE}>{u.email}</td>
                   <td style={TD_STYLE}>
-                    <Badge value={u.role} />
+                    <select
+                      value={u.role}
+                      onChange={(e) => handleRoleChange(u.id, e.target.value)}
+                      style={INLINE_SELECT_STYLE}
+                    >
+                      <option value="STUDENT">STUDENT</option>
+                      <option value="ADMIN">ADMIN</option>
+                      <option value="SUPER_ADMIN">SUPER_ADMIN</option>
+                    </select>
                   </td>
                   <td style={TD_STYLE}>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: '#2563eb', fontWeight: 600 }}>
@@ -199,18 +168,25 @@ export function UserPanel({ onToast }: UserPanelProps) {
                     </span>
                   </td>
                   <td style={TD_STYLE}>
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      {u.isHidden && <span style={{ background: '#fee2e2', color: '#ef4444', fontSize: 11, padding: '2px 6px', borderRadius: 6, fontWeight: 600 }}>Bị ẩn</span>}
-                      {u.isVerified ? 
-                        <span style={{ background: '#dcfce7', color: '#15803d', fontSize: 11, padding: '2px 6px', borderRadius: 6, fontWeight: 600 }}>✓ Đã xác thực</span> :
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <select
+                        value={u.isHidden ? 'true' : 'false'}
+                        onChange={(e) => handleVisibilityChange(u.id, e.target.value === 'true')}
+                        style={{
+                          ...INLINE_SELECT_STYLE,
+                          color: u.isHidden ? '#ef4444' : '#16a34a',
+                          borderColor: u.isHidden ? '#fca5a5' : '#86efac',
+                          background: u.isHidden ? '#fef2f2' : '#f0fdf4'
+                        }}
+                      >
+                        <option value="false">Hiển thị</option>
+                        <option value="true">Bị ẩn</option>
+                      </select>
+                      {u.isVerified ? (
+                        <span style={{ background: '#dcfce7', color: '#15803d', fontSize: 11, padding: '2px 6px', borderRadius: 6, fontWeight: 600 }}>✓ Đã xác thực</span>
+                      ) : (
                         <span style={{ background: '#f1f5f9', color: '#64748b', fontSize: 11, padding: '2px 6px', borderRadius: 6, fontWeight: 600 }}>Chưa xác thực</span>
-                      }
-                    </div>
-                  </td>
-                  <td style={{ ...TD_STYLE, textAlign: 'right' }}>
-                    <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                      <Button variant="secondary" icon={<IconEdit size={14} />} onClick={() => openEdit(u)} style={{ padding: '6px 12px', fontSize: 13 }}>Sửa</Button>
-                      <Button variant="danger" icon={<IconDelete size={14} />} onClick={() => setDeleteTarget(u)} style={{ padding: '6px 12px', fontSize: 13 }}>Xóa</Button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -219,37 +195,6 @@ export function UserPanel({ onToast }: UserPanelProps) {
           </table>
         </div>
       )}
-
-      {/* Edit modal */}
-      <Modal open={modalOpen} title={`Chỉnh sửa: ${editUser?.name}`} onClose={() => setModalOpen(false)}>
-        <Select label="Vai trò" value={form.role} onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}>
-          <option value="STUDENT">STUDENT — Học sinh</option>
-          <option value="ADMIN">ADMIN — Quản trị viên</option>
-          <option value="SUPER_ADMIN">SUPER_ADMIN — Quản trị cấp tối cao</option>
-        </Select>
-
-        <div style={{ marginBottom: 20 }}>
-          <Select label="Trạng thái hiển thị" value={form.isHidden ? 'true' : 'false'} onChange={(e) => setForm((f) => ({ ...f, isHidden: e.target.value === 'true' }))}>
-            <option value="false">Hiển thị (Normal)</option>
-            <option value="true">Ẩn tài khoản (Hidden)</option>
-          </Select>
-        </div>
-
-        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-          <Button variant="ghost" onClick={() => setModalOpen(false)}>Hủy</Button>
-          <Button onClick={handleSave} loading={saving}>Lưu thay đổi</Button>
-        </div>
-      </Modal>
-
-      {/* Delete confirm */}
-      <ConfirmDialog
-        open={!!deleteTarget}
-        title={`Xóa tài khoản: ${deleteTarget?.name}?`}
-        message={`Cảnh báo: Hành động này sẽ xóa vĩnh viễn tài khoản người dùng ${deleteTarget?.email} khỏi cơ sở dữ liệu và Supabase Auth. Dữ liệu tiến trình học và các tương tác của họ cũng sẽ bị mất.`}
-        onConfirm={handleDelete}
-        onCancel={() => setDeleteTarget(null)}
-        loading={deleting}
-      />
     </div>
   );
 }
@@ -269,3 +214,16 @@ const TD_STYLE = {
   color: '#475569',
   fontSize: 14
 };
+
+const INLINE_SELECT_STYLE = {
+  padding: '6px 10px',
+  borderRadius: 8,
+  border: '1px solid #cbd5e1',
+  background: '#ffffff',
+  fontSize: 13,
+  fontWeight: 600,
+  color: '#334155',
+  outline: 'none',
+  cursor: 'pointer'
+};
+
