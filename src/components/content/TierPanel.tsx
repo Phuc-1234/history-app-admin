@@ -413,15 +413,9 @@ export function TierPanel({ onToast }: TierPanelProps) {
           </div>
 
           {/* XP Threshold */}
-          <Input
-            label="Ngưỡng XP yêu cầu"
-            type="number"
-            min="0"
-            placeholder="0"
-            value={form.xpThreshold}
-            onChange={(e) => setForm(prev => ({ ...prev, xpThreshold: e.target.value }))}
-            hint="Số điểm XP tối thiểu để người dùng đạt danh hiệu này"
-          />
+          <div style={{ fontSize: 14, fontWeight: 600, color: '#334155' }}>
+            Mốc XP: {form.xpThreshold}
+          </div>
 
           {/* Description */}
           <div>
