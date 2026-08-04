@@ -6,7 +6,7 @@ import type { ToastType } from '../../hooks/useToast';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
-import { Input, Select } from '../ui/FormField';
+import { Select } from '../ui/FormField';
 import { Spinner } from '../ui/Spinner';
 import { Badge } from '../ui/Badge';
 import { IconEdit, IconDelete, IconUser, IconXP, IconGold } from '../ui/Icons';
@@ -18,9 +18,6 @@ interface UserPanelProps {
 const EMPTY_FORM = {
   role: 'STUDENT',
   isHidden: false,
-  isVerified: false,
-  totalXp: '0',
-  totalGold: '0'
 };
 
 export function UserPanel({ onToast }: UserPanelProps) {
@@ -62,9 +59,6 @@ export function UserPanel({ onToast }: UserPanelProps) {
     setForm({
       role: u.role,
       isHidden: u.isHidden,
-      isVerified: u.isVerified,
-      totalXp: String(u.totalXp),
-      totalGold: String(u.totalGold)
     });
     setModalOpen(true);
   };
@@ -76,9 +70,6 @@ export function UserPanel({ onToast }: UserPanelProps) {
       await client.patch(`/api/admin/users/${editUser.id}`, {
         role: form.role,
         isHidden: form.isHidden,
-        isVerified: form.isVerified,
-        totalXp: Number(form.totalXp),
-        totalGold: Number(form.totalGold)
       });
       onToast(`Đã cập nhật người dùng ${editUser.name}`, 'success');
       setModalOpen(false);
@@ -237,28 +228,11 @@ export function UserPanel({ onToast }: UserPanelProps) {
           <option value="SUPER_ADMIN">SUPER_ADMIN — Quản trị cấp tối cao</option>
         </Select>
 
-        <div style={{ display: 'flex', gap: 16, marginBottom: 16 }}>
-          <div style={{ flex: 1 }}>
-            <Select label="Ẩn tài khoản" value={form.isHidden ? 'true' : 'false'} onChange={(e) => setForm((f) => ({ ...f, isHidden: e.target.value === 'true' }))}>
-              <option value="false">Không ẩn (Hiển thị)</option>
-              <option value="true">Ẩn tài khoản</option>
-            </Select>
-          </div>
-          <div style={{ flex: 1 }}>
-            <Select label="Xác thực email" value={form.isVerified ? 'true' : 'false'} onChange={(e) => setForm((f) => ({ ...f, isVerified: e.target.value === 'true' }))}>
-              <option value="false">Chưa xác thực</option>
-              <option value="true">Đã xác thực</option>
-            </Select>
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', gap: 16, marginBottom: 20 }}>
-          <div style={{ flex: 1 }}>
-            <Input label="Tổng điểm XP" type="number" value={form.totalXp} onChange={(e) => setForm((f) => ({ ...f, totalXp: e.target.value }))} />
-          </div>
-          <div style={{ flex: 1 }}>
-            <Input label="Tổng số Vàng" type="number" value={form.totalGold} onChange={(e) => setForm((f) => ({ ...f, totalGold: e.target.value }))} />
-          </div>
+        <div style={{ marginBottom: 20 }}>
+          <Select label="Trạng thái hiển thị" value={form.isHidden ? 'true' : 'false'} onChange={(e) => setForm((f) => ({ ...f, isHidden: e.target.value === 'true' }))}>
+            <option value="false">Hiển thị (Normal)</option>
+            <option value="true">Ẩn tài khoản (Hidden)</option>
+          </Select>
         </div>
 
         <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
