@@ -268,10 +268,10 @@ export function TestPresetPanel({ onToast }: TestPresetPanelProps) {
                     </td>
                     <td style={TD_STYLE}>
                       <div style={{ fontSize: 13, color: '#475569', display: 'flex', gap: 8 }}>
-                        <span style={{ background: '#f1f5f9', padding: '2px 6px', borderRadius: 4 }}>L1: {r['1'] ?? 40}%</span>
-                        <span style={{ background: '#e0e7ff', padding: '2px 6px', borderRadius: 4 }}>L2: {r['2'] ?? 30}%</span>
-                        <span style={{ background: '#fef3c7', padding: '2px 6px', borderRadius: 4 }}>L3: {r['3'] ?? 20}%</span>
-                        <span style={{ background: '#fee2e2', padding: '2px 6px', borderRadius: 4 }}>L4: {r['4'] ?? 10}%</span>
+                        <span style={{ background: '#f1f5f9', padding: '2px 6px', borderRadius: 4 }}>Mức độ 1: {r['1'] ?? 40}%</span>
+                        <span style={{ background: '#e0e7ff', padding: '2px 6px', borderRadius: 4 }}>Mức độ 2: {r['2'] ?? 30}%</span>
+                        <span style={{ background: '#fef3c7', padding: '2px 6px', borderRadius: 4 }}>Mức độ 3: {r['3'] ?? 20}%</span>
+                        <span style={{ background: '#fee2e2', padding: '2px 6px', borderRadius: 4 }}>Mức độ 4: {r['4'] ?? 10}%</span>
                       </div>
                     </td>
                     <td style={{ ...TD_STYLE, textAlign: 'right' }}>
@@ -308,10 +308,10 @@ export function TestPresetPanel({ onToast }: TestPresetPanelProps) {
         <div style={{ background: '#f8fafc', padding: 14, borderRadius: 10, border: '1px solid #e2e8f0', marginBottom: 16 }}>
           <span style={{ fontSize: 13, fontWeight: 700, color: '#334155', display: 'block', marginBottom: 10 }}>Cấu trúc tỉ lệ độ khó câu hỏi (Tổng bằng 100%)</span>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
-            <Input label="Lớp 1 (%)" type="number" value={presetForm.ratio1} onChange={(e) => setPresetForm(f => ({ ...f, ratio1: e.target.value }))} />
-            <Input label="Lớp 2 (%)" type="number" value={presetForm.ratio2} onChange={(e) => setPresetForm(f => ({ ...f, ratio2: e.target.value }))} />
-            <Input label="Lớp 3 (%)" type="number" value={presetForm.ratio3} onChange={(e) => setPresetForm(f => ({ ...f, ratio3: e.target.value }))} />
-            <Input label="Lớp 4 (%)" type="number" value={presetForm.ratio4} onChange={(e) => setPresetForm(f => ({ ...f, ratio4: e.target.value }))} />
+            <Input label="Mức độ 1 (%)" type="number" value={presetForm.ratio1} onChange={(e) => setPresetForm(f => ({ ...f, ratio1: e.target.value }))} />
+            <Input label="Mức độ 2 (%)" type="number" value={presetForm.ratio2} onChange={(e) => setPresetForm(f => ({ ...f, ratio2: e.target.value }))} />
+            <Input label="Mức độ 3 (%)" type="number" value={presetForm.ratio3} onChange={(e) => setPresetForm(f => ({ ...f, ratio3: e.target.value }))} />
+            <Input label="Mức độ 4 (%)" type="number" value={presetForm.ratio4} onChange={(e) => setPresetForm(f => ({ ...f, ratio4: e.target.value }))} />
           </div>
         </div>
 

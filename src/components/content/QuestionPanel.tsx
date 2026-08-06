@@ -1235,10 +1235,10 @@ export function QuestionPanel({ onToast }: QuestionPanelProps) {
                         value={qItem.difficulty}
                         onChange={(e) => updateQuestionField(qIdx, 'difficulty', e.target.value)}
                       >
-                        <option value="1">Lớp 1 (Nhận biết)</option>
-                        <option value="2">Lớp 2 (Thông hiểu)</option>
-                        <option value="3">Lớp 3 (Vận dụng)</option>
-                        <option value="4">Lớp 4 (Vận dụng cao)</option>
+                        <option value="1">Mức độ 1 (Nhận biết)</option>
+                        <option value="2">Mức độ 2 (Thông hiểu)</option>
+                        <option value="3">Mức độ 3 (Vận dụng)</option>
+                        <option value="4">Mức độ 4 (Vận dụng cao)</option>
                       </Select>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: 6 }}>
