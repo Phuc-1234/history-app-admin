@@ -10,7 +10,8 @@ import { Input, Select } from '../ui/FormField';
 import { ImageUploadInput } from '../ui/ImageUploadInput';
 import { RichTextEditor } from '../ui/RichTextEditor';
 import { Spinner } from '../ui/Spinner';
-import { IconPlus, IconEdit, IconDelete, IconLesson } from '../ui/Icons';
+import { IconPlus, IconEdit, IconDelete, IconLesson, IconMindMap } from '../ui/Icons';
+import flashcardIcon from '../../assets/flashcard_ic.png';
 import type { TabId, NavParams } from '../../pages/DashboardPage';
 
 interface LessonPanelProps {
@@ -265,12 +266,12 @@ export function LessonPanel({ onToast, navParams, onNavigate }: LessonPanelProps
                     )}
                   </Td>
                   <Td align="right">
-                    <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-                      <Button variant="secondary" onClick={() => onNavigate?.('sections', { gradeId: selectedGradeId, topicId: selectedTopicId, lessonId: l.id })} style={{ padding: '6px 14px', fontSize: 13, borderColor: '#6c63ff', color: '#6c63ff' }}>Nội dung</Button>
-                      <Button variant="secondary" onClick={() => onNavigate?.('mindmaps', { gradeId: selectedGradeId, topicId: selectedTopicId, lessonId: l.id })} style={{ padding: '6px 14px', fontSize: 13, borderColor: '#0284c7', color: '#0284c7' }}>Sơ đồ</Button>
-                      <Button variant="secondary" onClick={() => onNavigate?.('flashcards', { gradeId: selectedGradeId, topicId: selectedTopicId, lessonId: l.id, sectionId: null, nodeId: null })} style={{ padding: '6px 14px', fontSize: 13, borderColor: '#ec4899', color: '#ec4899' }}>Thẻ ghi nhớ</Button>
-                      <Button variant="secondary" icon={<IconEdit size={14} />} onClick={() => openEdit(l)} style={{ padding: '6px 14px', fontSize: 13 }}>Sửa</Button>
-                      <Button variant="danger" icon={<IconDelete size={14} />} onClick={() => setDeleteTarget(l)} style={{ padding: '6px 14px', fontSize: 13 }}>Xóa</Button>
+                    <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', alignItems: 'center', whiteSpace: 'nowrap' }}>
+                      <Button variant="secondary" onClick={() => onNavigate?.('sections', { gradeId: selectedGradeId, topicId: selectedTopicId, lessonId: l.id })} style={{ padding: '6px 12px', fontSize: 13, borderColor: '#6c63ff', color: '#6c63ff', borderRadius: 30 }}>Nội dung</Button>
+                      <Button variant="secondary" title="Sơ đồ tư duy" aria-label="Sơ đồ tư duy" icon={<IconMindMap size={16} color="#0284c7" />} onClick={() => onNavigate?.('mindmaps', { gradeId: selectedGradeId, topicId: selectedTopicId, lessonId: l.id })} style={{ padding: '6px 10px', fontSize: 13, borderColor: '#0284c7', color: '#0284c7', borderRadius: 30 }} />
+                      <Button variant="secondary" title="Thẻ ghi nhớ" aria-label="Thẻ ghi nhớ" icon={<img src={flashcardIcon} alt="Thẻ ghi nhớ" style={{ width: 16, height: 16, objectFit: 'contain' }} />} onClick={() => onNavigate?.('flashcards', { gradeId: selectedGradeId, topicId: selectedTopicId, lessonId: l.id, sectionId: null, nodeId: null })} style={{ padding: '6px 10px', fontSize: 13, borderColor: '#ec4899', color: '#ec4899', borderRadius: 30 }} />
+                      <Button variant="secondary" icon={<IconEdit size={14} />} onClick={() => openEdit(l)} style={{ padding: '6px 12px', fontSize: 13, borderRadius: 30 }}>Sửa</Button>
+                      <Button variant="danger" icon={<IconDelete size={14} />} onClick={() => setDeleteTarget(l)} style={{ padding: '6px 12px', fontSize: 13, borderRadius: 30 }}>Xóa</Button>
                     </div>
                   </Td>
                 </tr>

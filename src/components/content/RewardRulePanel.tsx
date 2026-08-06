@@ -16,11 +16,11 @@ interface RewardRulePanelProps {
 
 const TRIGGER_TYPES: { value: RewardTriggerType; label: string; desc: string }[] = [
   { value: 'MANUAL_TEST_COMPLETE', label: 'Làm đề thi cụ thể', desc: 'Quy tắc áp dụng khi hoàn thành đề thi có ID cụ thể.' },
-  { value: 'AUTO_NODE_TEST_COMPLETE', label: 'Tự động (Thẻ kiến thức)', desc: 'Áp dụng cho bài kiểm tra tự động của Thẻ kiến thức (Node).' },
-  { value: 'AUTO_SECTION_TEST_COMPLETE', label: 'Tự động (Phần học)', desc: 'Áp dụng cho bài kiểm tra tự động của Phần học (Section).' },
-  { value: 'AUTO_LESSON_TEST_COMPLETE', label: 'Tự động (Bài học)', desc: 'Áp dụng cho bài kiểm tra tự động của Bài học (Lesson).' },
-  { value: 'AUTO_TOPIC_TEST_COMPLETE', label: 'Tự động (Chủ đề)', desc: 'Áp dụng cho bài kiểm tra tự động của Chủ đề (Topic).' },
-  { value: 'AUTO_GRADE_TEST_COMPLETE', label: 'Tự động (Khối lớp)', desc: 'Áp dụng cho bài kiểm tra tự động của Khối lớp (Grade).' },
+  { value: 'AUTO_NODE_TEST_COMPLETE', label: 'Đề tự sinh (thẻ kiến thức)', desc: 'Áp dụng cho bài kiểm tra đề tự sinh của Thẻ kiến thức (Node).' },
+  { value: 'AUTO_SECTION_TEST_COMPLETE', label: 'Đề tự sinh (phần học)', desc: 'Áp dụng cho bài kiểm tra đề tự sinh của Phần học (Section).' },
+  { value: 'AUTO_LESSON_TEST_COMPLETE', label: 'Đề tự sinh (bài học)', desc: 'Áp dụng cho bài kiểm tra đề tự sinh của Bài học (Lesson).' },
+  { value: 'AUTO_TOPIC_TEST_COMPLETE', label: 'Đề tự sinh (chủ đề)', desc: 'Áp dụng cho bài kiểm tra đề tự sinh của Chủ đề (Topic).' },
+  { value: 'AUTO_GRADE_TEST_COMPLETE', label: 'Đề tự sinh (khối lớp)', desc: 'Áp dụng cho bài kiểm tra đề tự sinh của Khối lớp (Grade).' },
   { value: 'AUTO_PERSONAL_PRACTICE_COMPLETE', label: 'Luyện tập cá nhân', desc: 'Áp dụng cho bài luyện tập cá nhân tự động (Personal Practice).' },
   { value: 'AUTO_WRONG_PRACTICE_COMPLETE', label: 'Luyện tập câu sai', desc: 'Áp dụng cho bài luyện tập các câu trả lời sai (Wrong Practice).' },
   { value: 'STREAK_REACHED', label: 'Đạt chuỗi ngày học', desc: 'Áp dụng khi người dùng đạt cột mốc chuỗi ngày học liên tục.' },
@@ -29,11 +29,11 @@ const TRIGGER_TYPES: { value: RewardTriggerType; label: string; desc: string }[]
 
 const TRIGGER_LABELS: Record<RewardTriggerType, string> = {
   MANUAL_TEST_COMPLETE: 'Đề thi cụ thể',
-  AUTO_NODE_TEST_COMPLETE: 'Tự động (Thẻ kiến thức)',
-  AUTO_SECTION_TEST_COMPLETE: 'Tự động (Phần học)',
-  AUTO_LESSON_TEST_COMPLETE: 'Tự động (Bài học)',
-  AUTO_TOPIC_TEST_COMPLETE: 'Tự động (Chủ đề)',
-  AUTO_GRADE_TEST_COMPLETE: 'Tự động (Khối lớp)',
+  AUTO_NODE_TEST_COMPLETE: 'Đề tự sinh (thẻ kiến thức)',
+  AUTO_SECTION_TEST_COMPLETE: 'Đề tự sinh (phần học)',
+  AUTO_LESSON_TEST_COMPLETE: 'Đề tự sinh (bài học)',
+  AUTO_TOPIC_TEST_COMPLETE: 'Đề tự sinh (chủ đề)',
+  AUTO_GRADE_TEST_COMPLETE: 'Đề tự sinh (khối lớp)',
   AUTO_PERSONAL_PRACTICE_COMPLETE: 'Luyện tập cá nhân',
   AUTO_WRONG_PRACTICE_COMPLETE: 'Luyện tập câu sai',
   STREAK_REACHED: 'Chuỗi ngày học',
@@ -345,12 +345,12 @@ export function RewardRulePanel({ onToast }: RewardRulePanelProps) {
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 14 }}>
             <thead>
               <tr style={{ background: '#f8fafc', borderBottom: '1px solid #f1f5f9' }}>
-                <th style={{ padding: '16px 20px', fontWeight: 600, color: '#475569', width: 60 }}>ID</th>
-                <th style={{ padding: '16px 20px', fontWeight: 600, color: '#475569' }}>Loại hoạt động</th>
-                <th style={{ padding: '16px 20px', fontWeight: 600, color: '#475569' }}>Mục tiêu (Target ID)</th>
-                <th style={{ padding: '16px 20px', fontWeight: 600, color: '#475569', width: 140 }}>Lượt áp dụng</th>
-                <th style={{ padding: '16px 20px', fontWeight: 600, color: '#475569', width: 120 }}>Phần thưởng</th>
-                <th style={{ padding: '16px 20px', fontWeight: 600, color: '#475569', width: 100, textAlign: 'right' }}>Thao tác</th>
+                <th style={{ padding: '16px 20px', fontWeight: 600, color: '#475569', width: 60, whiteSpace: 'nowrap' }}>ID</th>
+                <th style={{ padding: '16px 20px', fontWeight: 600, color: '#475569', whiteSpace: 'nowrap' }}>Loại hoạt động</th>
+                <th style={{ padding: '16px 20px', fontWeight: 600, color: '#475569', whiteSpace: 'nowrap' }}>Mục tiêu (Target ID)</th>
+                <th style={{ padding: '16px 20px', fontWeight: 600, color: '#475569', width: 140, whiteSpace: 'nowrap' }}>Lượt áp dụng</th>
+                <th style={{ padding: '16px 20px', fontWeight: 600, color: '#475569', width: 180, whiteSpace: 'nowrap' }}>Phần thưởng</th>
+                <th style={{ padding: '16px 20px', fontWeight: 600, color: '#475569', width: 100, textAlign: 'right', whiteSpace: 'nowrap' }}>Thao tác</th>
               </tr>
             </thead>
             <tbody>
