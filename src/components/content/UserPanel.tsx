@@ -5,6 +5,7 @@ import type { AdminUserDto } from '../../types/api';
 import type { ToastType } from '../../hooks/useToast';
 import { Spinner } from '../ui/Spinner';
 import { IconUser, IconXP, IconGold } from '../ui/Icons';
+import { UserStreakCalendarModal } from './UserStreakCalendarModal';
 
 interface UserPanelProps {
   onToast: (msg: string, type: ToastType) => void;
@@ -13,6 +14,7 @@ interface UserPanelProps {
 export function UserPanel({ onToast }: UserPanelProps) {
   const [users, setUsers] = useState<AdminUserDto[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedUserForCalendar, setSelectedUserForCalendar] = useState<{ id: string; name: string } | null>(null);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
 
@@ -132,7 +134,21 @@ export function UserPanel({ onToast }: UserPanelProps) {
             </thead>
             <tbody>
               {users.map((u, idx) => (
-                <tr key={u.id} style={{ background: idx % 2 === 0 ? '#ffffff' : '#fafbff', borderTop: '1px solid #f1f5f9' }}>
+                <tr
+                  key={u.id}
+                  className="clickable-row"
+                  style={{
+                    background: idx % 2 === 0 ? '#ffffff' : '#fafbff',
+                    borderTop: '1px solid #f1f5f9'
+                  }}
+                  onClick={(e) => {
+                    const target = e.target as HTMLElement;
+                    if (target.tagName === 'SELECT' || target.tagName === 'OPTION' || target.closest('select')) {
+                      return;
+                    }
+                    setSelectedUserForCalendar({ id: u.id, name: u.name ?? 'Người dùng' });
+                  }}
+                >
                   <td style={TD_STYLE}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <div style={{
@@ -194,6 +210,15 @@ export function UserPanel({ onToast }: UserPanelProps) {
             </tbody>
           </table>
         </div>
+      )}
+
+      {selectedUserForCalendar && (
+        <UserStreakCalendarModal
+          open={!!selectedUserForCalendar}
+          userId={selectedUserForCalendar.id}
+          userName={selectedUserForCalendar.name}
+          onClose={() => setSelectedUserForCalendar(null)}
+        />
       )}
     </div>
   );

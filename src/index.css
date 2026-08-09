@@ -129,3 +129,14 @@ a, select, input {
   max-width: 50%;
 }
 
+.clickable-row {
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.1s;
+}
+.clickable-row:hover {
+  background-color: #f1f5f9 !important;
+}
+.clickable-row:active {
+  transform: scale(0.998);
+}
+
