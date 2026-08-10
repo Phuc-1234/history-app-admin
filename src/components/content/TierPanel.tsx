@@ -70,11 +70,11 @@ export function TierPanel({ onToast }: TierPanelProps) {
     fetchItemDefs();
   }, [fetchTiers, fetchItemDefs]);
 
-  const openCreate = () => {
-    setEditTier(null);
-    setForm(EMPTY_FORM);
-    setModalOpen(true);
-  };
+  // const openCreate = () => {
+  //   setEditTier(null);
+  //   setForm(EMPTY_FORM);
+  //   setModalOpen(true);
+  // };
 
   const openEdit = (tier: TierDto) => {
     setEditTier(tier);
@@ -219,9 +219,9 @@ export function TierPanel({ onToast }: TierPanelProps) {
             Quản lý các cấp độ danh hiệu người dùng đạt được dựa trên tổng XP, và thiết lập phần thưởng khi đạt hạng.
           </p>
         </div>
-        <Button variant="primary" icon={<IconPlus size={18} />} onClick={openCreate}>
+        {/* <Button variant="primary" icon={<IconPlus size={18} />} onClick={openCreate}>
           Thêm danh hiệu mới
-        </Button>
+        </Button> */}
       </div>
 
       {/* Search */}
@@ -363,7 +363,7 @@ export function TierPanel({ onToast }: TierPanelProps) {
                         >
                           <IconEdit size={14} />
                         </button>
-                        <button
+                        {/* <button
                           onClick={() => setDeleteTarget(tier)}
                           style={{
                             background: '#f8fafc', border: '1px solid #e2e8f0', color: '#475569',
@@ -373,7 +373,7 @@ export function TierPanel({ onToast }: TierPanelProps) {
                           title="Xóa"
                         >
                           <IconDelete size={14} />
-                        </button>
+                        </button> */}
                       </div>
                     </td>
                   </tr>

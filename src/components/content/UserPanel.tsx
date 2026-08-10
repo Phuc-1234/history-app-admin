@@ -4,8 +4,8 @@ import client from '../../api/client';
 import type { AdminUserDto } from '../../types/api';
 import type { ToastType } from '../../hooks/useToast';
 import { Spinner } from '../ui/Spinner';
-import { IconUser, IconXP, IconGold } from '../ui/Icons';
-import { UserStreakCalendarModal } from './UserStreakCalendarModal';
+import { IconUser, IconXP, IconGold, IconEdit } from '../ui/Icons';
+import { UserEditModal } from './UserEditModal';
 
 interface UserPanelProps {
   onToast: (msg: string, type: ToastType) => void;
@@ -14,7 +14,7 @@ interface UserPanelProps {
 export function UserPanel({ onToast }: UserPanelProps) {
   const [users, setUsers] = useState<AdminUserDto[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedUserForCalendar, setSelectedUserForCalendar] = useState<{ id: string; name: string } | null>(null);
+  const [selectedUserForEdit, setSelectedUserForEdit] = useState<AdminUserDto | null>(null);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
 
@@ -44,6 +44,7 @@ export function UserPanel({ onToast }: UserPanelProps) {
     try {
       await client.patch(`/api/admin/users/${userId}`, { role: newRole });
       setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, role: newRole as any } : u)));
+      setSelectedUserForEdit((prev) => prev && prev.id === userId ? { ...prev, role: newRole } : prev);
       onToast('Đã cập nhật vai trò', 'success');
     } catch (err: any) {
       onToast(err?.response?.data?.error ?? 'Lỗi khi cập nhật vai trò', 'error');
@@ -54,6 +55,7 @@ export function UserPanel({ onToast }: UserPanelProps) {
     try {
       await client.patch(`/api/admin/users/${userId}`, { isHidden });
       setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, isHidden } : u)));
+      setSelectedUserForEdit((prev) => prev && prev.id === userId ? { ...prev, isHidden } : prev);
       onToast('Đã cập nhật trạng thái hiển thị', 'success');
     } catch (err: any) {
       onToast(err?.response?.data?.error ?? 'Lỗi khi cập nhật trạng thái', 'error');
@@ -126,27 +128,20 @@ export function UserPanel({ onToast }: UserPanelProps) {
             <thead>
               <tr style={{ background: 'linear-gradient(135deg, rgba(108,99,255,0.06), rgba(79,70,229,0.03))' }}>
                 <th style={TH_STYLE}>Người dùng</th>
-                <th style={TH_STYLE}>Email</th>
+                <th style={{ ...TH_STYLE, width: 220 }}>Email</th>
                 <th style={TH_STYLE}>Vai trò</th>
                 <th style={TH_STYLE}>XP / Vàng</th>
                 <th style={TH_STYLE}>Trạng thái</th>
+                <th style={TH_STYLE}>Hành động</th>
               </tr>
             </thead>
             <tbody>
               {users.map((u, idx) => (
                 <tr
                   key={u.id}
-                  className="clickable-row"
                   style={{
                     background: idx % 2 === 0 ? '#ffffff' : '#fafbff',
                     borderTop: '1px solid #f1f5f9'
-                  }}
-                  onClick={(e) => {
-                    const target = e.target as HTMLElement;
-                    if (target.tagName === 'SELECT' || target.tagName === 'OPTION' || target.closest('select')) {
-                      return;
-                    }
-                    setSelectedUserForCalendar({ id: u.id, name: u.name ?? 'Người dùng' });
                   }}
                 >
                   <td style={TD_STYLE}>
@@ -162,17 +157,26 @@ export function UserPanel({ onToast }: UserPanelProps) {
                       <span style={{ fontWeight: 600, color: '#0f172a' }}>{u.name}</span>
                     </div>
                   </td>
-                  <td style={TD_STYLE}>{u.email}</td>
+                  <td style={{
+                    ...TD_STYLE,
+                    maxWidth: 220,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap'
+                  }} title={u.email}>
+                    {u.email}
+                  </td>
                   <td style={TD_STYLE}>
-                    <select
-                      value={u.role}
-                      onChange={(e) => handleRoleChange(u.id, e.target.value)}
-                      style={INLINE_SELECT_STYLE}
-                    >
-                      <option value="STUDENT">STUDENT</option>
-                      <option value="ADMIN">ADMIN</option>
-                      <option value="SUPER_ADMIN">SUPER_ADMIN</option>
-                    </select>
+                    <span style={{
+                      padding: '4px 8px',
+                      borderRadius: 6,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      background: u.role === 'SUPER_ADMIN' ? '#f5f3ff' : u.role === 'ADMIN' ? '#eff6ff' : '#f1f5f9',
+                      color: u.role === 'SUPER_ADMIN' ? '#7c3aed' : u.role === 'ADMIN' ? '#2563eb' : '#475569'
+                    }}>
+                      {u.role}
+                    </span>
                   </td>
                   <td style={TD_STYLE}>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: '#2563eb', fontWeight: 600 }}>
@@ -185,25 +189,46 @@ export function UserPanel({ onToast }: UserPanelProps) {
                   </td>
                   <td style={TD_STYLE}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <select
-                        value={u.isHidden ? 'true' : 'false'}
-                        onChange={(e) => handleVisibilityChange(u.id, e.target.value === 'true')}
-                        style={{
-                          ...INLINE_SELECT_STYLE,
-                          color: u.isHidden ? '#ef4444' : '#16a34a',
-                          borderColor: u.isHidden ? '#fca5a5' : '#86efac',
-                          background: u.isHidden ? '#fef2f2' : '#f0fdf4'
-                        }}
-                      >
-                        <option value="false">Hiển thị</option>
-                        <option value="true">Bị ẩn</option>
-                      </select>
+                      <span style={{
+                        padding: '4px 8px',
+                        borderRadius: 6,
+                        fontSize: 12,
+                        fontWeight: 600,
+                        background: u.isHidden ? '#fef2f2' : '#f0fdf4',
+                        color: u.isHidden ? '#ef4444' : '#16a34a'
+                      }}>
+                        {u.isHidden ? 'Bị ẩn' : 'Hiển thị'}
+                      </span>
                       {u.isVerified ? (
                         <span style={{ background: '#dcfce7', color: '#15803d', fontSize: 11, padding: '2px 6px', borderRadius: 6, fontWeight: 600 }}>✓ Đã xác thực</span>
                       ) : (
                         <span style={{ background: '#f1f5f9', color: '#64748b', fontSize: 11, padding: '2px 6px', borderRadius: 6, fontWeight: 600 }}>Chưa xác thực</span>
                       )}
                     </div>
+                  </td>
+                  <td style={TD_STYLE}>
+                    <button
+                      onClick={() => setSelectedUserForEdit(u)}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        background: 'linear-gradient(135deg, #6c63ff, #4f46e5)',
+                        border: 'none',
+                        color: '#ffffff',
+                        padding: '6px 12px',
+                        borderRadius: 8,
+                        fontSize: 13,
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        boxShadow: '0 2px 8px rgba(108,99,255,0.15)'
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-1px)')}
+                      onMouseLeave={(e) => (e.currentTarget.style.transform = 'none')}
+                    >
+                      <IconEdit size={14} color="#ffffff" />
+                      Sửa
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -212,12 +237,13 @@ export function UserPanel({ onToast }: UserPanelProps) {
         </div>
       )}
 
-      {selectedUserForCalendar && (
-        <UserStreakCalendarModal
-          open={!!selectedUserForCalendar}
-          userId={selectedUserForCalendar.id}
-          userName={selectedUserForCalendar.name}
-          onClose={() => setSelectedUserForCalendar(null)}
+      {selectedUserForEdit && (
+        <UserEditModal
+          open={!!selectedUserForEdit}
+          user={selectedUserForEdit}
+          onClose={() => setSelectedUserForEdit(null)}
+          onRoleChange={handleRoleChange}
+          onVisibilityChange={handleVisibilityChange}
         />
       )}
     </div>
