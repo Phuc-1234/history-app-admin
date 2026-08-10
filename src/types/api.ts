@@ -72,6 +72,7 @@ export interface AdminUserDto {
   profileImgUrl: string | null;
   currentStreak: number;
   highestStreak: number;
+  lastXpGainedAt: string | null;
 }
 
 export interface AdminVideoDto {

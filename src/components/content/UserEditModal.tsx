@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import client from '../../api/client';
 import { Modal } from '../ui/Modal';
 import { Spinner } from '../ui/Spinner';
+import { Button } from '../ui/Button';
 import type { AdminUserDto } from '../../types/api';
 import { IconXP, IconGold, IconFlame, IconChevronDown } from '../ui/Icons';
 
@@ -9,8 +10,7 @@ interface UserEditModalProps {
   open: boolean;
   user: AdminUserDto | null;
   onClose: () => void;
-  onRoleChange: (userId: string, newRole: string) => Promise<void>;
-  onVisibilityChange: (userId: string, isHidden: boolean) => Promise<void>;
+  onSave: (userId: string, role: string, isHidden: boolean) => Promise<void>;
 }
 
 interface DailyXpEntry {
@@ -27,6 +27,17 @@ interface CalendarData {
 const WEEK_HEADERS = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
 const MONTHS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 const YEARS = Array.from({ length: 31 }, (_, i) => 2020 + i);
+
+function isStreakGainedToday(lastXpGainedAt: string | null | undefined): boolean {
+  if (!lastXpGainedAt) return false;
+  try {
+    const lastDateStr = new Date(lastXpGainedAt).toISOString().slice(0, 10);
+    const todayStr = new Date().toISOString().slice(0, 10);
+    return lastDateStr === todayStr;
+  } catch {
+    return false;
+  }
+}
 
 function getFlameStyle(xp: number) {
   if (xp <= 0) {
@@ -77,11 +88,11 @@ export function UserEditModal({
   open,
   user,
   onClose,
-  onRoleChange,
-  onVisibilityChange
+  onSave
 }: UserEditModalProps) {
-  const [updatingRole, setUpdatingRole] = useState(false);
-  const [updatingVisibility, setUpdatingVisibility] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<string>('');
+  const [selectedIsHidden, setSelectedIsHidden] = useState<boolean>(false);
+  const [saving, setSaving] = useState(false);
 
   // Calendar States
   const today = new Date();
@@ -89,6 +100,13 @@ export function UserEditModal({
   const [month, setMonth] = useState(today.getMonth() + 1);
   const [calendarLoading, setCalendarLoading] = useState(false);
   const [calendarData, setCalendarData] = useState<CalendarData | null>(null);
+
+  useEffect(() => {
+    if (user) {
+      setSelectedRole(user.role);
+      setSelectedIsHidden(user.isHidden);
+    }
+  }, [user]);
 
   useEffect(() => {
     if (open && user?.id) {
@@ -121,21 +139,21 @@ export function UserEditModal({
 
   if (!user) return null;
 
-  const handleRoleSelectChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setUpdatingRole(true);
-    try {
-      await onRoleChange(user.id, e.target.value);
-    } finally {
-      setUpdatingRole(false);
-    }
+  const handleRoleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedRole(e.target.value);
   };
 
-  const handleVisibilitySelectChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setUpdatingVisibility(true);
+  const handleVisibilitySelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedIsHidden(e.target.value === 'true');
+  };
+
+  const handleSave = async () => {
+    if (!user) return;
+    setSaving(true);
     try {
-      await onVisibilityChange(user.id, e.target.value === 'true');
+      await onSave(user.id, selectedRole, selectedIsHidden);
     } finally {
-      setUpdatingVisibility(false);
+      setSaving(false);
     }
   };
 
@@ -234,8 +252,8 @@ export function UserEditModal({
             </div>
             <div style={STAT_BOX_STYLE}>
               <span style={STAT_LABEL_STYLE}>Chuỗi hiện tại (Streak)</span>
-              <span style={{ ...STAT_VALUE_STYLE, color: '#ef4444' }}>
-                <IconFlame size={16} color="#ef4444" style={{ marginRight: 6 }} /> {user.currentStreak} ngày
+              <span style={{ ...STAT_VALUE_STYLE, color: user.currentStreak > 0 && isStreakGainedToday(user.lastXpGainedAt) ? '#ef4444' : '#64748b' }}>
+                <IconFlame size={16} color={user.currentStreak > 0 && isStreakGainedToday(user.lastXpGainedAt) ? '#ef4444' : '#cbd5e1'} style={{ marginRight: 6 }} /> {user.currentStreak} ngày
               </span>
             </div>
             <div style={STAT_BOX_STYLE}>
@@ -266,22 +284,18 @@ export function UserEditModal({
               <label style={LABEL_STYLE}>Vai trò người dùng</label>
               <div style={{ position: 'relative' }}>
                 <select
-                  value={user.role}
+                  value={selectedRole}
                   onChange={handleRoleSelectChange}
-                  disabled={updatingRole}
+                  disabled={saving}
                   style={{ ...SELECT_STYLE, paddingRight: 36 }}
                 >
                   <option value="STUDENT">STUDENT (Học sinh)</option>
                   <option value="ADMIN">ADMIN (Quản trị)</option>
                   <option value="SUPER_ADMIN">SUPER_ADMIN (Tối cao)</option>
                 </select>
-                {updatingRole ? (
-                  <span style={SPINNER_STYLE} />
-                ) : (
-                  <span style={CHEVRON_WRAPPER_STYLE}>
-                    <IconChevronDown size={16} color="#64748b" />
-                  </span>
-                )}
+                <span style={CHEVRON_WRAPPER_STYLE}>
+                  <IconChevronDown size={16} color="#64748b" />
+                </span>
               </div>
             </div>
 
@@ -290,27 +304,23 @@ export function UserEditModal({
               <label style={LABEL_STYLE}>Trạng thái hiển thị</label>
               <div style={{ position: 'relative' }}>
                 <select
-                  value={user.isHidden ? 'true' : 'false'}
+                  value={selectedIsHidden ? 'true' : 'false'}
                   onChange={handleVisibilitySelectChange}
-                  disabled={updatingVisibility}
+                  disabled={saving}
                   style={{
                     ...SELECT_STYLE,
                     paddingRight: 36,
-                    color: user.isHidden ? '#ef4444' : '#16a34a',
-                    background: user.isHidden ? '#fef2f2' : '#f0fdf4',
-                    borderColor: user.isHidden ? '#fca5a5' : '#86efac',
+                    color: selectedIsHidden ? '#ef4444' : '#16a34a',
+                    background: selectedIsHidden ? '#fef2f2' : '#f0fdf4',
+                    borderColor: selectedIsHidden ? '#fca5a5' : '#86efac',
                   }}
                 >
                   <option value="false" style={{ color: '#16a34a' }}>Hiển thị công khai</option>
                   <option value="true" style={{ color: '#ef4444' }}>Bị ẩn (Vô hiệu hóa)</option>
                 </select>
-                {updatingVisibility ? (
-                  <span style={SPINNER_STYLE} />
-                ) : (
-                  <span style={CHEVRON_WRAPPER_STYLE}>
-                    <IconChevronDown size={16} color={user.isHidden ? '#ef4444' : '#16a34a'} />
-                  </span>
-                )}
+                <span style={CHEVRON_WRAPPER_STYLE}>
+                  <IconChevronDown size={16} color={selectedIsHidden ? '#ef4444' : '#16a34a'} />
+                </span>
               </div>
             </div>
           </div>
@@ -406,8 +416,8 @@ export function UserEditModal({
                     >
                       <div
                         style={{
-                          width: 26,
-                          height: 26,
+                          width: 28,
+                          height: 28,
                           borderRadius: 8,
                           backgroundColor: flameStyle.bg,
                           display: 'flex',
@@ -417,16 +427,17 @@ export function UserEditModal({
                           position: 'relative',
                           transition: 'transform 0.2s',
                           boxShadow: xp > 0 ? '0 2px 4px rgba(217,119,6,0.1)' : 'none',
+                          gap: 1
                         }}
                         title={xp > 0 ? `${xp} XP gained` : undefined}
                       >
-                        <IconFlame size={10} color={flameStyle.iconColor} style={{ marginTop: 1 }} />
+                        <IconFlame size={10} color={flameStyle.iconColor} style={{ marginTop: 2 }} />
                         <span
                           style={{
                             fontSize: 8,
                             fontWeight: flameStyle.fontWeight as any,
                             color: flameStyle.textColor,
-                            marginTop: -2,
+                            marginBottom: 2,
                             lineHeight: 1
                           }}
                         >
@@ -452,6 +463,12 @@ export function UserEditModal({
               </div>
             )}
           </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 8 }}>
+          <Button variant="ghost" onClick={onClose} disabled={saving}>Hủy</Button>
+          <Button onClick={handleSave} loading={saving}>Lưu thay đổi</Button>
         </div>
       </div>
     </Modal>

@@ -4,8 +4,19 @@ import client from '../../api/client';
 import type { AdminUserDto } from '../../types/api';
 import type { ToastType } from '../../hooks/useToast';
 import { Spinner } from '../ui/Spinner';
-import { IconUser, IconXP, IconGold, IconEdit } from '../ui/Icons';
+import { IconUser, IconXP, IconGold, IconEdit, IconFlame } from '../ui/Icons';
 import { UserEditModal } from './UserEditModal';
+
+function isStreakGainedToday(lastXpGainedAt: string | null | undefined): boolean {
+  if (!lastXpGainedAt) return false;
+  try {
+    const lastDateStr = new Date(lastXpGainedAt).toISOString().slice(0, 10);
+    const todayStr = new Date().toISOString().slice(0, 10);
+    return lastDateStr === todayStr;
+  } catch {
+    return false;
+  }
+}
 
 interface UserPanelProps {
   onToast: (msg: string, type: ToastType) => void;
@@ -40,25 +51,14 @@ export function UserPanel({ onToast }: UserPanelProps) {
     return () => clearTimeout(delayDebounce);
   }, [fetchUsers]);
 
-  const handleRoleChange = async (userId: string, newRole: string) => {
+  const handleSaveUser = async (userId: string, role: string, isHidden: boolean) => {
     try {
-      await client.patch(`/api/admin/users/${userId}`, { role: newRole });
-      setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, role: newRole as any } : u)));
-      setSelectedUserForEdit((prev) => prev && prev.id === userId ? { ...prev, role: newRole } : prev);
-      onToast('Đã cập nhật vai trò', 'success');
+      await client.patch(`/api/admin/users/${userId}`, { role, isHidden });
+      setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, role: role as any, isHidden } : u)));
+      setSelectedUserForEdit(null);
+      onToast('Đã cập nhật thông tin người dùng', 'success');
     } catch (err: any) {
-      onToast(err?.response?.data?.error ?? 'Lỗi khi cập nhật vai trò', 'error');
-    }
-  };
-
-  const handleVisibilityChange = async (userId: string, isHidden: boolean) => {
-    try {
-      await client.patch(`/api/admin/users/${userId}`, { isHidden });
-      setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, isHidden } : u)));
-      setSelectedUserForEdit((prev) => prev && prev.id === userId ? { ...prev, isHidden } : prev);
-      onToast('Đã cập nhật trạng thái hiển thị', 'success');
-    } catch (err: any) {
-      onToast(err?.response?.data?.error ?? 'Lỗi khi cập nhật trạng thái', 'error');
+      onToast(err?.response?.data?.error ?? 'Lỗi khi cập nhật người dùng', 'error');
     }
   };
 
@@ -130,7 +130,7 @@ export function UserPanel({ onToast }: UserPanelProps) {
                 <th style={TH_STYLE}>Người dùng</th>
                 <th style={{ ...TH_STYLE, width: 220 }}>Email</th>
                 <th style={TH_STYLE}>Vai trò</th>
-                <th style={TH_STYLE}>XP / Vàng</th>
+                <th style={TH_STYLE}>XP / Vàng / Streak</th>
                 <th style={TH_STYLE}>Trạng thái</th>
                 <th style={TH_STYLE}>Hành động</th>
               </tr>
@@ -185,6 +185,19 @@ export function UserPanel({ onToast }: UserPanelProps) {
                     <span style={{ margin: '0 6px', color: '#cbd5e1' }}>|</span>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: '#d97706', fontWeight: 600 }}>
                       <IconGold size={14} color="#d97706" /> {u.totalGold}
+                    </span>
+                    <span style={{ margin: '0 6px', color: '#cbd5e1' }}>|</span>
+                    <span 
+                      style={{ 
+                        display: 'inline-flex', 
+                        alignItems: 'center', 
+                        gap: 4, 
+                        color: u.currentStreak > 0 && isStreakGainedToday(u.lastXpGainedAt) ? '#ef4444' : '#64748b', 
+                        fontWeight: 600 
+                      }} 
+                      title={u.currentStreak > 0 && isStreakGainedToday(u.lastXpGainedAt) ? "Đã duy trì chuỗi hôm nay" : "Chưa duy trì chuỗi hôm nay"}
+                    >
+                      <IconFlame size={14} color={u.currentStreak > 0 && isStreakGainedToday(u.lastXpGainedAt) ? '#ef4444' : '#cbd5e1'} /> {u.currentStreak}
                     </span>
                   </td>
                   <td style={TD_STYLE}>
@@ -242,8 +255,7 @@ export function UserPanel({ onToast }: UserPanelProps) {
           open={!!selectedUserForEdit}
           user={selectedUserForEdit}
           onClose={() => setSelectedUserForEdit(null)}
-          onRoleChange={handleRoleChange}
-          onVisibilityChange={handleVisibilityChange}
+          onSave={handleSaveUser}
         />
       )}
     </div>
