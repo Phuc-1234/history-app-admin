@@ -1,6 +1,5 @@
 // src/pages/DashboardPage.tsx
 import { useState, useEffect } from 'react';
-import client from '../api/client';
 import { Sidebar } from '../components/layout/Sidebar';
 import { TopBar } from '../components/layout/TopBar';
 import { GradePanel } from '../components/content/GradePanel';
@@ -20,120 +19,12 @@ import { FeedbackPanel } from '../components/content/FeedbackPanel';
 import { ItemDefinitionPanel } from '../components/content/ItemDefinitionPanel';
 import { PackagePricingPanel } from '../components/content/PackagePricingPanel';
 import { TierPanel } from '../components/content/TierPanel';
+import { OverviewPanel } from '../components/dashboard/OverviewPanel';
 import { ToastContainer } from '../components/ui/Toast';
 import { useAuthStore } from '../store/authStore';
 import { useToast } from '../hooks/useToast';
-import { Spinner } from '../components/ui/Spinner';
-import {
-  IconGrade,
-  IconTopic,
-  IconLesson,
-  IconUser,
-  IconVideo,
-  IconQuestion,
-  IconTest,
-  IconMindMap,
-  IconFlashcard,
-  IconSparkles
-} from '../components/ui/Icons';
 
 export type TabId = 'overview' | 'grades' | 'topics' | 'lessons' | 'sections' | 'nodes' | 'mindmaps' | 'flashcards' | 'users' | 'videos' | 'questions' | 'tests' | 'testpresets' | 'tiers' | 'feedbacks' | 'rewardrules' | 'itemdefinitions' | 'packages';
-
-interface OverviewStats {
-  grades: number;
-  topics: number;
-  lessons: number;
-  sections: number;
-  users: number;
-  videos: number;
-  questions: number;
-  tests: number;
-  flashcards: number;
-  rewardRules: number;
-}
-
-function OverviewPanel() {
-  const [stats, setStats] = useState<OverviewStats | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const res = await client.get('/api/admin/stats');
-        setStats(res.data);
-      } catch {
-        // ignore
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchStats();
-  }, []);
-
-  const statCards = [
-    { icon: IconGrade, label: 'Khối lớp',     value: stats?.grades    ?? '—', accent: '#6c63ff', bg: '#f5f3ff', border: '#ddd6fe' },
-    { icon: IconTopic, label: 'Chủ đề',       value: stats?.topics    ?? '—', accent: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0' },
-    { icon: IconLesson, label: 'Bài học',      value: stats?.lessons   ?? '—', accent: '#d97706', bg: '#fffbeb', border: '#fde68a' },
-    { icon: IconMindMap, label: 'Sơ đồ tư duy', value: stats?.sections  ?? '—', accent: '#0284c7', bg: '#f0f9ff', border: '#bae6fd' },
-    { icon: IconFlashcard, label: 'Thẻ ghi nhớ', value: stats?.flashcards ?? '—', accent: '#ec4899', bg: '#fdf2f8', border: '#fbcfe8' },
-    { icon: IconUser, label: 'Người dùng',    value: stats?.users     ?? '—', accent: '#4f46e5', bg: '#e0e7ff', border: '#c7d2fe' },
-    { icon: IconVideo, label: 'Video bài học',  value: stats?.videos    ?? '—', accent: '#ea580c', bg: '#fff7ed', border: '#ffedd5' },
-    { icon: IconQuestion, label: 'Câu hỏi',       value: stats?.questions ?? '—', accent: '#0d9488', bg: '#f0fdfa', border: '#99f6e4' },
-    { icon: IconTest, label: 'Đề thi',        value: stats?.tests     ?? '—', accent: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe' },
-    { icon: IconSparkles, label: 'Phần thưởng', value: stats?.rewardRules ?? '—', accent: '#d97706', bg: '#fffbeb', border: '#fde68a' },
-  ];
-
-  return (
-    <div>
-      <h2 style={{ margin: '0 0 6px', fontSize: 20, fontWeight: 700, color: '#0f172a' }}>Tổng quan</h2>
-      <p style={{ margin: '0 0 28px', color: '#64748b', fontSize: 14 }}>Thống kê nội dung hiện tại trong hệ thống</p>
-
-      {loading ? (
-        <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}><Spinner size={36} /></div>
-      ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 20, marginBottom: 36 }}>
-          {statCards.map((card) => {
-            const IconComponent = card.icon;
-            return (
-              <div key={card.label} style={{
-                background: card.bg,
-                border: `1px solid ${card.border}`,
-                borderRadius: 20,
-                padding: 24,
-                transition: 'transform 0.2s, box-shadow 0.2s',
-                cursor: 'default',
-              }}
-                onMouseEnter={e => {
-                  (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-3px)';
-                  (e.currentTarget as HTMLDivElement).style.boxShadow = `0 12px 32px ${card.border}88`;
-                }}
-                onMouseLeave={e => {
-                  (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)';
-                  (e.currentTarget as HTMLDivElement).style.boxShadow = 'none';
-                }}
-              >
-                <div style={{
-                  width: 48, height: 48, borderRadius: 14,
-                  background: '#ffffff',
-                  border: `1px solid ${card.border}`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  marginBottom: 16,
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-                }}>
-                  <IconComponent size={24} color={card.accent} />
-                </div>
-                <div style={{ fontSize: 36, fontWeight: 800, color: '#0f172a', lineHeight: 1, marginBottom: 8 }}>
-                  {card.value}
-                </div>
-                <div style={{ fontSize: 14, color: card.accent, fontWeight: 600 }}>{card.label}</div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
 
 export interface NavParams {
   gradeId?: number | null;
@@ -285,10 +176,9 @@ export function DashboardPage() {
           isMobile={isMobile}
           onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
         />
-        <main style={{ 
-          flex: 1, 
-          padding: isMobile ? '20px 16px' : '32px 36px', 
-          maxWidth: 1200,
+        <main style={{
+          flex: 1,
+          padding: isMobile ? '20px 16px' : '32px 36px',
           width: '100%',
           boxSizing: 'border-box',
         }}>

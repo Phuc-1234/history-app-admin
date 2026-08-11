@@ -311,3 +311,76 @@ export interface ProPackageDto {
   updatedAt: string;
 }
 
+// ─── Dashboard / Overview ────────────────────────────────────────────────────
+
+/** Response shape của /api/admin/stats (số đếm tĩnh). */
+export interface OverviewStats {
+  grades: number;
+  topics: number;
+  lessons: number;
+  sections: number;
+  users: number;
+  videos: number;
+  questions: number;
+  tests: number;
+  flashcards: number;
+  rewardRules: number;
+}
+
+/** Các KPI tính từ danh sách user (derived). */
+export interface OverviewDerivedStats {
+  totalUsers: number;
+  totalXp: number;
+  totalGold: number;
+  avgXp: number;
+  avgGold: number;
+  avgStreak: number;
+  verifiedCount: number;
+  verifiedRatio: number; // 0..1
+  activeTodayCount: number; // user có lastXpGainedAt trong hôm nay
+}
+
+/** Một điểm dữ liệu cho biểu đồ hoạt động theo ngày. */
+export interface DailyActivityPoint {
+  date: string; // YYYY-MM-DD
+  label: string; // dd/MM
+  count: number; // số user active ngày đó
+  cumulative: number; // lũy kế trong khoảng
+}
+
+/** Phân bố user theo role cho donut chart. */
+export interface RoleSlice {
+  name: string;
+  value: number;
+}
+
+/** Phân bố user theo nhóm streak cho bar chart. */
+export interface StreakBucket {
+  bucket: string; // "0", "1-7", "8-30", "31+"
+  count: number;
+}
+
+/** Một mục trong Activity Feed (gộp feedback + user gain xp). */
+export interface ActivityItem {
+  id: string;
+  kind: 'feedback' | 'xp_gain';
+  timestamp: number; // epoch ms, dùng để sort
+  title: string;
+  subtitle?: string;
+  accent: string;
+}
+
+/** Toàn bộ dữ liệu đã xử lý cho tab Overview. */
+export interface DashboardData {
+  stats: OverviewStats | null;
+  users: AdminUserDto[];
+  derived: OverviewDerivedStats | null;
+  activitySeries: DailyActivityPoint[]; // mặc định 30 ngày
+  roleSlices: RoleSlice[];
+  streakBuckets: StreakBucket[];
+  topXp: AdminUserDto[];
+  topStreak: AdminUserDto[];
+  topGold: AdminUserDto[];
+  activityFeed: ActivityItem[];
+}
+

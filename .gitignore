@@ -25,3 +25,4 @@ dist-ssr
 *.sw?
 .qldatn-tracker/
 qldatn-reactjs-install_*.mjs
+.zcode/
