@@ -1,5 +1,6 @@
 // src/components/dashboard/ActivityFeed.tsx
 import type { ActivityItem } from '../../types/api';
+import { IconFeedback, IconXP } from '../ui/Icons';
 
 interface ActivityFeedProps {
   items: ActivityItem[];
@@ -60,11 +61,14 @@ export function ActivityFeed({ items }: ActivityFeedProps) {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: 15,
                   flexShrink: 0,
                 }}
               >
-                {item.kind === 'feedback' ? '💬' : '⚡'}
+                {item.kind === 'feedback' ? (
+                  <IconFeedback size={16} color={item.accent} />
+                ) : (
+                  <IconXP size={16} color={item.accent} />
+                )}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 13, fontWeight: 600, color: '#0f172a', lineHeight: 1.3 }}>

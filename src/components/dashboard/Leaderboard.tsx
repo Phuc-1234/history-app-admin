@@ -1,5 +1,7 @@
 // src/components/dashboard/Leaderboard.tsx
+import type { ReactNode } from 'react';
 import type { AdminUserDto } from '../../types/api';
+import { IconXP, IconFlame, IconGold } from '../ui/Icons';
 
 interface LeaderboardProps {
   topXp: AdminUserDto[];
@@ -12,7 +14,7 @@ const MEDAL = ['#f59e0b', '#94a3b8', '#cd7f32']; // vàng / bạc / đồng
 interface BoardProps {
   title: string;
   users: AdminUserDto[];
-  icon: React.ReactNode;
+  icon: ReactNode;
   valueExtractor: (u: AdminUserDto) => string;
 }
 
@@ -77,9 +79,18 @@ function Board({ title, users, icon, valueExtractor }: BoardProps) {
                   fontSize: 12,
                   fontWeight: 700,
                   flexShrink: 0,
+                  overflow: 'hidden',
                 }}
               >
-                {u.name?.[0]?.toUpperCase() ?? '?'}
+                {u.profileImgUrl ? (
+                  <img
+                    src={u.profileImgUrl}
+                    alt={u.name}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                ) : (
+                  u.name?.[0]?.toUpperCase() ?? '?'
+                )}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 13, fontWeight: 600, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -108,19 +119,19 @@ export function Leaderboard({ topXp, topStreak, topGold }: LeaderboardProps) {
         <Board
           title="Top XP"
           users={topXp}
-          icon={<span style={{ fontSize: 16 }}>⚡</span>}
+          icon={<IconXP size={16} color="#4f46e5" />}
           valueExtractor={(u) => `${(u.totalXp || 0).toLocaleString('vi-VN')} XP`}
         />
         <Board
           title="Top chuỗi ngày (streak)"
           users={topStreak}
-          icon={<span style={{ fontSize: 16 }}>🔥</span>}
+          icon={<IconFlame size={16} color="#ea580c" />}
           valueExtractor={(u) => `${u.currentStreak || 0} ngày`}
         />
         <Board
           title="Top Gold"
           users={topGold}
-          icon={<span style={{ fontSize: 16 }}>💰</span>}
+          icon={<IconGold size={16} color="#d97706" />}
           valueExtractor={(u) => `${(u.totalGold || 0).toLocaleString('vi-VN')}`}
         />
       </div>
