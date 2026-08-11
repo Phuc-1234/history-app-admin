@@ -11,6 +11,10 @@ import { Spinner } from '../ui/Spinner';
 import { IconPlus, IconEdit, IconDelete, IconFlashcard, IconMagicWand, IconAlert } from '../ui/Icons';
 import type { TabId, NavParams } from '../../pages/DashboardPage';
 
+export interface SectionWithDepth extends SectionDto {
+  depth: number;
+}
+
 interface FlashcardPanelProps {
   onToast: (msg: string, type: ToastType) => void;
   navParams?: NavParams;
@@ -21,7 +25,7 @@ export function FlashcardPanel({ onToast, navParams, onNavigate: _onNavigate }: 
   const [grades, setGrades] = useState<GradeDto[]>([]);
   const [topics, setTopics] = useState<TopicDto[]>([]);
   const [lessons, setLessons] = useState<LessonDto[]>([]);
-  const [sections, setSections] = useState<SectionDto[]>([]);
+  const [sections, setSections] = useState<SectionWithDepth[]>([]);
   const [nodes, setNodes] = useState<NodeDto[]>([]);
   const [flashcards, setFlashcards] = useState<FlashcardDto[]>([]);
 
@@ -34,7 +38,24 @@ export function FlashcardPanel({ onToast, navParams, onNavigate: _onNavigate }: 
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editCard, setEditCard] = useState<FlashcardDto | null>(null);
-  const [form, setForm] = useState({ frontText: '', backText: '', sectionId: '', nodeId: '' });
+
+  // Form modal scope & inputs
+  const [form, setForm] = useState({
+    frontText: '',
+    backText: '',
+    gradeId: '',
+    topicId: '',
+    lessonId: '',
+    sectionId: '',
+    nodeId: '',
+  });
+
+  // Modal cascade options
+  const [formTopics, setFormTopics] = useState<TopicDto[]>([]);
+  const [formLessons, setFormLessons] = useState<LessonDto[]>([]);
+  const [formSections, setFormSections] = useState<SectionWithDepth[]>([]);
+  const [formNodes, setFormNodes] = useState<NodeDto[]>([]);
+
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<FlashcardDto | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -55,7 +76,6 @@ export function FlashcardPanel({ onToast, navParams, onNavigate: _onNavigate }: 
 
     async function loadCascade() {
       try {
-        // High-speed parallel fetch if targetGradeId & targetTopicId are provided in navParams
         if (targetGradeId && targetTopicId) {
           const [gRes, tRes, lRes] = await Promise.all([
             client.get('/api/content/grades'),
@@ -266,20 +286,20 @@ export function FlashcardPanel({ onToast, navParams, onNavigate: _onNavigate }: 
     client.get(`/api/content/lessons/${selectedLessonId}/tree`).then((r) => {
       const tree = r.data;
       if (tree && tree.sections) {
-        const flatSecs: SectionDto[] = [];
+        const flatSecs: SectionWithDepth[] = [];
         const flatNodes: NodeDto[] = [];
-        const traverse = (sList: SectionDto[]) => {
+        const traverse = (sList: SectionDto[], depth = 0) => {
           for (const s of sList) {
-            flatSecs.push(s);
+            flatSecs.push({ ...s, depth });
             if (s.nodes) {
               flatNodes.push(...s.nodes);
             }
             if (s.children) {
-              traverse(s.children);
+              traverse(s.children, depth + 1);
             }
           }
         };
-        traverse(tree.sections);
+        traverse(tree.sections, 0);
         setSections(flatSecs);
         setNodes(flatNodes);
 
@@ -308,26 +328,120 @@ export function FlashcardPanel({ onToast, navParams, onNavigate: _onNavigate }: 
     });
   }, [selectedLessonId, navParams?.sectionId, navParams?.nodeId]);
 
+  // Modal cascade triggers
+  const handleFormGradeChange = async (gIdStr: string) => {
+    setForm(prev => ({ ...prev, gradeId: gIdStr, topicId: '', lessonId: '', sectionId: '', nodeId: '' }));
+    setFormTopics([]);
+    setFormLessons([]);
+    setFormSections([]);
+    setFormNodes([]);
+    if (!gIdStr) return;
+    try {
+      const res = await client.get(`/api/content/grades/${gIdStr}/topics`);
+      setFormTopics(res.data.topics ?? []);
+    } catch {
+      onToast('Không tải được danh sách chủ đề', 'error');
+    }
+  };
+
+  const handleFormTopicChange = async (tIdStr: string) => {
+    setForm(prev => ({ ...prev, topicId: tIdStr, lessonId: '', sectionId: '', nodeId: '' }));
+    setFormLessons([]);
+    setFormSections([]);
+    setFormNodes([]);
+    if (!tIdStr) return;
+    try {
+      const res = await client.get(`/api/content/topics/${tIdStr}/lessons`);
+      setFormLessons(res.data.lessons ?? []);
+    } catch {
+      onToast('Không tải được danh sách bài học', 'error');
+    }
+  };
+
+  const handleFormLessonChange = async (lIdStr: string) => {
+    setForm(prev => ({ ...prev, lessonId: lIdStr, sectionId: '', nodeId: '' }));
+    setFormSections([]);
+    setFormNodes([]);
+    if (!lIdStr) return;
+    try {
+      const res = await client.get(`/api/content/lessons/${lIdStr}/tree`);
+      const tree = res.data;
+      if (tree && tree.sections) {
+        const flatSecs: SectionWithDepth[] = [];
+        const flatNodes: NodeDto[] = [];
+        const traverse = (sList: SectionDto[], depth = 0) => {
+          for (const s of sList) {
+            flatSecs.push({ ...s, depth });
+            if (s.nodes) flatNodes.push(...s.nodes);
+            if (s.children) traverse(s.children, depth + 1);
+          }
+        };
+        traverse(tree.sections, 0);
+        setFormSections(flatSecs);
+        setFormNodes(flatNodes);
+      }
+    } catch {
+      onToast('Không tải được danh sách phần', 'error');
+    }
+  };
+
+  const handleFormSectionChange = (sIdStr: string) => {
+    setForm(prev => ({ ...prev, sectionId: sIdStr, nodeId: '' }));
+  };
+
   // 2. Individual CRUD Handlers
   const openCreate = () => {
     setEditCard(null);
+    const gId = selectedGradeId ? String(selectedGradeId) : (grades.length > 0 ? String(grades[0].id) : '');
+    const tId = selectedTopicId ? String(selectedTopicId) : '';
+    const lId = selectedLessonId ? String(selectedLessonId) : '';
+    const sId = selectedSectionId ? String(selectedSectionId) : '';
+    const nId = selectedNodeId ? String(selectedNodeId) : '';
+
     setForm({
       frontText: '',
       backText: '',
-      sectionId: selectedSectionId ? String(selectedSectionId) : '',
-      nodeId: selectedNodeId ? String(selectedNodeId) : '',
+      gradeId: gId,
+      topicId: tId,
+      lessonId: lId,
+      sectionId: sId,
+      nodeId: nId,
     });
+    setFormTopics(topics);
+    setFormLessons(lessons);
+    setFormSections(sections);
+    setFormNodes(nodes);
     setModalOpen(true);
   };
 
   const openEdit = (card: FlashcardDto) => {
     setEditCard(card);
+    const gId = selectedGradeId ? String(selectedGradeId) : '';
+    const tId = selectedTopicId ? String(selectedTopicId) : '';
+    const lId = card.lessonId ? String(card.lessonId) : (selectedLessonId ? String(selectedLessonId) : '');
+    let sId = card.sectionId ? String(card.sectionId) : '';
+    const nId = card.nodeId ? String(card.nodeId) : '';
+
+    if (card.nodeId) {
+      const node = nodes.find(n => n.id === card.nodeId);
+      if (node && node.sectionId) {
+        sId = String(node.sectionId);
+      }
+    }
+
     setForm({
       frontText: card.frontText,
       backText: card.backText,
-      sectionId: card.sectionId ? String(card.sectionId) : '',
-      nodeId: card.nodeId ? String(card.nodeId) : '',
+      gradeId: gId,
+      topicId: tId,
+      lessonId: lId,
+      sectionId: sId,
+      nodeId: nId,
     });
+    setFormTopics(topics);
+    setFormLessons(lessons);
+    setFormSections(sections);
+    setFormNodes(nodes);
     setModalOpen(true);
   };
 
@@ -336,8 +450,15 @@ export function FlashcardPanel({ onToast, navParams, onNavigate: _onNavigate }: 
       onToast('Mặt trước và mặt sau không được để trống', 'error');
       return;
     }
-    const sectionId = form.sectionId ? Number(form.sectionId) : undefined;
-    const nodeId = form.nodeId ? Number(form.nodeId) : undefined;
+
+    const nodeId = form.nodeId ? Number(form.nodeId) : null;
+    const sectionId = form.sectionId ? Number(form.sectionId) : null;
+    const lessonId = form.lessonId ? Number(form.lessonId) : null;
+
+    if (!nodeId && !sectionId && !lessonId) {
+      onToast('Vui lòng chọn ít nhất Bài học, Phần hoặc Nút kiến thức', 'error');
+      return;
+    }
 
     try {
       setSaving(true);
@@ -345,22 +466,26 @@ export function FlashcardPanel({ onToast, navParams, onNavigate: _onNavigate }: 
         await client.patch(`/api/admin/flashcards/${editCard.id}`, {
           frontText: form.frontText.trim(),
           backText: form.backText.trim(),
-          sectionId: sectionId ?? null,
-          nodeId: nodeId ?? null,
+          lessonId: nodeId ? null : sectionId ? null : lessonId,
+          sectionId: nodeId ? null : sectionId,
+          nodeId: nodeId,
         });
         onToast('Đã cập nhật thẻ ghi nhớ', 'success');
       } else {
-        if (!selectedLessonId) {
-          onToast('Vui lòng chọn bài học trước', 'error');
-          return;
-        }
-        await client.post('/api/admin/flashcards', {
+        const payload: any = {
           frontText: form.frontText.trim(),
           backText: form.backText.trim(),
-          lessonId: selectedLessonId,
-          sectionId,
-          nodeId,
-        });
+        };
+        // Add only the lowest scope ID
+        if (nodeId) {
+          payload.nodeId = nodeId;
+        } else if (sectionId) {
+          payload.sectionId = sectionId;
+        } else if (lessonId) {
+          payload.lessonId = lessonId;
+        }
+
+        await client.post('/api/admin/flashcards', payload);
         onToast('Đã tạo thẻ ghi nhớ mới', 'success');
       }
       setModalOpen(false);
@@ -442,15 +567,31 @@ export function FlashcardPanel({ onToast, navParams, onNavigate: _onNavigate }: 
     }
   };
 
+  const getDescendantSectionIds = useCallback((startId: number, secList: SectionWithDepth[]): Set<number> => {
+    const ids = new Set<number>([startId]);
+    let added = true;
+    while (added) {
+      added = false;
+      for (const sec of secList) {
+        if (sec.parentSectionId && ids.has(sec.parentSectionId) && !ids.has(sec.id)) {
+          ids.add(sec.id);
+          added = true;
+        }
+      }
+    }
+    return ids;
+  }, []);
+
   const filteredFlashcards = flashcards.filter((card) => {
     if (selectedNodeId) {
       return card.nodeId === selectedNodeId;
     }
     if (selectedSectionId) {
-      if (card.sectionId === selectedSectionId) return true;
+      const descendantSecIds = getDescendantSectionIds(selectedSectionId, sections);
+      if (card.sectionId && descendantSecIds.has(card.sectionId)) return true;
       if (card.nodeId) {
         const node = nodes.find((n) => n.id === card.nodeId);
-        return node?.sectionId === selectedSectionId;
+        return node?.sectionId ? descendantSecIds.has(node.sectionId) : false;
       }
       return false;
     }
@@ -526,7 +667,9 @@ export function FlashcardPanel({ onToast, navParams, onNavigate: _onNavigate }: 
         >
           <option value="">Tất cả</option>
           {sections.map((sec) => (
-            <option key={sec.id} value={sec.id}>{sec.name}</option>
+            <option key={sec.id} value={sec.id}>
+              {'\u00A0\u00A0'.repeat(sec.depth)}{sec.depth > 0 ? '↳ ' : ''}{sec.name}
+            </option>
           ))}
         </Select>
 
@@ -638,7 +781,7 @@ export function FlashcardPanel({ onToast, navParams, onNavigate: _onNavigate }: 
                     </span>
                   ) : (
                     <span style={{ fontSize: 11, fontWeight: 600, color: '#64748b', background: '#f1f5f9', padding: '2px 8px', borderRadius: 20 }}>
-                      Bài học
+                      Bài học #{card.lessonId}
                     </span>
                   )}
                 </div>
@@ -676,7 +819,7 @@ export function FlashcardPanel({ onToast, navParams, onNavigate: _onNavigate }: 
         onClose={() => setModalOpen(false)}
         title={editCard ? `Chỉnh sửa thẻ #${editCard.id}` : 'Thêm thẻ ghi nhớ mới'}
       >
-        <div style={{ width: 460, maxWidth: '100%' }}>
+        <div style={{ width: 500, maxWidth: '100%', display: 'flex', flexDirection: 'column', gap: 16 }}>
           <Textarea
             label="Mặt trước (Câu hỏi / Thuật ngữ)"
             value={form.frontText}
@@ -691,42 +834,101 @@ export function FlashcardPanel({ onToast, navParams, onNavigate: _onNavigate }: 
             placeholder="Ví dụ: Ngày 13 tháng 3 năm 1954."
             rows={3}
           />
-          <Select
-            label="Thuộc phần/nhánh sơ đồ (Tùy chọn)"
-            value={form.sectionId}
-            onChange={(e) => {
-              const secId = e.target.value;
-              setForm({
-                ...form,
-                sectionId: secId,
-                nodeId: '', // Reset node selection if section changes
-              });
-            }}
-          >
-            <option value="">-- Mặc định thuộc bài học --</option>
-            {sections.map((sec) => (
-              <option key={sec.id} value={sec.id}>
-                {sec.name}
-              </option>
-            ))}
-          </Select>
 
-          <Select
-            label="Thuộc nút kiến thức cụ thể (Tùy chọn)"
-            value={form.nodeId}
-            onChange={(e) => setForm({ ...form, nodeId: e.target.value })}
-            disabled={!form.sectionId} // Only enable if a section is selected
-          >
-            <option value="">-- Thuộc toàn bộ nhánh sơ đồ --</option>
-            {nodes
-              .filter((n) => n.sectionId === Number(form.sectionId))
-              .map((node) => (
-                <option key={node.id} value={node.id}>
-                  {node.header || node.body.slice(0, 40) + '...'}
-                </option>
-              ))}
-          </Select>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 24 }}>
+          <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: 12 }}>
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: '#334155', marginBottom: 8 }}>
+              Phạm vi thuộc về
+            </label>
+
+            {(() => {
+              const activeScope = form.nodeId ? 'node' : form.sectionId ? 'section' : form.lessonId ? 'lesson' : form.topicId ? 'topic' : form.gradeId ? 'grade' : null;
+              const glowStyle = {
+                borderColor: '#059669',
+                borderWidth: '2px',
+                borderStyle: 'solid',
+                boxShadow: '0 0 0 4px rgba(16, 185, 129, 0.3)',
+                background: '#ecfdf5',
+                fontWeight: 700,
+                color: '#065f46',
+              };
+
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <Select
+                    label="Khối lớp"
+                    value={form.gradeId}
+                    onChange={(e) => handleFormGradeChange(e.target.value)}
+                    style={activeScope === 'grade' ? glowStyle : undefined}
+                  >
+                    <option value="">-- Chọn Khối --</option>
+                    {grades.map((g) => (
+                      <option key={g.id} value={g.id}>Khối {g.id}</option>
+                    ))}
+                  </Select>
+
+                  <Select
+                    label="Chủ đề"
+                    value={form.topicId}
+                    onChange={(e) => handleFormTopicChange(e.target.value)}
+                    disabled={!form.gradeId || formTopics.length === 0}
+                    style={activeScope === 'topic' ? glowStyle : undefined}
+                  >
+                    <option value="">-- Chọn Chủ đề --</option>
+                    {formTopics.map((t) => (
+                      <option key={t.id} value={t.id}>{t.name}</option>
+                    ))}
+                  </Select>
+
+                  <Select
+                    label="Bài học"
+                    value={form.lessonId}
+                    onChange={(e) => handleFormLessonChange(e.target.value)}
+                    disabled={!form.topicId || formLessons.length === 0}
+                    style={activeScope === 'lesson' ? glowStyle : undefined}
+                  >
+                    <option value="">-- Chọn Bài học --</option>
+                    {formLessons.map((l) => (
+                      <option key={l.id} value={l.id}>{l.name}</option>
+                    ))}
+                  </Select>
+
+                  <Select
+                    label="Phần/Nhánh sơ đồ (Tùy chọn)"
+                    value={form.sectionId}
+                    onChange={(e) => handleFormSectionChange(e.target.value)}
+                    disabled={!form.lessonId || formSections.length === 0}
+                    style={activeScope === 'section' ? glowStyle : undefined}
+                  >
+                    <option value="">-- Thuộc toàn bộ Bài học --</option>
+                    {formSections.map((sec) => (
+                      <option key={sec.id} value={sec.id}>
+                        {'\u00A0\u00A0'.repeat(sec.depth)}{sec.depth > 0 ? '↳ ' : ''}{sec.name}
+                      </option>
+                    ))}
+                  </Select>
+
+                  <Select
+                    label="Nút kiến thức cụ thể (Tùy chọn)"
+                    value={form.nodeId}
+                    onChange={(e) => setForm({ ...form, nodeId: e.target.value })}
+                    disabled={!form.sectionId}
+                    style={activeScope === 'node' ? glowStyle : undefined}
+                  >
+                    <option value="">-- Thuộc toàn bộ Nhánh --</option>
+                    {formNodes
+                      .filter((n) => n.sectionId === Number(form.sectionId))
+                      .map((node) => (
+                        <option key={node.id} value={node.id}>
+                          {node.header || node.body.slice(0, 40) + '...'}
+                        </option>
+                      ))}
+                  </Select>
+                </div>
+              );
+            })()}
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 12 }}>
             <Button variant="secondary" onClick={() => setModalOpen(false)} disabled={saving}>Hủy</Button>
             <Button onClick={handleSave} disabled={saving}>{saving ? 'Đang lưu...' : 'Lưu lại'}</Button>
           </div>
@@ -892,3 +1094,4 @@ export function FlashcardPanel({ onToast, navParams, onNavigate: _onNavigate }: 
     </div>
   );
 }
+
