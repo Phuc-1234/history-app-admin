@@ -146,14 +146,27 @@ export function UserPanel({ onToast }: UserPanelProps) {
                 >
                   <td style={TD_STYLE}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <div style={{
-                        width: 32, height: 32, borderRadius: 8,
-                        background: 'linear-gradient(135deg, #e0e7ff, #c7d2fe)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: 14, fontWeight: 700, color: '#4338ca'
-                      }}>
-                        {u.name?.[0]?.toUpperCase() ?? 'U'}
-                      </div>
+                      {u.profileImgUrl ? (
+                        <img
+                          src={u.profileImgUrl}
+                          alt={u.name}
+                          style={{
+                            width: 32,
+                            height: 32,
+                            borderRadius: '50%',
+                            objectFit: 'cover'
+                          }}
+                        />
+                      ) : (
+                        <div style={{
+                          width: 32, height: 32, borderRadius: '50%',
+                          background: 'linear-gradient(135deg, #e0e7ff, #c7d2fe)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: 14, fontWeight: 700, color: '#4338ca'
+                        }}>
+                          {u.name?.[0]?.toUpperCase() ?? 'U'}
+                        </div>
+                      )}
                       <span style={{ fontWeight: 600, color: '#0f172a' }}>{u.name}</span>
                     </div>
                   </td>
