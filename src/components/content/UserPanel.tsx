@@ -278,7 +278,7 @@ const TD_STYLE = {
   fontSize: 14
 };
 
-const INLINE_SELECT_STYLE = {
+export const INLINE_SELECT_STYLE = {
   padding: '6px 10px',
   borderRadius: 8,
   border: '1px solid #cbd5e1',

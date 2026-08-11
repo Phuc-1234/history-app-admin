@@ -529,7 +529,7 @@ const SELECT_STYLE = {
   WebkitAppearance: 'none' as const,
 };
 
-const SPINNER_STYLE = {
+export const SPINNER_STYLE = {
   position: 'absolute' as const,
   right: 14,
   top: '50%',
