@@ -6,6 +6,7 @@ import { GrowthCharts } from './GrowthCharts';
 import { UserAnalytics } from './UserAnalytics';
 import { Leaderboard } from './Leaderboard';
 import { ActivityFeed } from './ActivityFeed';
+import { QuestionStatsPanel } from './QuestionStatsPanel';
 
 export function OverviewPanel() {
   const { data, loading, partial } = useDashboardData();
@@ -55,7 +56,10 @@ export function OverviewPanel() {
         {/* Phần 4 — Bảng xếp hạng */}
         <Leaderboard topXp={topXp} topStreak={topStreak} topGold={topGold} />
 
-        {/* Phần 5 — Hoạt động gần đây */}
+        {/* Phần 5 — Thống kê câu hỏi (top câu dễ sai + tỷ lệ sai theo loại) */}
+        <QuestionStatsPanel />
+
+        {/* Phần 6 — Hoạt động gần đây */}
         <ActivityFeed items={activityFeed} />
       </div>
     </div>

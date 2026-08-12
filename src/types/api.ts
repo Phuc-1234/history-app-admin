@@ -370,6 +370,25 @@ export interface ActivityItem {
   accent: string;
 }
 
+/** Section 3 — Một câu hỏi trong top câu dễ sai. */
+export interface WrongQuestionRow {
+  questionId: number;
+  promptText: string;
+  type: string; // CHOOSE | FILL | MATCH
+  difficulty: number;
+  totalAnswers: number;
+  wrongCount: number;
+  wrongRate: number; // %, 0-100
+}
+
+/** Section 3 — Phân bố đúng/sai theo loại câu hỏi. */
+export interface QuestionTypeBreakdown {
+  type: string;
+  total: number;
+  wrongCount: number;
+  wrongRate: number; // %, 0-100
+}
+
 /** Toàn bộ dữ liệu đã xử lý cho tab Overview. */
 export interface DashboardData {
   stats: OverviewStats | null;
