@@ -375,7 +375,7 @@ export interface DashboardData {
   stats: OverviewStats | null;
   users: AdminUserDto[];
   derived: OverviewDerivedStats | null;
-  activitySeries: DailyActivityPoint[]; // mặc định 30 ngày
+  // NOTE: activitySeries được fetch riêng trong GrowthCharts từ /api/admin/stats/xp-activity.
   roleSlices: RoleSlice[];
   streakBuckets: StreakBucket[];
   topXp: AdminUserDto[];

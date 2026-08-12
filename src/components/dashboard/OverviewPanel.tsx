@@ -33,7 +33,7 @@ export function OverviewPanel() {
     );
   }
 
-  const { stats, derived, users, roleSlices, streakBuckets, topXp, topStreak, topGold, activityFeed } = data;
+  const { stats, derived, roleSlices, streakBuckets, topXp, topStreak, topGold, activityFeed } = data;
 
   return (
     <div>
@@ -47,7 +47,7 @@ export function OverviewPanel() {
         <StatsCards stats={stats} derived={derived} />
 
         {/* Phần 2 — Biểu đồ tăng trưởng */}
-        <GrowthCharts users={users} />
+        <GrowthCharts />
 
         {/* Phần 3 — Phân tích người dùng */}
         <UserAnalytics roleSlices={roleSlices} streakBuckets={streakBuckets} derived={derived} />
