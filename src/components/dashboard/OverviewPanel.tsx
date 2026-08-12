@@ -63,7 +63,7 @@ export function OverviewPanel() {
         {/* Phần 5 — Bảng xếp hạng */}
         <Leaderboard topXp={topXp} topStreak={topStreak} topGold={topGold} />
 
-        {/* Phần 5 — Hoạt động gần đây */}
+        {/* Phần 6 — Hoạt động gần đây */}
         <ActivityFeed items={activityFeed} />
       </div>
     </div>
