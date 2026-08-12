@@ -4,6 +4,7 @@ import { Spinner } from '../ui/Spinner';
 import { StatsCards } from './StatsCards';
 import { GrowthCharts } from './GrowthCharts';
 import { UserAnalytics } from './UserAnalytics';
+import { AiUsagePanel } from './AiUsagePanel';
 import { TestActivityCharts } from './TestActivityCharts';
 import { TestOverviewCards } from './TestOverviewCards';
 import { QuestionStatsPanel } from './QuestionStatsPanel';
@@ -52,8 +53,12 @@ export function OverviewPanel() {
         {/* Phần 2 — Biểu đồ tăng trưởng */}
         <GrowthCharts />
 
+        {/* Phần AI — Thống kê & Bảng xếp hạng AI Token */}
+        <AiUsagePanel />
+
         {/* Phần 3 — Phân tích người dùng */}
         <UserAnalytics roleSlices={roleSlices} streakBuckets={streakBuckets} derived={derived} />
+
 
         {/* Phần 4 — Thống kê làm bài & câu hỏi */}
         <TestActivityCharts />

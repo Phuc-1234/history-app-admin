@@ -425,3 +425,40 @@ export interface DashboardData {
   activityFeed: ActivityItem[];
 }
 
+export interface AiUsageSummary {
+  totalTokensInPeriod: number;
+  activeUsersCount: number;
+  avgTokensPerUser: number;
+  topUserTokens: number;
+  periodDays: number | 'all';
+  startStr?: string;
+  endStr?: string;
+}
+
+export interface AiUsageTimeSeriesPoint {
+  date: string;
+  totalTokens: number;
+  activeUsersCount: number;
+}
+
+export interface AiUserRankingItem {
+  rank: number;
+  userId: string;
+  name: string;
+  email: string | null;
+  profileImgUrl: string | null;
+  role: string;
+  isPro: boolean;
+  tokensInPeriod: number;
+  tokensAllTime: number;
+  sessionCount: number;
+  sharePercent: number;
+}
+
+export interface AiUsageStatsResponse {
+  summary: AiUsageSummary;
+  timeSeries: AiUsageTimeSeriesPoint[];
+  rankings: AiUserRankingItem[];
+}
+
+

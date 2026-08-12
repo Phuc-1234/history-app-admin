@@ -40,6 +40,8 @@ const VALID_TABS: TabId[] = [
   'testpresets', 'tiers', 'feedbacks', 'rewardrules', 'itemdefinitions', 'packages'
 ];
 
+
+
 function getInitialTab(): TabId {
   const hash = window.location.hash.replace('#', '') as TabId;
   if (hash && VALID_TABS.includes(hash)) {
@@ -111,6 +113,8 @@ export function DashboardPage() {
     switch (activeTab) {
       case 'overview':  return <OverviewPanel />;
       case 'grades':    return <GradePanel onToast={addToast} onNavigate={handleNavigate} />;
+
+
       case 'topics':    return <TopicPanel onToast={addToast} navParams={navParams} onNavigate={handleNavigate} />;
       case 'lessons':   return <LessonPanel onToast={addToast} navParams={navParams} onNavigate={handleNavigate} />;
       case 'sections':  return <SectionPanel onToast={addToast} navParams={navParams} onNavigate={handleNavigate} />;

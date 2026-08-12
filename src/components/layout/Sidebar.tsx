@@ -51,6 +51,7 @@ const ICON_MAP: Record<string, any> = {
   overview: IconOverview,
   grades: IconGrade,
   topics: IconTopic,
+
   lessons: IconLesson,
   sections: IconSection,
   mindmaps: IconMindMap,
@@ -66,6 +67,7 @@ const ICON_MAP: Record<string, any> = {
   packages: IconPackagePricing,
   feedbacks: IconFeedback,
 };
+
 
 interface SidebarProps {
   activeTab: TabId;
