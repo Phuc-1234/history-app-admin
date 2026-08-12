@@ -29,7 +29,7 @@ export function ActivityFeed({ items }: ActivityFeedProps) {
         background: '#ffffff',
         border: '1px solid #e2e8f0',
         borderRadius: 20,
-        padding: 20,
+        padding: 24,
       }}
     >
       <h3 style={{ margin: '0 0 14px', fontSize: 15, fontWeight: 700, color: '#0f172a' }}>

@@ -121,22 +121,22 @@ export function TestOverviewCards() {
           {cards.map((c) => (
             <div
               key={c.label}
-              style={{ background: c.bg, border: `1px solid ${c.border}`, borderRadius: 14, padding: 16 }}
+              style={{ background: c.bg, border: `1px solid ${c.border}`, borderRadius: 20, padding: 24 }}
             >
               <div style={{ fontSize: 12, color: c.accent, fontWeight: 600, marginBottom: 8 }}>{c.label}</div>
-              <div style={{ fontSize: 26, fontWeight: 800, color: '#0f172a', lineHeight: 1 }}>{c.value}</div>
+              <div style={{ fontSize: 24, fontWeight: 800, color: '#0f172a', lineHeight: 1 }}>{c.value}</div>
             </div>
           ))}
 
           {/* Pass/Fail donut */}
-          <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 14, padding: 16, display: 'flex', flexDirection: 'column' }}>
-            <div style={{ fontSize: 12, color: '#475569', fontWeight: 600, marginBottom: 4 }}>Pass / Fail</div>
+          <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 20, padding: 24, display: 'flex', flexDirection: 'column' }}>
+            <div style={{ fontSize: 12, color: '#16a34a', fontWeight: 600, marginBottom: 8 }}>Pass / Fail</div>
             <div style={{ flex: 1, minHeight: 90, position: 'relative' }}>
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie data={passData} dataKey="value" nameKey="name" innerRadius={28} outerRadius={42} paddingAngle={2}>
                     <Cell fill="#16a34a" stroke="#fff" strokeWidth={2} />
-                    <Cell fill="#ef4444" stroke="#fff" strokeWidth={2} />
+                    <Cell fill="#f43f5e" stroke="#fff" strokeWidth={2} />
                   </Pie>
                   <Tooltip contentStyle={tooltipStyle} />
                 </PieChart>
@@ -147,9 +147,9 @@ export function TestOverviewCards() {
                 </div>
               )}
             </div>
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 12, fontSize: 11, color: '#64748b' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 12, fontSize: 11, color: '#475569', fontWeight: 600 }}>
               <span><span style={{ color: '#16a34a', fontWeight: 700 }}>●</span> Pass {data?.passedCount ?? 0}</span>
-              <span><span style={{ color: '#ef4444', fontWeight: 700 }}>●</span> Fail {data?.failedCount ?? 0}</span>
+              <span><span style={{ color: '#f43f5e', fontWeight: 700 }}>●</span> Fail {data?.failedCount ?? 0}</span>
             </div>
           </div>
         </div>
