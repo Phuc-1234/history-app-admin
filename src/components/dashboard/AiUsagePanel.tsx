@@ -12,10 +12,12 @@ import {
 import client from '../../api/client';
 import type { AiUsageStatsResponse } from '../../types/api';
 import type { ToastType } from '../../hooks/useToast';
+import { IconSparkles, IconSearch } from '../ui/Icons';
 
 interface AiUsagePanelProps {
   onToast?: (message: string, type?: ToastType) => void;
 }
+
 
 
 type TimeSpanOption = '7' | '30' | '90' | 'all' | 'custom';
@@ -44,6 +46,8 @@ export function AiUsagePanel({ onToast }: AiUsagePanelProps) {
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
   const [selectedUserId, setSelectedUserId] = useState<string>('');
+  const [showInfoTooltip, setShowInfoTooltip] = useState<boolean>(false);
+
   
   const [loading, setLoading] = useState<boolean>(true);
   const [data, setData] = useState<AiUsageStatsResponse | null>(null);
@@ -128,23 +132,89 @@ export function AiUsagePanel({ onToast }: AiUsagePanelProps) {
                 borderRadius: 12,
                 background: 'linear-gradient(135deg, #6c63ff, #4f46e5)',
                 color: '#fff',
-                fontWeight: 800,
-                fontSize: 18,
                 boxShadow: '0 4px 12px rgba(108,99,255,0.3)',
               }}
             >
-              ✨
+              <IconSparkles size={20} color="#ffffff" />
             </span>
             <div>
-              <h2 style={{ margin: 0, fontSize: 19, fontWeight: 800, color: '#0f172a' }}>
-                Thống kê tiêu thụ AI Token
-              </h2>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, position: 'relative' }}>
+                <h2 style={{ margin: 0, fontSize: 19, fontWeight: 800, color: '#0f172a' }}>
+                  Thống kê tiêu thụ AI Token
+                </h2>
+
+                {/* Info Hover Badge & Tooltip */}
+                <div
+                  style={{ position: 'relative', display: 'inline-flex', cursor: 'pointer' }}
+                  onMouseEnter={() => setShowInfoTooltip(true)}
+                  onMouseLeave={() => setShowInfoTooltip(false)}
+                >
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: 20,
+                      height: 20,
+                      borderRadius: '50%',
+                      background: '#f1f5f9',
+                      color: '#64748b',
+                      fontSize: 12,
+                      fontWeight: 700,
+                      border: '1px solid #cbd5e1',
+                    }}
+                  >
+                    i
+                  </span>
+
+                  {showInfoTooltip && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: 28,
+                        left: 0,
+                        width: 340,
+                        background: '#0f172a',
+                        color: '#f8fafc',
+                        padding: '16px 18px',
+                        borderRadius: 14,
+                        boxShadow: '0 12px 30px rgba(15,23,42,0.25)',
+                        zIndex: 100,
+                        fontSize: 12,
+                        lineHeight: 1.6,
+                        pointerEvents: 'none',
+                      }}
+                    >
+                      <div style={{ fontWeight: 700, fontSize: 13, color: '#38bdf8', marginBottom: 6 }}>
+                        Thông tin Hạn mức 3 Gemini API Keys
+                      </div>
+                      <div style={{ marginBottom: 8, paddingBottom: 8, borderBottom: '1px solid #334155' }}>
+                        <div><b>Hạn mức tổng API Keys:</b> 4.500 requests/ngày (~4.5M - 13.5M tokens)</div>
+                        <div><b>Tốc độ xử lý tối đa:</b> 45 requests/phút</div>
+                      </div>
+                      <div style={{ marginBottom: 8, paddingBottom: 8, borderBottom: '1px solid #334155' }}>
+                        <div><b>Hạn mức Free User:</b> 50.000 tokens/ngày (~15-30 câu)</div>
+                        <div><b>Hạn mức PRO User:</b> 500.000 tokens/ngày (~150-300 câu)</div>
+                      </div>
+                      <div style={{ color: '#fbbf24', fontWeight: 600 }}>
+                        Ngưỡng chạm giới hạn 3 API Keys:
+                      </div>
+                      <div style={{ color: '#cbd5e1' }}>
+                        • ~90 Free Users dùng hết quota/ngày<br />
+                        • ~9 PRO Users dùng hết quota/ngày<br />
+                        • &gt;45 requests đồng thời trong 1 phút
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
               <p style={{ margin: '2px 0 0', fontSize: 13, color: '#64748b' }}>
                 Theo dõi lượng token tiêu thụ theo thời gian & bảng xếp hạng người dùng
               </p>
             </div>
           </div>
         </div>
+
 
         {/* Filter Controls */}
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12 }}>
@@ -231,8 +301,11 @@ export function AiUsagePanel({ onToast }: AiUsagePanelProps) {
               justifyContent: 'center',
             }}
           >
-            🔄
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
+            </svg>
           </button>
+
         </div>
       </div>
 
@@ -535,11 +608,11 @@ export function AiUsagePanel({ onToast }: AiUsagePanelProps) {
                     left: 10,
                     top: '50%',
                     transform: 'translateY(-50%)',
-                    color: '#94a3b8',
-                    fontSize: 14,
+                    display: 'flex',
+                    alignItems: 'center',
                   }}
                 >
-                  🔍
+                  <IconSearch size={16} color="#94a3b8" />
                 </span>
               </div>
             </div>
@@ -583,15 +656,67 @@ export function AiUsagePanel({ onToast }: AiUsagePanelProps) {
                           {/* Rank */}
                           <td style={{ padding: '14px 16px', textAlign: 'center', fontWeight: 700 }}>
                             {isTop1 ? (
-                              <span style={{ fontSize: 16 }} title="Hạng 1">🥇</span>
+                              <span
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  width: 26,
+                                  height: 26,
+                                  borderRadius: 8,
+                                  background: '#fef9c3',
+                                  color: '#a16207',
+                                  border: '1px solid #fef08a',
+                                  fontSize: 12,
+                                  fontWeight: 800,
+                                }}
+                                title="Hạng 1"
+                              >
+                                #1
+                              </span>
                             ) : isTop2 ? (
-                              <span style={{ fontSize: 16 }} title="Hạng 2">🥈</span>
+                              <span
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  width: 26,
+                                  height: 26,
+                                  borderRadius: 8,
+                                  background: '#f1f5f9',
+                                  color: '#475569',
+                                  border: '1px solid #cbd5e1',
+                                  fontSize: 12,
+                                  fontWeight: 800,
+                                }}
+                                title="Hạng 2"
+                              >
+                                #2
+                              </span>
                             ) : isTop3 ? (
-                              <span style={{ fontSize: 16 }} title="Hạng 3">🥉</span>
+                              <span
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  width: 26,
+                                  height: 26,
+                                  borderRadius: 8,
+                                  background: '#ffedd5',
+                                  color: '#c2410c',
+                                  border: '1px solid #fed7aa',
+                                  fontSize: 12,
+                                  fontWeight: 800,
+                                }}
+                                title="Hạng 3"
+                              >
+                                #3
+                              </span>
                             ) : (
                               <span style={{ color: '#64748b' }}>#{user.rank}</span>
                             )}
                           </td>
+
 
                           {/* User Details */}
                           <td style={{ padding: '14px 16px' }}>
