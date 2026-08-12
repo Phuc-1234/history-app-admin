@@ -4,6 +4,9 @@ import { Spinner } from '../ui/Spinner';
 import { StatsCards } from './StatsCards';
 import { GrowthCharts } from './GrowthCharts';
 import { UserAnalytics } from './UserAnalytics';
+import { TestActivityCharts } from './TestActivityCharts';
+import { TestOverviewCards } from './TestOverviewCards';
+import { QuestionStatsPanel } from './QuestionStatsPanel';
 import { Leaderboard } from './Leaderboard';
 import { ActivityFeed } from './ActivityFeed';
 
@@ -52,7 +55,12 @@ export function OverviewPanel() {
         {/* Phần 3 — Phân tích người dùng */}
         <UserAnalytics roleSlices={roleSlices} streakBuckets={streakBuckets} derived={derived} />
 
-        {/* Phần 4 — Bảng xếp hạng */}
+        {/* Phần 4 — Thống kê làm bài & câu hỏi */}
+        <TestActivityCharts />
+        <TestOverviewCards />
+        <QuestionStatsPanel />
+
+        {/* Phần 5 — Bảng xếp hạng */}
         <Leaderboard topXp={topXp} topStreak={topStreak} topGold={topGold} />
 
         {/* Phần 5 — Hoạt động gần đây */}

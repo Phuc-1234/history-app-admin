@@ -348,6 +348,47 @@ export interface DailyActivityPoint {
   cumulative: number; // lũy kế trong khoảng
 }
 
+/** Section 1 — Hoạt động làm bài theo ngày. */
+export interface TestActivityPoint {
+  date: string; // YYYY-MM-DD
+  label: string; // dd/MM
+  totalAttempts: number; // tổng lượt nộp bài
+  distinctUsers: number; // số user nộp bài
+  manualAttempts: number; // đề thủ công (testId NOT NULL)
+  autoAttempts: number; // đề tự động (testId NULL)
+}
+
+/** Section 2 — KPI tổng quan làm bài trong N ngày. */
+export interface TestOverviewStats {
+  totalAttempts: number;
+  distinctUsers: number;
+  manualAttempts: number;
+  autoAttempts: number;
+  passedCount: number;
+  failedCount: number;
+  avgScore: number;
+  passRate: number; // %, 0-100
+}
+
+/** Section 3 — Một câu hỏi trong top câu dễ sai. */
+export interface WrongQuestionRow {
+  questionId: number;
+  promptText: string;
+  type: string; // CHOOSE | FILL | MATCH
+  difficulty: number;
+  totalAnswers: number;
+  wrongCount: number;
+  wrongRate: number; // %, 0-100
+}
+
+/** Section 3 — Phân bố đúng/sai theo loại câu hỏi. */
+export interface QuestionTypeBreakdown {
+  type: string;
+  total: number;
+  wrongCount: number;
+  wrongRate: number; // %, 0-100
+}
+
 /** Phân bố user theo role cho donut chart. */
 export interface RoleSlice {
   name: string;
