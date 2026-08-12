@@ -1,5 +1,5 @@
 // src/components/dashboard/GrowthCharts.tsx
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Area,
   AreaChart,
@@ -11,40 +11,12 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import type { AdminUserDto, DailyActivityPoint } from '../../types/api';
+import client from '../../api/client';
+import type { DailyActivityPoint } from '../../types/api';
 
-interface GrowthChartsProps {
-  users: AdminUserDto[];
-}
-
-function buildSeries(users: AdminUserDto[], days: number): DailyActivityPoint[] {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const buckets: Record<string, number> = {};
-  const dateList: Date[] = [];
-  for (let i = days - 1; i >= 0; i--) {
-    const d = new Date(today);
-    d.setDate(d.getDate() - i);
-    const key = d.toISOString().slice(0, 10);
-    buckets[key] = 0;
-    dateList.push(d);
-  }
-
-  for (const u of users) {
-    if (!u.lastXpGainedAt) continue;
-    const key = new Date(u.lastXpGainedAt).toISOString().slice(0, 10);
-    if (key in buckets) buckets[key] += 1;
-  }
-
-  let cumulative = 0;
-  return dateList.map((d) => {
-    const key = d.toISOString().slice(0, 10);
-    cumulative += buckets[key];
-    const dd = String(d.getDate()).padStart(2, '0');
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    return { date: key, label: `${dd}/${mm}`, count: buckets[key], cumulative };
-  });
+interface XpActivityRow {
+  date: string; // YYYY-MM-DD
+  count: number;
 }
 
 const tooltipStyle = {
@@ -54,10 +26,54 @@ const tooltipStyle = {
   fontSize: 12,
 };
 
-export function GrowthCharts({ users }: GrowthChartsProps) {
-  const [range, setRange] = useState<7 | 30>(30);
+/**
+ * Biến đổi chuỗi { date, count } từ API thành { date, label, count, cumulative }.
+ * `cumulative` là running-sum trong khoảng đang xem.
+ */
+function toSeries(rows: XpActivityRow[]): DailyActivityPoint[] {
+  let cumulative = 0;
+  return rows.map((r) => {
+    cumulative += r.count;
+    const d = new Date(r.date + 'T00:00:00');
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    return { date: r.date, label: `${dd}/${mm}`, count: r.count, cumulative };
+  });
+}
 
-  const data = useMemo(() => buildSeries(users, range), [users, range]);
+export function GrowthCharts() {
+  const [range, setRange] = useState<7 | 30>(30);
+  const [raw, setRaw] = useState<XpActivityRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    setLoading(true);
+    setError(null);
+
+    client
+      .get<XpActivityRow[]>('/api/admin/stats/xp-activity', { params: { days: range } })
+      .then((res) => {
+        if (!isMounted) return;
+        setRaw(Array.isArray(res.data) ? res.data : []);
+      })
+      .catch((err) => {
+        if (!isMounted) return;
+        setError(err?.message || 'Không tải được dữ liệu hoạt động');
+        setRaw([]);
+      })
+      .finally(() => {
+        if (!isMounted) return;
+        setLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [range]);
+
+  const data = useMemo(() => toSeries(raw), [raw]);
 
   return (
     <section
@@ -74,7 +90,7 @@ export function GrowthCharts({ users }: GrowthChartsProps) {
             Hoạt động người dùng theo ngày
           </h3>
           <p style={{ margin: '4px 0 0', fontSize: 12, color: '#94a3b8' }}>
-            Số người dùng đạt XP trong ngày (dựa trên lần hoạt động gần nhất)
+            Số người dùng đạt XP trong ngày
           </p>
         </div>
         <div style={{ display: 'flex', gap: 6, background: '#f1f5f9', padding: 4, borderRadius: 10 }}>
@@ -102,17 +118,23 @@ export function GrowthCharts({ users }: GrowthChartsProps) {
         </div>
       </div>
 
-      <div style={{ width: '100%', height: 240, marginTop: 16 }}>
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data} margin={{ top: 8, right: 12, bottom: 0, left: -12 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-            <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={{ stroke: '#e2e8f0' }} interval="preserveStartEnd" minTickGap={20} />
-            <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={false} allowDecimals={false} />
-            <Tooltip contentStyle={tooltipStyle} />
-            <Line type="monotone" dataKey="count" name="Active" stroke="#6c63ff" strokeWidth={2.5} dot={{ r: 2, fill: '#6c63ff' }} activeDot={{ r: 5 }} />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
+      {error ? (
+        <div style={{ marginTop: 16, padding: '12px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, color: '#dc2626', fontSize: 13 }}>
+          {error}
+        </div>
+      ) : (
+        <div style={{ width: '100%', height: 240, marginTop: 16 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={data} margin={{ top: 8, right: 12, bottom: 0, left: -12 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+              <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={{ stroke: '#e2e8f0' }} interval="preserveStartEnd" minTickGap={20} />
+              <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={false} allowDecimals={false} />
+              <Tooltip contentStyle={tooltipStyle} />
+              <Line type="monotone" dataKey="count" name="Người đạt XP" stroke="#6c63ff" strokeWidth={2.5} dot={{ r: 2, fill: '#6c63ff' }} activeDot={{ r: 5 }} isAnimationActive={!loading} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      )}
 
       <h4 style={{ margin: '20px 0 4px', fontSize: 13, fontWeight: 700, color: '#475569' }}>
         Lũy kế người dùng hoạt động
@@ -130,7 +152,7 @@ export function GrowthCharts({ users }: GrowthChartsProps) {
             <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={{ stroke: '#e2e8f0' }} interval="preserveStartEnd" minTickGap={20} />
             <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={false} allowDecimals={false} />
             <Tooltip contentStyle={tooltipStyle} />
-            <Area type="monotone" dataKey="cumulative" name="Lũy kế" stroke="#4f46e5" strokeWidth={2} fill="url(#cumGradient)" />
+            <Area type="monotone" dataKey="cumulative" name="Lũy kế" stroke="#4f46e5" strokeWidth={2} fill="url(#cumGradient)" isAnimationActive={!loading} />
           </AreaChart>
         </ResponsiveContainer>
       </div>

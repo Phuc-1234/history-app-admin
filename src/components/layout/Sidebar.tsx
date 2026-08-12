@@ -77,6 +77,26 @@ interface SidebarProps {
 }
 
 export function Sidebar({ activeTab, onTabChange, userName, userRole, isMobile, sidebarOpen }: SidebarProps) {
+  const isSuperAdmin = userRole === 'SUPER_ADMIN';
+  const primaryColor = isSuperAdmin ? '#ef4444' : '#6c63ff';
+  const darkPrimaryColor = isSuperAdmin ? '#dc2626' : '#4f46e5';
+  const gradientBg = isSuperAdmin 
+    ? 'linear-gradient(135deg, #ef4444, #dc2626)' 
+    : 'linear-gradient(135deg, #6c63ff, #4f46e5)';
+  const activeBg = isSuperAdmin
+    ? 'linear-gradient(135deg, rgba(239,68,68,0.08), rgba(220,38,38,0.04))'
+    : 'linear-gradient(135deg, rgba(108,99,255,0.08), rgba(79,70,229,0.04))';
+  const activeShadow = isSuperAdmin
+    ? 'inset 0 0 0 1px rgba(239,68,68,0.15)'
+    : 'inset 0 0 0 1px rgba(108,99,255,0.15)';
+  const boxShadowLogo = isSuperAdmin
+    ? '0 4px 12px rgba(239,68,68,0.35)'
+    : '0 4px 12px rgba(108,99,255,0.35)';
+  const activeStrip = isSuperAdmin
+    ? 'linear-gradient(#ef4444, #dc2626)'
+    : 'linear-gradient(#6c63ff, #4f46e5)';
+  const userBoxBg = isSuperAdmin ? '#fff5f5' : '#fafbff';
+
   return (
     <aside
       style={{
@@ -105,9 +125,9 @@ export function Sidebar({ activeTab, onTabChange, userName, userRole, isMobile, 
           <div style={{
             width: 40, height: 40,
             borderRadius: 12,
-            background: 'linear-gradient(135deg, #6c63ff, #4f46e5)',
+            background: gradientBg,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 4px 12px rgba(108,99,255,0.35)',
+            boxShadow: boxShadowLogo,
           }}>
             <IconHistoryBook size={22} color="#ffffff" />
           </div>
@@ -115,8 +135,8 @@ export function Sidebar({ activeTab, onTabChange, userName, userRole, isMobile, 
             <div style={{ fontSize: 15, fontWeight: 800, color: '#0f172a', lineHeight: 1.2 }}>
               Sắc Sử
             </div>
-            <div style={{ fontSize: 11, color: '#6c63ff', fontWeight: 700, letterSpacing: '0.05em' }}>
-              ADMIN PANEL
+            <div style={{ fontSize: 11, color: primaryColor, fontWeight: 700, letterSpacing: '0.05em' }}>
+              {isSuperAdmin ? 'SUPER ADMIN' : 'ADMIN PANEL'}
             </div>
           </div>
         </div>
@@ -149,14 +169,14 @@ export function Sidebar({ activeTab, onTabChange, userName, userRole, isMobile, 
                 transition: 'all 0.15s ease',
                 fontFamily: 'inherit',
                 background: isActive
-                  ? 'linear-gradient(135deg, rgba(108,99,255,0.08), rgba(79,70,229,0.04))'
+                  ? activeBg
                   : 'transparent',
-                boxShadow: isActive ? 'inset 0 0 0 1px rgba(108,99,255,0.15)' : 'none',
+                boxShadow: isActive ? activeShadow : 'none',
                 position: 'relative',
                 overflow: 'hidden',
               }}
               onMouseEnter={(e) => {
-                if (!isActive) e.currentTarget.style.background = '#f8fafc';
+                if (!isActive) e.currentTarget.style.background = isSuperAdmin ? '#fef2f2' : '#f8fafc';
               }}
               onMouseLeave={(e) => {
                 if (!isActive) e.currentTarget.style.background = 'transparent';
@@ -166,21 +186,21 @@ export function Sidebar({ activeTab, onTabChange, userName, userRole, isMobile, 
                 <div style={{
                   position: 'absolute', left: 0, top: '20%', bottom: '20%',
                   width: 3, borderRadius: '0 3px 3px 0',
-                  background: 'linear-gradient(#6c63ff, #4f46e5)',
+                  background: activeStrip,
                 }} />
               )}
               <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 24, flexShrink: 0 }}>
-                <IconComponent size={20} color={isActive ? '#4f46e5' : '#64748b'} />
+                <IconComponent size={20} color={isActive ? darkPrimaryColor : '#64748b'} />
               </span>
               <div>
                 <div style={{
                   fontSize: 14, fontWeight: isActive ? 700 : 500,
-                  color: isActive ? '#4f46e5' : '#475569',
+                  color: isActive ? darkPrimaryColor : '#475569',
                   lineHeight: 1.3,
                 }}>
                   {item.label}
                 </div>
-                <div style={{ fontSize: 11, color: isActive ? '#6c63ff' : '#94a3b8' }}>
+                <div style={{ fontSize: 11, color: isActive ? primaryColor : '#94a3b8' }}>
                   {item.description}
                 </div>
               </div>
@@ -193,12 +213,12 @@ export function Sidebar({ activeTab, onTabChange, userName, userRole, isMobile, 
       <div style={{
         padding: '16px 16px',
         borderTop: '1px solid #f1f5f9',
-        background: '#fafbff',
+        background: userBoxBg,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{
             width: 36, height: 36, borderRadius: 10,
-            background: 'linear-gradient(135deg, #6c63ff, #4f46e5)',
+            background: gradientBg,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: 15, fontWeight: 700, color: '#fff',
             flexShrink: 0,
@@ -209,7 +229,7 @@ export function Sidebar({ activeTab, onTabChange, userName, userRole, isMobile, 
             <div style={{ fontSize: 13, fontWeight: 600, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {userName ?? 'Admin'}
             </div>
-            <div style={{ fontSize: 11, color: '#6c63ff', fontWeight: 600 }}>
+            <div style={{ fontSize: 11, color: primaryColor, fontWeight: 600 }}>
               {userRole ?? 'ADMIN'}
             </div>
           </div>

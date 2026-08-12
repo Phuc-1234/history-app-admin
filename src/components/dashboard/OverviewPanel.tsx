@@ -4,9 +4,11 @@ import { Spinner } from '../ui/Spinner';
 import { StatsCards } from './StatsCards';
 import { GrowthCharts } from './GrowthCharts';
 import { UserAnalytics } from './UserAnalytics';
+import { TestActivityCharts } from './TestActivityCharts';
+import { TestOverviewCards } from './TestOverviewCards';
+import { QuestionStatsPanel } from './QuestionStatsPanel';
 import { Leaderboard } from './Leaderboard';
 import { ActivityFeed } from './ActivityFeed';
-import { QuestionStatsPanel } from './QuestionStatsPanel';
 
 export function OverviewPanel() {
   const { data, loading, partial } = useDashboardData();
@@ -34,7 +36,7 @@ export function OverviewPanel() {
     );
   }
 
-  const { stats, derived, users, roleSlices, streakBuckets, topXp, topStreak, topGold, activityFeed } = data;
+  const { stats, derived, roleSlices, streakBuckets, topXp, topStreak, topGold, activityFeed } = data;
 
   return (
     <div>
@@ -48,16 +50,18 @@ export function OverviewPanel() {
         <StatsCards stats={stats} derived={derived} />
 
         {/* Phần 2 — Biểu đồ tăng trưởng */}
-        <GrowthCharts users={users} />
+        <GrowthCharts />
 
         {/* Phần 3 — Phân tích người dùng */}
         <UserAnalytics roleSlices={roleSlices} streakBuckets={streakBuckets} derived={derived} />
 
-        {/* Phần 4 — Bảng xếp hạng */}
-        <Leaderboard topXp={topXp} topStreak={topStreak} topGold={topGold} />
-
-        {/* Phần 5 — Thống kê câu hỏi (top câu dễ sai + tỷ lệ sai theo loại) */}
+        {/* Phần 4 — Thống kê làm bài & câu hỏi */}
+        <TestActivityCharts />
+        <TestOverviewCards />
         <QuestionStatsPanel />
+
+        {/* Phần 5 — Bảng xếp hạng */}
+        <Leaderboard topXp={topXp} topStreak={topStreak} topGold={topGold} />
 
         {/* Phần 6 — Hoạt động gần đây */}
         <ActivityFeed items={activityFeed} />

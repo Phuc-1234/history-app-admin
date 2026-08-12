@@ -4,7 +4,6 @@ import client from '../api/client';
 import type {
   AdminUserDto,
   ActivityItem,
-  DailyActivityPoint,
   DashboardData,
   OverviewDerivedStats,
   OverviewStats,
@@ -34,36 +33,9 @@ const ROLE_COLORS: Record<string, string> = {
 };
 
 /** Đếm user active trong N ngày gần nhất dựa trên lastXpGainedAt (proxy cho engagement). */
-function buildActivitySeries(users: AdminUserDto[], days: number): DailyActivityPoint[] {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  // Khởi tạo mảng N ngày gần nhất (cũ -> mới)
-  const buckets: Record<string, number> = {};
-  const dateList: Date[] = [];
-  for (let i = days - 1; i >= 0; i--) {
-    const d = new Date(today);
-    d.setDate(d.getDate() - i);
-    const key = d.toISOString().slice(0, 10);
-    buckets[key] = 0;
-    dateList.push(d);
-  }
-
-  for (const u of users) {
-    if (!u.lastXpGainedAt) continue;
-    const key = new Date(u.lastXpGainedAt).toISOString().slice(0, 10);
-    if (key in buckets) buckets[key] += 1;
-  }
-
-  let cumulative = 0;
-  return dateList.map((d) => {
-    const key = d.toISOString().slice(0, 10);
-    cumulative += buckets[key];
-    const dd = String(d.getDate()).padStart(2, '0');
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    return { date: key, label: `${dd}/${mm}`, count: buckets[key], cumulative };
-  });
-}
+// NOTE: Daily activity series giờ được fetch riêng từ endpoint
+// /api/admin/stats/xp-activity (đếm distinct userId từ UserXpLog) bên trong GrowthCharts.
+// Hàm buildActivitySeries cũ đã bị xoá vì nó chỉ dùng lastXpGainedAt (mỗi user 1 ngày) → sai semantics.
 
 function computeDerived(users: AdminUserDto[]): OverviewDerivedStats {
   const n = users.length;
@@ -235,7 +207,6 @@ export function useDashboardData(): UseDashboardDataResult {
       stats,
       users,
       derived,
-      activitySeries: buildActivitySeries(users, 30),
       roleSlices: computeRoleSlices(users),
       streakBuckets: computeStreakBuckets(users),
       topXp: topN(users, 'totalXp', 5),
