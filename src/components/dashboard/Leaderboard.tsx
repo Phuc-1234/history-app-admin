@@ -25,7 +25,7 @@ function Board({ title, users, icon, valueExtractor }: BoardProps) {
         background: '#ffffff',
         border: '1px solid #e2e8f0',
         borderRadius: 20,
-        padding: 20,
+        padding: 24,
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
@@ -33,7 +33,7 @@ function Board({ title, users, icon, valueExtractor }: BoardProps) {
         <h4 style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#475569' }}>{title}</h4>
       </div>
       {users.length === 0 ? (
-        <div style={{ fontSize: 12, color: '#94a3b8', padding: '12px 0' }}>Chưa có dữ liệu</div>
+        <div style={{ fontSize: 13, color: '#94a3b8', padding: '16px 0', textAlign: 'center' }}>Chưa có dữ liệu</div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {users.map((u, i) => (

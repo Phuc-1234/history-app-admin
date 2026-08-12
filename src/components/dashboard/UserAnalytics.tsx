@@ -30,7 +30,7 @@ const cardStyle = {
   background: '#ffffff',
   border: '1px solid #e2e8f0',
   borderRadius: 20,
-  padding: 20,
+  padding: 24,
 } as const;
 
 function DonutLegend({ data, colors }: { data: RoleSlice[]; colors: string[] }) {
