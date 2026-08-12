@@ -136,7 +136,6 @@ export function StatsCards({ stats, derived }: StatsCardsProps) {
                   key={card.label}
                   style={{
                     ...cardStyle(card.bg, card.border),
-                    padding: 18,
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>

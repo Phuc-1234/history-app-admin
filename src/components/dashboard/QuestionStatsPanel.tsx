@@ -211,7 +211,7 @@ export function QuestionStatsPanel() {
                       </div>
                     </div>
                     <div style={{ textAlign: 'right', minWidth: 56 }}>
-                      <div style={{ fontSize: 16, fontWeight: 800, color: q.wrongRate >= 50 ? '#dc2626' : '#d97706' }}>
+                      <div style={{ fontSize: 16, fontWeight: 800, color: q.wrongRate >= 50 ? '#f43f5e' : '#d97706' }}>
                         {q.wrongRate}%
                       </div>
                       <div style={{ fontSize: 10, color: '#94a3b8' }}>sai</div>
@@ -245,7 +245,7 @@ export function QuestionStatsPanel() {
                     />
                     <Bar dataKey="wrongRate" name="Tỷ lệ sai" radius={[6, 6, 0, 0]}>
                       {typeBars.map((b, i) => (
-                        <Cell key={i} fill={b.wrongRate >= 50 ? '#dc2626' : b.wrongRate >= 30 ? '#d97706' : '#16a34a'} />
+                        <Cell key={i} fill={b.wrongRate >= 50 ? '#f43f5e' : b.wrongRate >= 30 ? '#d97706' : '#16a34a'} />
                       ))}
                     </Bar>
                   </BarChart>
@@ -278,9 +278,9 @@ export function QuestionStatsPanel() {
             {/* Stats tóm tắt từ topWrong */}
             {selected && (
               <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                <StatChip label="Tỷ lệ sai" value={`${selected.wrongRate}%`} color={selected.wrongRate >= 50 ? '#dc2626' : '#d97706'} />
+                <StatChip label="Tỷ lệ sai" value={`${selected.wrongRate}%`} color={selected.wrongRate >= 50 ? '#f43f5e' : '#d97706'} />
                 <StatChip label="Số lượt trả lời" value={String(selected.totalAnswers)} color="#4f46e5" />
-                <StatChip label="Số lần sai" value={String(selected.wrongCount)} color="#dc2626" />
+                <StatChip label="Số lần sai" value={String(selected.wrongCount)} color="#f43f5e" />
                 <StatChip label="Loại" value={TYPE_LABELS[selected.type] || selected.type} color={TYPE_COLORS[selected.type] || '#64748b'} />
                 <StatChip label="Độ khó" value={`${selected.difficulty}/4`} color="#eab308" />
               </div>
@@ -320,7 +320,7 @@ export function QuestionStatsPanel() {
             {/* Đáp án */}
             {Array.isArray(detail.answers) && detail.answers.length > 0 && (
               <div>
-                <SectionLabel>Đáp án ({detail.answers.length})</SectionLabel>
+                <SectionLabel>Đáp án</SectionLabel>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   {detail.answers.map((a, idx) => {
                     const isCorrect = a.isCorrect === true;
@@ -330,7 +330,7 @@ export function QuestionStatsPanel() {
                         key={idx}
                         style={{
                           display: 'flex',
-                          alignItems: 'flex-start',
+                          alignItems: 'center',
                           gap: 8,
                           padding: '8px 10px',
                           borderRadius: 8,
@@ -340,13 +340,17 @@ export function QuestionStatsPanel() {
                           color: '#0f172a',
                         }}
                       >
-                        <span style={{ fontSize: 11, fontWeight: 700, color: isCorrect ? '#047857' : '#94a3b8', minWidth: 24 }}>
-                          {isCorrect ? '✓ ĐÚNG' : `#${idx + 1}`}
+                        <span style={{ flex: 1, minWidth: 0 }}>
+                          {a.leftText && a.rightText ? (
+                            <><strong>{stripHtml(a.leftText)}</strong> ↔ {stripHtml(a.rightText)}</>
+                          ) : (
+                            <span dangerouslySetInnerHTML={{ __html: text }} />
+                          )}
                         </span>
-                        {a.leftText && a.rightText ? (
-                          <span><strong>{stripHtml(a.leftText)}</strong> ↔ {stripHtml(a.rightText)}</span>
-                        ) : (
-                          <span dangerouslySetInnerHTML={{ __html: text }} />
+                        {isCorrect && (
+                          <span style={{ fontSize: 11, fontWeight: 700, color: '#047857', flexShrink: 0 }}>
+                            ✓ ĐÚNG
+                          </span>
                         )}
                       </div>
                     );
