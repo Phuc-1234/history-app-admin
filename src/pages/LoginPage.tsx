@@ -200,7 +200,7 @@ export function LoginPage() {
         </div>
 
         <p style={{ textAlign: 'center', marginTop: 20, fontSize: 13, color: '#94a3b8' }}>
-          Chỉ dành cho tài khoản có quyền ADMIN
+          chỉ dành cho tài khoản ADMIN hoặc SUPER ADMIN
         </p>
       </div>
     </div>

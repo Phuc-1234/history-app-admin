@@ -3,6 +3,7 @@ import client from '../../api/client';
 import { Modal } from '../ui/Modal';
 import { Spinner } from '../ui/Spinner';
 import { Button } from '../ui/Button';
+import { useAuthStore } from '../../store/authStore';
 import type { AdminUserDto } from '../../types/api';
 import { IconXP, IconGold, IconFlame, IconChevronDown } from '../ui/Icons';
 
@@ -90,6 +91,9 @@ export function UserEditModal({
   onClose,
   onSave
 }: UserEditModalProps) {
+  const currentUser = useAuthStore((state) => state.user);
+  const isSelfSuperAdmin = currentUser?.id === user?.id && currentUser?.role === 'SUPER_ADMIN';
+
   const [selectedRole, setSelectedRole] = useState<string>('');
   const [selectedIsHidden, setSelectedIsHidden] = useState<boolean>(false);
   const [saving, setSaving] = useState(false);
@@ -289,14 +293,19 @@ export function UserEditModal({
                   disabled={saving}
                   style={{ ...SELECT_STYLE, paddingRight: 36 }}
                 >
-                  <option value="STUDENT">STUDENT (Học sinh)</option>
-                  <option value="ADMIN">ADMIN (Quản trị)</option>
+                  <option value="STUDENT" disabled={isSelfSuperAdmin}>STUDENT (Học sinh)</option>
+                  <option value="ADMIN" disabled={isSelfSuperAdmin}>ADMIN (Quản trị)</option>
                   <option value="SUPER_ADMIN">SUPER_ADMIN (Tối cao)</option>
                 </select>
                 <span style={CHEVRON_WRAPPER_STYLE}>
                   <IconChevronDown size={16} color="#64748b" />
                 </span>
               </div>
+              {isSelfSuperAdmin && (
+                <div style={{ fontSize: 11, color: '#dc2626', marginTop: 4 }}>
+                  * Quản trị viên tối cao không thể tự giáng cấp bản thân.
+                </div>
+              )}
             </div>
 
             {/* Visibility Select */}
