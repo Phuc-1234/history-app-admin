@@ -32,7 +32,7 @@ const tooltipStyle = {
 };
 
 const TYPE_COLORS: Record<string, string> = {
-  CHOOSE: '#6c63ff',
+  CHOOSE: '#c37938',
   FILL: '#16a34a',
   MATCH: '#ea580c',
 };

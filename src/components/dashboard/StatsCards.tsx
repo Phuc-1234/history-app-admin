@@ -56,7 +56,7 @@ function StatIconWrap({ children, border }: { children: React.ReactNode; border:
 
 export function StatsCards({ stats, derived }: StatsCardsProps) {
   const statCards = [
-    { icon: IconGrade, label: 'Khối lớp', value: stats?.grades ?? '—', accent: '#6c63ff', bg: '#f5f3ff', border: '#ddd6fe' },
+    { icon: IconGrade, label: 'Khối lớp', value: stats?.grades ?? '—', accent: '#c37938', bg: 'rgba(195, 121, 56, 0.06)', border: 'rgba(195, 121, 56, 0.15)' },
     { icon: IconTopic, label: 'Chủ đề', value: stats?.topics ?? '—', accent: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0' },
     { icon: IconLesson, label: 'Bài học', value: stats?.lessons ?? '—', accent: '#d97706', bg: '#fffbeb', border: '#fde68a' },
     { icon: IconMindMap, label: 'Sơ đồ tư duy', value: stats?.sections ?? '—', accent: '#0284c7', bg: '#f0f9ff', border: '#bae6fd' },

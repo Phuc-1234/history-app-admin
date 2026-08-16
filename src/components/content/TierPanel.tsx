@@ -284,7 +284,7 @@ export function TierPanel({ onToast }: TierPanelProps) {
                     onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                   >
                     {/* Index */}
-                    <td style={{ padding: '16px 20px', fontWeight: 700, color: '#4f46e5' }}>
+                    <td style={{ padding: '16px 20px', fontWeight: 700, color: '#c37938' }}>
                       #{tier.index}
                     </td>
 
@@ -323,8 +323,8 @@ export function TierPanel({ onToast }: TierPanelProps) {
                     <td style={{ padding: '16px 20px' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                         {rule && rule.xp > 0 && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#4f46e5', fontWeight: 600, fontSize: 13 }}>
-                            <IconXP size={14} color="#6c63ff" />
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#a66228', fontWeight: 600, fontSize: 13 }}>
+                            <IconXP size={14} color="#c37938" />
                             <span>+{rule.xp} XP</span>
                           </div>
                         )}
@@ -462,8 +462,8 @@ export function TierPanel({ onToast }: TierPanelProps) {
                     transition: 'border-color 0.2s, box-shadow 0.2s',
                   }}
                   onFocus={(e) => {
-                    e.currentTarget.style.borderColor = '#6c63ff';
-                    e.currentTarget.style.boxShadow = '0 0 0 3px rgba(108,99,255,0.12)';
+                    e.currentTarget.style.borderColor = '#c37938';
+                    e.currentTarget.style.boxShadow = '0 0 0 3px rgba(195,121,56,0.12)';
                   }}
                   onBlur={(e) => {
                     e.currentTarget.style.borderColor = '#e2e8f0';

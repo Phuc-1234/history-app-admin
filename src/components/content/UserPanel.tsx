@@ -185,8 +185,8 @@ export function UserPanel({ onToast }: UserPanelProps) {
                       borderRadius: 6,
                       fontSize: 12,
                       fontWeight: 600,
-                      background: u.role === 'SUPER_ADMIN' ? '#f5f3ff' : u.role === 'ADMIN' ? '#eff6ff' : '#f1f5f9',
-                      color: u.role === 'SUPER_ADMIN' ? '#7c3aed' : u.role === 'ADMIN' ? '#2563eb' : '#475569'
+                      background: (u.role === 'SUPER_ADMIN' || u.role === 'ADMIN') ? 'rgba(195, 121, 56, 0.1)' : '#f1f5f9',
+                      color: u.role === 'SUPER_ADMIN' ? '#ef4444' : u.role === 'ADMIN' ? '#c37938' : '#475569'
                     }}>
                       {u.role}
                     </span>
@@ -239,7 +239,7 @@ export function UserPanel({ onToast }: UserPanelProps) {
                         display: 'inline-flex',
                         alignItems: 'center',
                         gap: 6,
-                        background: 'linear-gradient(135deg, #6c63ff, #4f46e5)',
+                        background: 'linear-gradient(135deg, #c37938, #a66228)',
                         border: 'none',
                         color: '#ffffff',
                         padding: '6px 12px',
@@ -247,7 +247,7 @@ export function UserPanel({ onToast }: UserPanelProps) {
                         fontSize: 13,
                         fontWeight: 600,
                         cursor: 'pointer',
-                        boxShadow: '0 2px 8px rgba(108,99,255,0.15)'
+                        boxShadow: '0 2px 8px rgba(195,121,56,0.15)'
                       }}
                       onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-1px)')}
                       onMouseLeave={(e) => (e.currentTarget.style.transform = 'none')}

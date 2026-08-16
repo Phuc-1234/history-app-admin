@@ -80,24 +80,14 @@ interface SidebarProps {
 
 export function Sidebar({ activeTab, onTabChange, userName, userRole, isMobile, sidebarOpen }: SidebarProps) {
   const isSuperAdmin = userRole === 'SUPER_ADMIN';
-  const primaryColor = isSuperAdmin ? '#ef4444' : '#6c63ff';
-  const darkPrimaryColor = isSuperAdmin ? '#dc2626' : '#4f46e5';
-  const gradientBg = isSuperAdmin 
-    ? 'linear-gradient(135deg, #ef4444, #dc2626)' 
-    : 'linear-gradient(135deg, #6c63ff, #4f46e5)';
-  const activeBg = isSuperAdmin
-    ? 'linear-gradient(135deg, rgba(239,68,68,0.08), rgba(220,38,38,0.04))'
-    : 'linear-gradient(135deg, rgba(108,99,255,0.08), rgba(79,70,229,0.04))';
-  const activeShadow = isSuperAdmin
-    ? 'inset 0 0 0 1px rgba(239,68,68,0.15)'
-    : 'inset 0 0 0 1px rgba(108,99,255,0.15)';
-  const boxShadowLogo = isSuperAdmin
-    ? '0 4px 12px rgba(239,68,68,0.35)'
-    : '0 4px 12px rgba(108,99,255,0.35)';
-  const activeStrip = isSuperAdmin
-    ? 'linear-gradient(#ef4444, #dc2626)'
-    : 'linear-gradient(#6c63ff, #4f46e5)';
-  const userBoxBg = isSuperAdmin ? '#fff5f5' : '#fafbff';
+  const primaryColor = '#c37938';
+  const darkPrimaryColor = '#a66228';
+  const gradientBg = 'linear-gradient(135deg, #c37938, #a66228)';
+  const activeBg = 'linear-gradient(135deg, rgba(195,121,56,0.08), rgba(166,98,40,0.04))';
+  const activeShadow = 'inset 0 0 0 1px rgba(195,121,56,0.15)';
+  const boxShadowLogo = '0 4px 12px rgba(195,121,56,0.35)';
+  const activeStrip = 'linear-gradient(#c37938, #a66228)';
+  const userBoxBg = '#fffbf7';
 
   return (
     <aside
@@ -137,7 +127,7 @@ export function Sidebar({ activeTab, onTabChange, userName, userRole, isMobile, 
             <div style={{ fontSize: 15, fontWeight: 800, color: '#0f172a', lineHeight: 1.2 }}>
               Sắc Sử
             </div>
-            <div style={{ fontSize: 11, color: primaryColor, fontWeight: 700, letterSpacing: '0.05em' }}>
+            <div style={{ fontSize: 11, color: isSuperAdmin ? '#ef4444' : primaryColor, fontWeight: 700, letterSpacing: '0.05em' }}>
               {isSuperAdmin ? 'SUPER ADMIN' : 'ADMIN PANEL'}
             </div>
           </div>
@@ -178,7 +168,7 @@ export function Sidebar({ activeTab, onTabChange, userName, userRole, isMobile, 
                 overflow: 'hidden',
               }}
               onMouseEnter={(e) => {
-                if (!isActive) e.currentTarget.style.background = isSuperAdmin ? '#fef2f2' : '#f8fafc';
+                if (!isActive) e.currentTarget.style.background = '#fff8f2';
               }}
               onMouseLeave={(e) => {
                 if (!isActive) e.currentTarget.style.background = 'transparent';
@@ -231,7 +221,7 @@ export function Sidebar({ activeTab, onTabChange, userName, userRole, isMobile, 
             <div style={{ fontSize: 13, fontWeight: 600, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {userName ?? 'Admin'}
             </div>
-            <div style={{ fontSize: 11, color: primaryColor, fontWeight: 600 }}>
+            <div style={{ fontSize: 11, color: isSuperAdmin ? '#ef4444' : primaryColor, fontWeight: 600 }}>
               {userRole ?? 'ADMIN'}
             </div>
           </div>

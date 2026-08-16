@@ -370,9 +370,9 @@ export function PackagePricingPanel({ onToast }: PackagePricingPanelProps) {
             display: 'flex',
             alignItems: 'center',
             gap: 8,
-            background: activeTab === 'gold' ? '#6c63ff' : '#ffffff',
+            background: activeTab === 'gold' ? '#c37938' : '#ffffff',
             color: activeTab === 'gold' ? '#ffffff' : '#64748b',
-            boxShadow: activeTab === 'gold' ? '0 4px 14px rgba(108,99,255,0.3)' : '0 1px 3px rgba(0,0,0,0.05)',
+            boxShadow: activeTab === 'gold' ? '0 4px 14px rgba(195,121,56,0.3)' : '0 1px 3px rgba(0,0,0,0.05)',
             transition: 'all 0.2s',
           }}
         >
@@ -392,9 +392,9 @@ export function PackagePricingPanel({ onToast }: PackagePricingPanelProps) {
             display: 'flex',
             alignItems: 'center',
             gap: 8,
-            background: activeTab === 'pro' ? '#6c63ff' : '#ffffff',
+            background: activeTab === 'pro' ? '#c37938' : '#ffffff',
             color: activeTab === 'pro' ? '#ffffff' : '#64748b',
-            boxShadow: activeTab === 'pro' ? '0 4px 14px rgba(108,99,255,0.3)' : '0 1px 3px rgba(0,0,0,0.05)',
+            boxShadow: activeTab === 'pro' ? '0 4px 14px rgba(195,121,56,0.3)' : '0 1px 3px rgba(0,0,0,0.05)',
             transition: 'all 0.2s',
           }}
         >
@@ -561,7 +561,7 @@ export function PackagePricingPanel({ onToast }: PackagePricingPanelProps) {
                           <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>{pkg.description}</div>
                         )}
                       </td>
-                      <td style={{ padding: '16px 20px', fontWeight: 700, color: '#6c63ff' }}>
+                      <td style={{ padding: '16px 20px', fontWeight: 700, color: '#c37938' }}>
                         {pkg.durationDays} Ngày
                       </td>
                       <td style={{ padding: '16px 20px', fontWeight: 800, color: '#10b981' }}>

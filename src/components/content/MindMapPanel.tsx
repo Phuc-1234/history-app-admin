@@ -1329,15 +1329,15 @@ export function MindMapPanel({ onToast, navParams, onNavigate: _onNavigate }: Mi
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center' }}>
             <Button
               variant="secondary"
-              icon={<IconMagicWand size={14} color="#6c63ff" />}
+              icon={<IconMagicWand size={14} color="#c37938" />}
               onClick={() => {
                 setAiPreviewSections([]);
                 setAiModalOpen(true);
               }}
               style={{
-                borderColor: '#c7d2fe',
-                background: '#faf5ff',
-                color: '#6c63ff',
+                borderColor: 'rgba(195, 121, 56, 0.25)',
+                background: 'rgba(195, 121, 56, 0.05)',
+                color: '#c37938',
                 fontWeight: 600,
                 height: '34px',
                 fontSize: '13px',
@@ -1516,13 +1516,13 @@ export function MindMapPanel({ onToast, navParams, onNavigate: _onNavigate }: Mi
             </span>
             <Button
               variant="secondary"
-              icon={aiGenerating ? <Spinner size={14} /> : <IconMagicWand size={14} color="#6c63ff" />}
+              icon={aiGenerating ? <Spinner size={14} /> : <IconMagicWand size={14} color="#c37938" />}
               onClick={handleAIGenerate}
               disabled={aiGenerating}
               style={{
-                borderColor: '#c7d2fe',
-                background: '#faf5ff',
-                color: '#6c63ff',
+                borderColor: 'rgba(195, 121, 56, 0.25)',
+                background: 'rgba(195, 121, 56, 0.05)',
+                color: '#c37938',
               }}
             >
               {aiGenerating ? 'Đang phân tích...' : 'Bắt đầu sinh bằng AI'}

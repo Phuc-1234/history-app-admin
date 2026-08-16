@@ -99,8 +99,8 @@ export function LoginPage() {
       overflow: 'hidden',
     }}>
       {/* Decorative blobs */}
-      <div style={{ position: 'fixed', top: -120, left: -120, width: 500, height: 500, borderRadius: '50%', background: 'radial-gradient(circle, rgba(108,99,255,0.12) 0%, transparent 70%)', pointerEvents: 'none' }} />
-      <div style={{ position: 'fixed', bottom: -100, right: -80, width: 450, height: 450, borderRadius: '50%', background: 'radial-gradient(circle, rgba(79,70,229,0.08) 0%, transparent 70%)', pointerEvents: 'none' }} />
+      <div style={{ position: 'fixed', top: -120, left: -120, width: 500, height: 500, borderRadius: '50%', background: 'radial-gradient(circle, rgba(195,121,56,0.12) 0%, transparent 70%)', pointerEvents: 'none' }} />
+      <div style={{ position: 'fixed', bottom: -100, right: -80, width: 450, height: 450, borderRadius: '50%', background: 'radial-gradient(circle, rgba(166,98,40,0.08) 0%, transparent 70%)', pointerEvents: 'none' }} />
       <div style={{ position: 'fixed', top: '40%', right: '10%', width: 300, height: 300, borderRadius: '50%', background: 'radial-gradient(circle, rgba(249,168,212,0.12) 0%, transparent 70%)', pointerEvents: 'none' }} />
 
       <div style={{ width: '100%', maxWidth: 420, position: 'relative', zIndex: 1 }}>
@@ -109,10 +109,10 @@ export function LoginPage() {
           <div style={{
             width: 72, height: 72,
             borderRadius: 22,
-            background: 'linear-gradient(135deg, #6c63ff, #4f46e5)',
+            background: 'linear-gradient(135deg, #c37938, #a66228)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             margin: '0 auto 16px',
-            boxShadow: '0 12px 32px rgba(108,99,255,0.35)',
+            boxShadow: '0 12px 32px rgba(195,121,56,0.35)',
           }}>
             <IconHistoryBook size={34} color="#ffffff" />
           </div>
@@ -157,8 +157,8 @@ export function LoginPage() {
                 placeholder="admin@example.com"
                 style={inputStyle}
                 onFocus={(e) => {
-                  e.target.style.borderColor = '#6c63ff';
-                  e.target.style.boxShadow = '0 0 0 3px rgba(108,99,255,0.12)';
+                  e.target.style.borderColor = '#c37938';
+                  e.target.style.boxShadow = '0 0 0 3px rgba(195,121,56,0.12)';
                 }}
                 onBlur={(e) => {
                   e.target.style.borderColor = '#e2e8f0';
@@ -179,8 +179,8 @@ export function LoginPage() {
                 placeholder="••••••••"
                 style={inputStyle}
                 onFocus={(e) => {
-                  e.target.style.borderColor = '#6c63ff';
-                  e.target.style.boxShadow = '0 0 0 3px rgba(108,99,255,0.12)';
+                  e.target.style.borderColor = '#c37938';
+                  e.target.style.boxShadow = '0 0 0 3px rgba(195,121,56,0.12)';
                 }}
                 onBlur={(e) => {
                   e.target.style.borderColor = '#e2e8f0';

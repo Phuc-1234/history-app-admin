@@ -308,14 +308,14 @@ export function NodePanel({ onToast }: NodePanelProps) {
                 (e.currentTarget as HTMLDivElement).style.boxShadow = '0 1px 6px rgba(15,23,42,0.05)';
               }}
             >
-              <div style={{ width: 36, height: 36, borderRadius: 10, background: '#f5f3ff', border: '1px solid #ddd6fe', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6c63ff', fontWeight: 700, fontSize: 14, flexShrink: 0 }}>
+              <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(195, 121, 56, 0.06)', border: '1px solid rgba(195, 121, 56, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#c37938', fontWeight: 700, fontSize: 14, flexShrink: 0 }}>
                 {n.position}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 {n.header && <div style={{ fontSize: 15, fontWeight: 700, color: '#0f172a', marginBottom: 6 }}>{n.header}</div>}
                 <div style={{ fontSize: 14, color: '#475569', lineHeight: 1.7 }} dangerouslySetInnerHTML={{ __html: n.body }} />
                 {n.videoId && (
-                  <div style={{ marginTop: 8, fontSize: 12, color: '#6c63ff', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <div style={{ marginTop: 8, fontSize: 12, color: '#c37938', display: 'flex', alignItems: 'center', gap: 4 }}>
                     <span>🎥 Video:</span> <span>{videos.find(v => v.id === n.videoId)?.title || n.videoId}</span>
                   </div>
                 )}

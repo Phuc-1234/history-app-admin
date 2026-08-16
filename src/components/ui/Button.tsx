@@ -11,10 +11,10 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const VARIANTS = {
   primary: {
-    background: 'linear-gradient(135deg, #6c63ff 0%, #4f46e5 100%)',
+    background: 'linear-gradient(135deg, #c37938 0%, #a66228 100%)',
     color: '#fff',
     border: 'none',
-    boxShadow: '0 4px 12px rgba(108,99,255,0.3)',
+    boxShadow: '0 4px 12px rgba(195,121,56,0.3)',
   },
   danger: {
     background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',

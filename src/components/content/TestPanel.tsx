@@ -339,7 +339,7 @@ export function TestPanel({ onToast }: TestPanelProps) {
                     </td>
                     <td style={TD_STYLE}>
                       <div style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
-                        <span style={{ fontWeight: 600, color: '#4f46e5' }}>
+                        <span style={{ fontWeight: 600, color: '#c37938' }}>
                           {getScopeBadgeLabel(t)}
                         </span>
                         {t.isNationalTest && (
@@ -350,7 +350,7 @@ export function TestPanel({ onToast }: TestPanelProps) {
                       </div>
                     </td>
                     <td style={TD_STYLE}>
-                      <span style={{ fontWeight: 700, color: '#6c63ff' }}>{t.questionIds?.length ?? 0}</span> câu
+                       <span style={{ fontWeight: 700, color: '#c37938' }}>{t.questionIds?.length ?? 0}</span> câu
                     </td>
                     <td style={{ ...TD_STYLE, textAlign: 'right' }}>
                       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>

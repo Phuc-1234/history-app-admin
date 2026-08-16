@@ -287,9 +287,9 @@ export function VideoPanel({ onToast }: VideoPanelProps) {
           transition: all 0.2s;
         }
         .tab-btn.active {
-          background: #6c63ff;
+          background: #c37938;
           color: #ffffff;
-          border-color: #6c63ff;
+          border-color: #c37938;
         }
         .tab-btn:first-child {
           border-top-left-radius: 8px;
@@ -355,7 +355,7 @@ export function VideoPanel({ onToast }: VideoPanelProps) {
                       <span style={{ background: '#fee2e2', color: '#b91c1c', padding: '4px 10px', borderRadius: 99, fontSize: 12, fontWeight: 600 }}>Lỗi xử lý</span>
                     )}
                   </td>
-                  <td style={{ ...TD_STYLE, fontSize: 13, fontFamily: 'monospace', color: v.status === 'READY' ? '#6c63ff' : '#94a3b8', maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <td style={{ ...TD_STYLE, fontSize: 13, fontFamily: 'monospace', color: v.status === 'READY' ? '#c37938' : '#94a3b8', maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {v.status === 'READY' ? v.hlsUrl : 'Chờ xử lý để cấp link...'}
                   </td>
                   <td style={{ ...TD_STYLE, color: '#64748b', maxWidth: 250, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -478,7 +478,7 @@ export function VideoPanel({ onToast }: VideoPanelProps) {
               <span>{uploadProgress}%</span>
             </div>
             <div style={{ width: '100%', height: 8, background: '#e2e8f0', borderRadius: 4, overflow: 'hidden' }}>
-              <div style={{ width: `${uploadProgress}%`, height: '100%', background: '#6c63ff', transition: 'width 0.1s linear' }}></div>
+              <div style={{ width: `${uploadProgress}%`, height: '100%', background: '#c37938', transition: 'width 0.1s linear' }}></div>
             </div>
           </div>
         )}

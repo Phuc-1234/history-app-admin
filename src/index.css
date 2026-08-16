@@ -33,7 +33,7 @@ html, body {
   border-radius: 10px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(108, 99, 255, 0.4);
+  background: rgba(195, 121, 56, 0.4);
 }
 
 /* Animations */
@@ -90,8 +90,8 @@ a, select, input {
   padding: 10px 16px !important;
 }
 .ck-editor__editable.ck-focused {
-  border-color: #6c63ff !important;
-  box-shadow: 0 0 0 3px rgba(108,99,255,0.12) !important;
+  border-color: #c37938 !important;
+  box-shadow: 0 0 0 3px rgba(195, 121, 56, 0.12) !important;
 }
 .ck-toolbar {
   border: 1px solid #e2e8f0 !important;

@@ -46,8 +46,8 @@ export function Input({ label, hint, ...props }: InputHTMLAttributes<HTMLInputEl
           props.onWheel?.(e);
         }}
         onFocus={(e) => {
-          e.target.style.borderColor = '#6c63ff';
-          e.target.style.boxShadow = '0 0 0 3px rgba(108,99,255,0.12)';
+          e.target.style.borderColor = '#c37938';
+          e.target.style.boxShadow = '0 0 0 3px rgba(195,121,56,0.12)';
           props.onFocus?.(e);
         }}
         onBlur={(e) => {
@@ -67,8 +67,8 @@ export function Textarea({ label, hint, ...props }: TextareaHTMLAttributes<HTMLT
         {...props}
         style={{ ...inputStyle, resize: 'vertical', minHeight: 90, ...props.style }}
         onFocus={(e) => {
-          e.target.style.borderColor = '#6c63ff';
-          e.target.style.boxShadow = '0 0 0 3px rgba(108,99,255,0.12)';
+          e.target.style.borderColor = '#c37938';
+          e.target.style.boxShadow = '0 0 0 3px rgba(195,121,56,0.12)';
         }}
         onBlur={(e) => {
           e.target.style.borderColor = '#e2e8f0';
@@ -86,8 +86,8 @@ export function Select({ label, hint, children, ...props }: SelectHTMLAttributes
         {...props}
         style={{ ...inputStyle, cursor: 'pointer', ...props.style }}
         onFocus={(e) => {
-          e.target.style.borderColor = '#6c63ff';
-          e.target.style.boxShadow = '0 0 0 3px rgba(108,99,255,0.12)';
+          e.target.style.borderColor = '#c37938';
+          e.target.style.boxShadow = '0 0 0 3px rgba(195,121,56,0.12)';
         }}
         onBlur={(e) => {
           e.target.style.borderColor = '#e2e8f0';

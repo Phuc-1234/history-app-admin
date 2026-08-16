@@ -203,20 +203,20 @@ export function UserEditModal({
           background: 'linear-gradient(135deg, rgba(108,99,255,0.06), rgba(79,70,229,0.03))',
           padding: 16,
           borderRadius: 14,
-          border: '1px solid rgba(108,99,255,0.1)'
+          border: '1px solid rgba(195,121,56,0.1)'
         }}>
           <div style={{
             width: 56,
             height: 56,
             borderRadius: 12,
-            background: 'linear-gradient(135deg, #6c63ff, #4f46e5)',
+            background: 'linear-gradient(135deg, #c37938, #a66228)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             fontSize: 22,
             fontWeight: 800,
             color: '#ffffff',
-            boxShadow: '0 4px 12px rgba(108,99,255,0.2)'
+            boxShadow: '0 4px 12px rgba(195,121,56,0.2)'
           }}>
             {user.profileImgUrl ? (
               <img src={user.profileImgUrl} alt={user.name} style={{ width: '100%', height: '100%', borderRadius: 12, objectFit: 'cover' }} />
@@ -546,7 +546,7 @@ export const SPINNER_STYLE = {
   width: 14,
   height: 14,
   border: '2px solid rgba(0,0,0,0.1)',
-  borderTopColor: '#6c63ff',
+  borderTopColor: '#c37938',
   borderRadius: '50%',
   animation: 'spin 0.6s linear infinite'
 };

@@ -288,8 +288,8 @@ export function RewardRulePanel({ onToast }: RewardRulePanelProps) {
               fontFamily: 'inherit', boxSizing: 'border-box'
             }}
             onFocus={(e) => {
-              e.target.style.borderColor = '#6c63ff';
-              e.target.style.boxShadow = '0 0 0 3px rgba(108,99,255,0.12)';
+              e.target.style.borderColor = '#c37938';
+              e.target.style.boxShadow = '0 0 0 3px rgba(195,121,56,0.12)';
             }}
             onBlur={(e) => {
               e.target.style.borderColor = '#e2e8f0';
@@ -310,8 +310,8 @@ export function RewardRulePanel({ onToast }: RewardRulePanelProps) {
               fontFamily: 'inherit', cursor: 'pointer'
             }}
             onFocus={(e) => {
-              e.target.style.borderColor = '#6c63ff';
-              e.target.style.boxShadow = '0 0 0 3px rgba(108,99,255,0.12)';
+              e.target.style.borderColor = '#c37938';
+              e.target.style.boxShadow = '0 0 0 3px rgba(195,121,56,0.12)';
             }}
             onBlur={(e) => {
               e.target.style.borderColor = '#e2e8f0';
@@ -400,8 +400,8 @@ export function RewardRulePanel({ onToast }: RewardRulePanelProps) {
                     <td style={{ padding: '16px 20px' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                         {rule.xp > 0 && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#4f46e5', fontWeight: 600, fontSize: 13 }}>
-                            <IconXP size={14} color="#6c63ff" />
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#a66228', fontWeight: 600, fontSize: 13 }}>
+                            <IconXP size={14} color="#c37938" />
                             <span>+{rule.xp} XP</span>
                           </div>
                         )}

@@ -368,9 +368,9 @@ export function SectionPanel({ onToast, navParams, onNavigate }: SectionPanelPro
           {selectedLessonId && (
             <Button
               variant="secondary"
-              icon={<IconMindMap size={16} color="#6c63ff" />}
+              icon={<IconMindMap size={16} color="#c37938" />}
               onClick={() => onNavigate?.('mindmaps', { gradeId: selectedGradeId, topicId: selectedTopicId, lessonId: selectedLessonId })}
-              style={{ borderColor: '#c7d2fe', background: '#faf5ff', color: '#6c63ff', fontWeight: 600 }}
+              style={{ borderColor: 'rgba(195, 121, 56, 0.25)', background: 'rgba(195, 121, 56, 0.05)', color: '#c37938', fontWeight: 600 }}
             >
               Sơ đồ tư duy
             </Button>
@@ -419,7 +419,7 @@ export function SectionPanel({ onToast, navParams, onNavigate }: SectionPanelPro
                       </Td>
                       <Td><span style={{ color: '#94a3b8', fontSize: 13 }}>{s.summary ?? '—'}</span></Td>
                       <Td>
-                        <span style={{ fontSize: 12, fontWeight: 600, color: s.depth === 0 ? '#6c63ff' : '#94a3b8', background: s.depth === 0 ? '#f5f3ff' : '#f8fafc', padding: '2px 8px', borderRadius: 6, border: `1px solid ${s.depth === 0 ? '#ddd6fe' : '#e2e8f0'}` }}>
+                        <span style={{ fontSize: 12, fontWeight: 600, color: s.depth === 0 ? '#c37938' : '#94a3b8', background: s.depth === 0 ? 'rgba(195, 121, 56, 0.06)' : '#f8fafc', padding: '2px 8px', borderRadius: 6, border: `1px solid ${s.depth === 0 ? 'rgba(195, 121, 56, 0.15)' : '#e2e8f0'}` }}>
                           {s.depth === 0 ? 'Gốc' : `Cấp ${s.depth}`}
                         </span>
                       </Td>
@@ -462,7 +462,7 @@ export function SectionPanel({ onToast, navParams, onNavigate }: SectionPanelPro
                                       {n.header && <strong style={{ display: 'block', fontSize: 14, color: '#0f172a', marginBottom: 4 }}>{n.header}</strong>}
                                       <div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }} dangerouslySetInnerHTML={{ __html: n.body }} />
                                       {n.videoId && (
-                                        <div style={{ marginTop: 6, fontSize: 11, color: '#6c63ff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        <div style={{ marginTop: 6, fontSize: 11, color: '#c37938', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                           🎥 Video: {videos.find(v => v.id === n.videoId)?.title || n.videoId}
                                         </div>
                                       )}

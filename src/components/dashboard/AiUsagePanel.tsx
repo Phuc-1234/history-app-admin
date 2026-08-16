@@ -130,9 +130,9 @@ export function AiUsagePanel({ onToast }: AiUsagePanelProps) {
                 width: 38,
                 height: 38,
                 borderRadius: 12,
-                background: 'linear-gradient(135deg, #6c63ff, #4f46e5)',
+                background: 'linear-gradient(135deg, #c37938, #a66228)',
                 color: '#fff',
-                boxShadow: '0 4px 12px rgba(108,99,255,0.3)',
+                boxShadow: '0 4px 12px rgba(195,121,56,0.3)',
               }}
             >
               <IconSparkles size={20} color="#ffffff" />
@@ -354,7 +354,7 @@ export function AiUsagePanel({ onToast }: AiUsagePanelProps) {
               padding: '6px 16px',
               borderRadius: 8,
               border: 'none',
-              background: '#6c63ff',
+              background: '#c37938',
               color: '#fff',
               fontSize: 13,
               fontWeight: 700,
@@ -414,7 +414,7 @@ export function AiUsagePanel({ onToast }: AiUsagePanelProps) {
               <div style={{ fontSize: 12, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 Tổng AI Tokens
               </div>
-              <div style={{ fontSize: 28, fontWeight: 800, color: '#6c63ff', margin: '8px 0 4px' }}>
+              <div style={{ fontSize: 28, fontWeight: 800, color: '#c37938', margin: '8px 0 4px' }}>
                 {formatFullNumber(data.summary.totalTokensInPeriod)}
               </div>
               <div style={{ fontSize: 12, color: '#94a3b8' }}>
@@ -519,8 +519,8 @@ export function AiUsagePanel({ onToast }: AiUsagePanelProps) {
                   <AreaChart data={data.timeSeries} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                     <defs>
                       <linearGradient id="colorTokens" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#6c63ff" stopOpacity={0.4} />
-                        <stop offset="95%" stopColor="#6c63ff" stopOpacity={0.0} />
+                        <stop offset="5%" stopColor="#c37938" stopOpacity={0.4} />
+                        <stop offset="95%" stopColor="#c37938" stopOpacity={0.0} />
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
@@ -544,7 +544,7 @@ export function AiUsagePanel({ onToast }: AiUsagePanelProps) {
                     <Area
                       type="monotone"
                       dataKey="totalTokens"
-                      stroke="#6c63ff"
+                      stroke="#c37938"
                       strokeWidth={3}
                       fillOpacity={1}
                       fill="url(#colorTokens)"
@@ -770,16 +770,14 @@ export function AiUsagePanel({ onToast }: AiUsagePanelProps) {
                                 fontSize: 11,
                                 fontWeight: 700,
                                 background:
-                                  user.role === 'SUPER_ADMIN'
-                                    ? '#fef2f2'
-                                    : user.role === 'ADMIN'
-                                    ? '#f0fdf4'
+                                  (user.role === 'SUPER_ADMIN' || user.role === 'ADMIN')
+                                    ? 'rgba(195, 121, 56, 0.1)'
                                     : '#f1f5f9',
                                 color:
                                   user.role === 'SUPER_ADMIN'
                                     ? '#ef4444'
                                     : user.role === 'ADMIN'
-                                    ? '#16a34a'
+                                    ? '#c37938'
                                     : '#64748b',
                               }}
                             >
@@ -810,7 +808,7 @@ export function AiUsagePanel({ onToast }: AiUsagePanelProps) {
                                   style={{
                                     height: '100%',
                                     width: `${Math.min(100, user.sharePercent)}%`,
-                                    background: 'linear-gradient(90deg, #6c63ff, #4f46e5)',
+                                    background: 'linear-gradient(90deg, #c37938, #a66228)',
                                     borderRadius: 3,
                                   }}
                                 />

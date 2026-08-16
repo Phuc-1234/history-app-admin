@@ -703,15 +703,15 @@ export function FlashcardPanel({ onToast, navParams, onNavigate: _onNavigate }: 
           <div style={{ display: 'flex', gap: 12 }}>
             <Button
               variant="secondary"
-              icon={<IconMagicWand size={16} color="#6c63ff" />}
+              icon={<IconMagicWand size={16} color="#c37938" />}
               onClick={() => {
                 setAiPreviewList([]);
                 setAiModalOpen(true);
               }}
               style={{
-                borderColor: '#c7d2fe',
-                background: '#faf5ff',
-                color: '#6c63ff',
+                borderColor: 'rgba(195, 121, 56, 0.25)',
+                background: 'rgba(195, 121, 56, 0.05)',
+                color: '#c37938',
                 fontWeight: 600,
               }}
             >
@@ -768,7 +768,7 @@ export function FlashcardPanel({ onToast, navParams, onNavigate: _onNavigate }: 
             >
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: '#6c63ff', background: '#f5f3ff', padding: '2px 8px', borderRadius: 20 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: '#c37938', background: 'rgba(195, 121, 56, 0.06)', padding: '2px 8px', borderRadius: 20 }}>
                     Thẻ #{card.id}
                   </span>
                   {card.nodeId ? (
@@ -978,13 +978,13 @@ export function FlashcardPanel({ onToast, navParams, onNavigate: _onNavigate }: 
             </span>
             <Button
               variant="secondary"
-              icon={aiGenerating ? <Spinner size={14} /> : <IconMagicWand size={14} color="#6c63ff" />}
+              icon={aiGenerating ? <Spinner size={14} /> : <IconMagicWand size={14} color="#c37938" />}
               onClick={handleAIGenerate}
               disabled={aiGenerating}
               style={{
-                borderColor: '#c7d2fe',
-                background: '#faf5ff',
-                color: '#6c63ff',
+                borderColor: 'rgba(195, 121, 56, 0.25)',
+                background: 'rgba(195, 121, 56, 0.05)',
+                color: '#c37938',
               }}
             >
               {aiGenerating ? 'Đang phân tích...' : 'Bắt đầu sinh bằng AI'}

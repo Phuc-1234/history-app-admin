@@ -156,12 +156,12 @@ export function TopicPanel({ onToast, navParams, onNavigate }: TopicPanelProps) 
               {topics.sort((a, b) => a.position - b.position).map((t, i) => (
                 <tr key={t.id} style={{ background: i % 2 === 0 ? '#ffffff' : '#fafbff', borderTop: '1px solid #f1f5f9' }}>
                   <Td>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: 6, background: '#f5f3ff', border: '1px solid #ddd6fe', color: '#6c63ff', fontWeight: 700, fontSize: 13 }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: 6, background: 'rgba(195, 121, 56, 0.06)', border: '1px solid rgba(195, 121, 56, 0.15)', color: '#c37938', fontWeight: 700, fontSize: 13 }}>
                       {t.position}
                     </span>
                   </Td>
                   <Td><span style={{ color: '#0f172a', fontWeight: 600 }}>{t.name}</span></Td>
-                  <Td><span style={{ color: '#6c63ff', fontWeight: 600, fontSize: 13 }}>Khối {t.gradeId}</span></Td>
+                  <Td><span style={{ color: '#c37938', fontWeight: 600, fontSize: 13 }}>Khối {t.gradeId}</span></Td>
                   <Td align="right">
                     <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                       <Button variant="secondary" onClick={() => onNavigate?.('lessons', { gradeId: selectedGradeId, topicId: t.id })} style={{ padding: '6px 14px', fontSize: 13, borderColor: '#d97706', color: '#d97706' }}>Xem bài học</Button>

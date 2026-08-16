@@ -27,9 +27,9 @@ const ROLE_LABELS: Record<string, string> = {
 };
 
 const ROLE_COLORS: Record<string, string> = {
-  STUDENT: '#6c63ff',
-  ADMIN: '#16a34a',
-  SUPER_ADMIN: '#d97706',
+  STUDENT: '#c37938',
+  ADMIN: '#c37938',
+  SUPER_ADMIN: '#ef4444',
 };
 
 /** Đếm user active trong N ngày gần nhất dựa trên lastXpGainedAt (proxy cho engagement). */
@@ -142,7 +142,7 @@ function buildActivityFeed(users: AdminUserDto[], feedbacks: FeedbackRow[], limi
       timestamp: ts,
       title: `${u.name} đạt XP`,
       subtitle: `+${u.totalXp.toLocaleString('vi-VN')} XP tổng`,
-      accent: '#6c63ff',
+      accent: '#c37938',
     });
   }
 

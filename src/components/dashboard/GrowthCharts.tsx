@@ -130,7 +130,7 @@ export function GrowthCharts() {
               <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={{ stroke: '#e2e8f0' }} interval="preserveStartEnd" minTickGap={20} />
               <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={false} allowDecimals={false} />
               <Tooltip contentStyle={tooltipStyle} />
-              <Line type="monotone" dataKey="count" name="Người đạt XP" stroke="#6c63ff" strokeWidth={2.5} dot={{ r: 2, fill: '#6c63ff' }} activeDot={{ r: 5 }} isAnimationActive={!loading} />
+              <Line type="monotone" dataKey="count" name="Người đạt XP" stroke="#c37938" strokeWidth={2.5} dot={{ r: 2, fill: '#c37938' }} activeDot={{ r: 5 }} isAnimationActive={!loading} />
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -144,15 +144,15 @@ export function GrowthCharts() {
           <AreaChart data={data} margin={{ top: 8, right: 12, bottom: 0, left: -12 }}>
             <defs>
               <linearGradient id="cumGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#4f46e5" stopOpacity={0.35} />
-                <stop offset="100%" stopColor="#4f46e5" stopOpacity={0.02} />
+                <stop offset="0%" stopColor="#a66228" stopOpacity={0.35} />
+                <stop offset="100%" stopColor="#a66228" stopOpacity={0.02} />
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
             <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={{ stroke: '#e2e8f0' }} interval="preserveStartEnd" minTickGap={20} />
             <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={false} allowDecimals={false} />
             <Tooltip contentStyle={tooltipStyle} />
-            <Area type="monotone" dataKey="cumulative" name="Lũy kế" stroke="#4f46e5" strokeWidth={2} fill="url(#cumGradient)" isAnimationActive={!loading} />
+            <Area type="monotone" dataKey="cumulative" name="Lũy kế" stroke="#a66228" strokeWidth={2} fill="url(#cumGradient)" isAnimationActive={!loading} />
           </AreaChart>
         </ResponsiveContainer>
       </div>

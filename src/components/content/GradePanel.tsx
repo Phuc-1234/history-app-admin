@@ -109,11 +109,11 @@ export function GradePanel({ onToast, onNavigate }: GradePanelProps) {
                 <tr key={g.id} style={{ background: i % 2 === 0 ? '#ffffff' : '#fafbff', borderTop: '1px solid #f1f5f9' }}>
                   <Td>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10, fontWeight: 700, fontSize: 15, color: '#0f172a' }}>
-                      <span style={{ width: 32, height: 32, borderRadius: 8, background: '#f5f3ff', border: '1px solid #ddd6fe', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                      <span style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(195, 121, 56, 0.06)', border: '1px solid rgba(195, 121, 56, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
                         {g.imgUrl ? (
                           <img src={g.imgUrl} alt={`Khối ${g.id}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         ) : (
-                          <IconGrade size={18} color="#6c63ff" />
+                          <IconGrade size={18} color="#c37938" />
                         )}
                       </span>
                       Khối {g.id}
@@ -125,7 +125,7 @@ export function GradePanel({ onToast, onNavigate }: GradePanelProps) {
                   <Td><Badge value={g.state} /></Td>
                   <Td align="right">
                     <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                      <Button variant="secondary" onClick={() => onNavigate?.('topics', { gradeId: g.id })} style={{ padding: '6px 14px', fontSize: 13, borderColor: '#6c63ff', color: '#6c63ff' }}>Xem chủ đề</Button>
+                       <Button variant="secondary" onClick={() => onNavigate?.('topics', { gradeId: g.id })} style={{ padding: '6px 14px', fontSize: 13, borderColor: '#c37938', color: '#c37938' }}>Xem chủ đề</Button>
                       <Button variant="secondary" icon={<IconEdit size={14} />} onClick={() => openEdit(g)} style={{ padding: '6px 14px', fontSize: 13 }}>Sửa</Button>
                       <Button variant="danger" icon={<IconDelete size={14} />} onClick={() => setDeleteTarget(g)} style={{ padding: '6px 14px', fontSize: 13 }}>Xóa</Button>
                     </div>

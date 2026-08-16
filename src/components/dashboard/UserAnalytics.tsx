@@ -18,7 +18,7 @@ interface UserAnalyticsProps {
   derived: OverviewDerivedStats | null;
 }
 
-const PIE_COLORS = ['#6c63ff', '#16a34a', '#d97706', '#0284c7', '#ec4899'];
+const PIE_COLORS = ['#c37938', '#16a34a', '#d97706', '#0284c7', '#ec4899'];
 const tooltipStyle = {
   borderRadius: 10,
   border: '1px solid #e2e8f0',
