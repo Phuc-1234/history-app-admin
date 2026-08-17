@@ -1,5 +1,5 @@
 // src/components/content/MindMapPanel.tsx
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, type CSSProperties } from 'react';
 import client from '../../api/client';
 import type { GradeDto, TopicDto, LessonDto, SectionDto, NodeDto, AdminVideoDto } from '../../types/api';
 import type { TabId, NavParams } from '../../pages/DashboardPage';
@@ -32,6 +32,32 @@ const stripHtml = (html: string) => {
   return html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ');
 };
 
+// ─── Card geometry: layout and DOM must agree ────────────────────────────────
+// computeTreeLayout positions cards using getNodeHeight(), so every card MUST
+// render at exactly that height (fixed height + border-box + clamped text).
+// Before this, cards grew with their text and overlapped the cards below —
+// clicks landed on the wrong card (opening note 3 expanded note 2) and long
+// text covered the +/- buttons of the rows underneath.
+
+const lineClamp = (lines: number): CSSProperties =>
+  ({
+    display: '-webkit-box',
+    WebkitLineClamp: lines,
+    WebkitBoxOrient: 'vertical',
+    overflow: 'hidden',
+  }) as CSSProperties;
+
+// Node keys must be unique even for data without ids (e.g. AI-generated
+// preview). Duplicate keys made two nodes share one expandedNodes entry, so
+// toggling one node expanded/collapsed the other one too.
+function buildSectionKey(sec: any, parentKey: string, index: number): string {
+  return sec.id != null ? `sec-${sec.id}` : `${parentKey}/s${index}`;
+}
+
+function buildNodeKey(secKey: string, node: any, index: number): string {
+  return node.id != null ? `node-${node.id}` : `${secKey}/n${index}`;
+}
+
 interface VisualMindMapDiagramProps {
   rootTitle: string;
   sections: any[];
@@ -54,6 +80,10 @@ const RootNode = ({ data }: any) => {
         color: '#ffffff',
         borderRadius: '16px',
         width: '280px',
+        height: data.cardHeight ?? 140,
+        boxSizing: 'border-box',
+        display: 'flex',
+        flexDirection: 'column',
         boxShadow: '0 10px 25px rgba(79,70,229,0.25)',
         border: '1px solid rgba(255,255,255,0.1)',
         fontFamily: 'Inter, system-ui, sans-serif',
@@ -61,11 +91,11 @@ const RootNode = ({ data }: any) => {
         overflow: 'hidden',
       }}
     >
-      <div style={{ padding: '18px 24px 12px 24px' }}>
+      <div style={{ padding: '18px 24px 12px 24px', flex: 1, minHeight: 0 }}>
         <div style={{ fontSize: '11px', textTransform: 'uppercase', opacity: 0.8, fontWeight: 700, letterSpacing: '0.05em', marginBottom: '6px' }}>
           Bài học gốc
         </div>
-        <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, lineHeight: 1.4 }}>
+        <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, lineHeight: 1.4, ...lineClamp(2) }}>
           {data.label}
         </h3>
       </div>
@@ -133,9 +163,14 @@ const SectionNode = ({ data }: any) => {
         borderRadius: '12px',
         boxShadow: '0 4px 12px rgba(15,23,42,0.05)',
         width: '260px',
+        height: data.cardHeight ?? (data.summary ? 170 : 140),
+        boxSizing: 'border-box',
+        display: 'flex',
+        flexDirection: 'column',
         position: 'relative',
         fontFamily: 'Inter, system-ui, sans-serif',
         textAlign: 'left',
+        overflow: 'hidden',
       }}
     >
       <Handle
@@ -170,12 +205,12 @@ const SectionNode = ({ data }: any) => {
       </div>
 
       {/* Body */}
-      <div style={{ padding: '14px 14px 10px 14px' }}>
-        <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: '#0f172a', lineHeight: 1.4 }}>
+      <div style={{ padding: '14px 14px 10px 14px', flex: 1, minHeight: 0 }}>
+        <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: '#0f172a', lineHeight: 1.4, ...lineClamp(2) }}>
           {data.name}
         </h4>
         {data.summary && (
-          <p style={{ margin: '6px 0 0 0', fontSize: '12px', color: '#64748b', lineHeight: 1.4 }}>
+          <p style={{ margin: '6px 0 0 0', fontSize: '12px', color: '#64748b', lineHeight: 1.4, ...lineClamp(3) }}>
             {data.summary}
           </p>
         )}
@@ -233,6 +268,7 @@ const SectionNode = ({ data }: any) => {
       {/* Toggle Button for collapsing branches */}
       {data.hasChildren && (
         <button
+          type="button"
           onClick={(e) => {
             e.stopPropagation();
             data.onToggleCollapse();
@@ -285,10 +321,15 @@ const KnowledgeNode = ({ data }: any) => {
         border: isExpanded ? '2px solid #10b981' : '1px solid #e2e8f0',
         borderRadius: '10px',
         width: '240px',
+        height: data.cardHeight ?? (isExpanded ? 280 : 110),
+        boxSizing: 'border-box',
+        display: 'flex',
+        flexDirection: 'column',
         boxShadow: '0 2px 8px rgba(15,23,42,0.03)',
         position: 'relative',
         fontFamily: 'Inter, system-ui, sans-serif',
         textAlign: 'left',
+        overflow: 'hidden',
       }}
     >
       <Handle
@@ -296,13 +337,14 @@ const KnowledgeNode = ({ data }: any) => {
         position={Position.Left}
         style={{ background: 'transparent', border: 'none', left: 0, top: '50%' }}
       />
-      
-      <div style={{ padding: '12px 14px 10px 14px' }}>
+
+      <div style={{ padding: '12px 14px 10px 14px', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
           <span style={{ fontSize: '9px', fontWeight: 700, color: '#10b981', textTransform: 'uppercase' }}>
             Nút kiến thức
           </span>
           <button
+            type="button"
             onClick={(e) => {
               e.stopPropagation();
               data.onToggleExpand();
@@ -313,8 +355,9 @@ const KnowledgeNode = ({ data }: any) => {
               fontWeight: 'bold',
               color: isExpanded ? '#ffffff' : '#10b981',
               background: isExpanded ? '#10b981' : '#ecfdf5',
-              width: '16px',
-              height: '16px',
+              width: '18px',
+              height: '18px',
+              flexShrink: 0,
               borderRadius: '50%',
               display: 'flex',
               alignItems: 'center',
@@ -330,13 +373,13 @@ const KnowledgeNode = ({ data }: any) => {
         </div>
 
         {data.header && (
-          <h5 style={{ margin: '0 0 4px 0', fontSize: '12px', fontWeight: 700, color: '#1f2937' }}>
+          <h5 style={{ margin: '0 0 4px 0', fontSize: '12px', fontWeight: 700, color: '#1f2937', ...lineClamp(2) }}>
             {data.header}
           </h5>
         )}
 
         {isExpanded ? (
-          <>
+          <div className="nodrag nowheel" style={{ flex: 1, minHeight: 0, overflow: 'auto', paddingRight: '2px' }}>
             <div style={{ margin: 0, fontSize: '12px', color: '#4b5563', lineHeight: 1.4 }} dangerouslySetInnerHTML={{ __html: data.body }} />
             {data.imgUrl && (
               <img
@@ -345,7 +388,7 @@ const KnowledgeNode = ({ data }: any) => {
                 style={{ marginTop: '8px', width: '100%', maxHeight: '120px', objectFit: 'cover', borderRadius: '4px' }}
               />
             )}
-          </>
+          </div>
         ) : (
           <p style={{
             margin: 0,
@@ -416,6 +459,10 @@ interface TreeNode {
   isExpanded?: boolean;
 }
 
+// These heights are the CONTRACT between computeTreeLayout and the rendered
+// cards: every card component renders at exactly its cardHeight (fixed height,
+// border-box, clamped text). If a card renders taller, it overlaps the rows
+// below and clicks start landing on the wrong card.
 const getNodeHeight = (node: TreeNode) => {
   if (node.type === 'root') return 140;
   if (node.type === 'knowledge') {
@@ -454,7 +501,14 @@ function computeTreeLayout(
       type: node.type,
       position: { x: currentX, y: startY },
       draggable: true,
-      data: { ...node.data, depth, isCollapsed: node.isCollapsed, isExpanded: node.isExpanded },
+      // Declarative dimensions: every toggle rebuilds the node array, which
+      // wipes ReactFlow's `measured` cache and leaves nodes visibility:hidden
+      // until the ResizeObserver re-measures. While hidden, every +/- button
+      // is dead — the "spam rồi nhấn không được" bug. Declared width/height
+      // keep nodes visible instantly and pin the wrapper to the layout size.
+      width: nodeW,
+      height: nodeH,
+      data: { ...node.data, depth, isCollapsed: node.isCollapsed, isExpanded: node.isExpanded, cardHeight: nodeH },
     });
     return { subtreeHeight: nodeH, centerY };
   }
@@ -498,7 +552,9 @@ function computeTreeLayout(
     type: node.type,
     position: { x: currentX, y: nodeY },
     draggable: true,
-    data: { ...node.data, depth, isCollapsed: node.isCollapsed, isExpanded: node.isExpanded },
+    width: nodeW,
+    height: nodeH,
+    data: { ...node.data, depth, isCollapsed: node.isCollapsed, isExpanded: node.isExpanded, cardHeight: nodeH },
   });
 
   const subtreeHeight = Math.max(nodeH, childrenTotalHeight);
@@ -507,18 +563,20 @@ function computeTreeLayout(
 
 function getInitialCollapsedSections(sectionsList: any[]): Set<string> {
   const collapsed = new Set<string>();
-  const walk = (items: any[], depth = 0) => {
-    for (const item of items) {
-      const key = item.id ? `sec-${item.id}` : `sec-${item.name}`;
+  // Must produce the SAME keys as mapSectionToTreeNode, so both walk the tree
+  // with buildSectionKey(parentKey, index).
+  const walk = (items: any[], parentKey: string, depth: number) => {
+    items.forEach((item, index) => {
+      const key = buildSectionKey(item, parentKey, index);
       if (depth >= 1) {
         collapsed.add(key);
       }
       if (item.children) {
-        walk(item.children, depth + 1);
+        walk(item.children, key, depth + 1);
       }
-    }
+    });
   };
-  walk(sectionsList);
+  walk(sectionsList, 'root', 0);
   return collapsed;
 }
 
@@ -571,12 +629,12 @@ function VisualMindMapDiagramContent({
     });
   }, []);
 
-  const mapSectionToTreeNode = useCallback((sec: any, depth = 1): TreeNode => {
-    const secKey = sec.id ? `sec-${sec.id}` : `sec-${sec.name}`;
+  const mapSectionToTreeNode = useCallback((sec: any, depth = 1, parentKey = 'root', index = 0): TreeNode => {
+    const secKey = buildSectionKey(sec, parentKey, index);
     const isCollapsed = collapsedSections.has(secKey);
-    
-    const childNodes = (sec.nodes || []).map((node: any) => {
-      const nodeKey = node.id ? `node-${node.id}` : `node-${node.header || node.body}`;
+
+    const childNodes = (sec.nodes || []).map((node: any, idx: number) => {
+      const nodeKey = buildNodeKey(secKey, node, idx);
       const isExpanded = expandedNodes.has(nodeKey);
       return {
         id: nodeKey,
@@ -597,7 +655,7 @@ function VisualMindMapDiagramContent({
       };
     });
 
-    const childSections = (sec.children || []).map((c: any) => mapSectionToTreeNode(c, depth + 1));
+    const childSections = (sec.children || []).map((c: any, i: number) => mapSectionToTreeNode(c, depth + 1, secKey, i));
 
     return {
       id: secKey,
@@ -629,7 +687,7 @@ function VisualMindMapDiagramContent({
         label: rootTitle,
         onAddSection: () => onAddSection && onAddSection(),
       },
-      children: sections.map(sec => mapSectionToTreeNode(sec, 1)),
+      children: sections.map((sec, i) => mapSectionToTreeNode(sec, 1, 'root', i)),
       isCollapsed: false,
     };
 
