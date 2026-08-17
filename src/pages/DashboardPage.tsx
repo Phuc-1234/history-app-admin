@@ -159,6 +159,7 @@ export function DashboardPage() {
         }}
         userName={user?.name}
         userRole={user?.role}
+        userAvatar={user?.profileImgUrl}
         isMobile={isMobile}
         sidebarOpen={sidebarOpen}
       />

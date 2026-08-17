@@ -23,8 +23,7 @@ const ITEM_TYPES = [
 
 const EQUIPMENT_SLOTS = [
   { value: '', label: 'Không có vị trí trang bị' },
-  { value: 'AVT_FRAME', label: 'Khung ảnh đại diện (AVT_FRAME)' },
-  { value: 'BACKGROUND', label: 'Hình nền trang cá nhân (BACKGROUND)' }
+  { value: 'AVT_FRAME', label: 'Khung ảnh đại diện (AVT_FRAME)' }
 ];
 
 const EMPTY_FORM = {

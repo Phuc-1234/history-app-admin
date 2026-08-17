@@ -61,6 +61,7 @@ export function LoginPage() {
         role,
         totalGold: profile.totalGold ?? 0,
         totalXp: profile.totalXp ?? 0,
+        profileImgUrl: profile.profileImgUrl ?? null,
       };
 
       login(data.session.accessToken, data.session.refreshToken, userProfile);
@@ -106,18 +107,21 @@ export function LoginPage() {
       <div style={{ width: '100%', maxWidth: 420, position: 'relative', zIndex: 1 }}>
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: 36 }}>
-          <div style={{
-            width: 72, height: 72,
-            borderRadius: 22,
-            background: 'linear-gradient(135deg, #c37938, #a66228)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            margin: '0 auto 16px',
-            boxShadow: '0 12px 32px rgba(195,121,56,0.35)',
-          }}>
-            <IconHistoryBook size={34} color="#ffffff" />
-          </div>
-          <h1 style={{ margin: 0, fontSize: 28, fontWeight: 800, color: '#0f172a', letterSpacing: '-0.02em' }}>
-            Sắc Sử admin
+          <img
+            src="/logo-main.png"
+            alt="Sắc Sử Logo"
+            style={{
+              width: 72,
+              height: 72,
+              objectFit: 'contain',
+              display: 'block',
+              margin: '0 auto 16px',
+              border: 'none'
+            }}
+          />
+          <h1 style={{ margin: 0, fontSize: 28, fontWeight: 800, color: '#0f172a', letterSpacing: '-0.02em', display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 6 }}>
+            <span>Sắc Sử admin</span>
+            <span style={{ fontSize: 16, fontWeight: 600, color: '#64748b' }}>v2.0.0</span>
           </h1>
           <p style={{ margin: '8px 0 0', color: '#64748b', fontSize: 15 }}>
             Đăng nhập để quản lý nội dung

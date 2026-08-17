@@ -74,11 +74,12 @@ interface SidebarProps {
   onTabChange: (tab: TabId) => void;
   userName?: string;
   userRole?: string;
+  userAvatar?: string | null;
   isMobile?: boolean;
   sidebarOpen?: boolean;
 }
 
-export function Sidebar({ activeTab, onTabChange, userName, userRole, isMobile, sidebarOpen }: SidebarProps) {
+export function Sidebar({ activeTab, onTabChange, userName, userRole, userAvatar, isMobile, sidebarOpen }: SidebarProps) {
   const isSuperAdmin = userRole === 'SUPER_ADMIN';
   const primaryColor = '#c37938';
   const darkPrimaryColor = '#a66228';
@@ -114,18 +115,20 @@ export function Sidebar({ activeTab, onTabChange, userName, userRole, isMobile, 
         borderBottom: '1px solid #f1f5f9',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{
-            width: 40, height: 40,
-            borderRadius: 12,
-            background: gradientBg,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: boxShadowLogo,
-          }}>
-            <IconHistoryBook size={22} color="#ffffff" />
-          </div>
+          <img
+            src="/logo-main.png"
+            alt="Sắc Sử Logo"
+            style={{
+              width: 40,
+              height: 40,
+              objectFit: 'contain',
+              border: 'none'
+            }}
+          />
           <div>
-            <div style={{ fontSize: 15, fontWeight: 800, color: '#0f172a', lineHeight: 1.2 }}>
-              Sắc Sử
+            <div style={{ fontSize: 15, fontWeight: 800, color: '#0f172a', lineHeight: 1.2, display: 'flex', alignItems: 'baseline', gap: 4 }}>
+              <span>Sắc Sử</span>
+              <span style={{ fontSize: 10, fontWeight: 600, color: '#64748b' }}>v2.0.0</span>
             </div>
             <div style={{ fontSize: 11, color: isSuperAdmin ? '#ef4444' : primaryColor, fontWeight: 700, letterSpacing: '0.05em' }}>
               {isSuperAdmin ? 'SUPER ADMIN' : 'ADMIN PANEL'}
@@ -208,14 +211,45 @@ export function Sidebar({ activeTab, onTabChange, userName, userRole, isMobile, 
         background: userBoxBg,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{
-            width: 36, height: 36, borderRadius: 10,
-            background: gradientBg,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 15, fontWeight: 700, color: '#fff',
-            flexShrink: 0,
-          }}>
-            {userName?.[0]?.toUpperCase() ?? 'A'}
+          <div style={{ position: 'relative', width: 36, height: 36, flexShrink: 0 }}>
+            {userAvatar ? (
+              <img
+                src={userAvatar}
+                alt={userName ?? 'Admin'}
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: '50%',
+                  objectFit: 'cover',
+                  display: 'block',
+                }}
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                  const parent = e.currentTarget.parentElement;
+                  const fallback = parent?.querySelector('.avatar-fallback');
+                  if (fallback) {
+                    (fallback as HTMLElement).style.display = 'flex';
+                  }
+                }}
+              />
+            ) : null}
+            <div
+              className="avatar-fallback"
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: '50%',
+                background: gradientBg,
+                display: userAvatar ? 'none' : 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 15,
+                fontWeight: 700,
+                color: '#fff',
+              }}
+            >
+              {userName?.[0]?.toUpperCase() ?? 'A'}
+            </div>
           </div>
           <div style={{ overflow: 'hidden' }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>

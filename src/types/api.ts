@@ -52,6 +52,7 @@ export interface UserProfile {
   role: 'STUDENT' | 'ADMIN' | 'SUPER_ADMIN';
   totalGold: number;
   totalXp: number;
+  profileImgUrl?: string | null;
 }
 
 export interface SessionTokens {
