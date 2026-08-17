@@ -3,7 +3,7 @@ import { useState } from 'react';
 import client from '../api/client';
 import { useAuthStore } from '../store/authStore';
 import { Button } from '../components/ui/Button';
-import { IconHistoryBook, IconAlert } from '../components/ui/Icons';
+import { IconAlert } from '../components/ui/Icons';
 import type { UserProfile } from '../types/api';
 
 export function LoginPage() {

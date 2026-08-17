@@ -10,7 +10,6 @@ import {
   IconVideo,
   IconQuestion,
   IconTest,
-  IconHistoryBook,
   IconMindMap,
   IconFlashcard,
   IconTarget,
@@ -86,7 +85,6 @@ export function Sidebar({ activeTab, onTabChange, userName, userRole, userAvatar
   const gradientBg = 'linear-gradient(135deg, #c37938, #a66228)';
   const activeBg = 'linear-gradient(135deg, rgba(195,121,56,0.08), rgba(166,98,40,0.04))';
   const activeShadow = 'inset 0 0 0 1px rgba(195,121,56,0.15)';
-  const boxShadowLogo = '0 4px 12px rgba(195,121,56,0.35)';
   const activeStrip = 'linear-gradient(#c37938, #a66228)';
   const userBoxBg = '#fffbf7';
 
