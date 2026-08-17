@@ -1,5 +1,4 @@
-// src/components/layout/TopBar.tsx
-import { BASE_URL } from '../../api/client';
+import { IS_LOCAL } from '../../api/client';
 import { IconLogout } from '../ui/Icons';
 
 const TAB_TITLES: Record<string, string> = {
@@ -66,7 +65,7 @@ export function TopBar({ activeTab, onLogout, isMobile, onToggleSidebar }: TopBa
           </h1>
           {!isMobile && (
             <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 1 }}>
-              {BASE_URL}
+              {IS_LOCAL ? 'Đã kết nối local' : 'Đã kết nối server'}
             </div>
           )}
         </div>

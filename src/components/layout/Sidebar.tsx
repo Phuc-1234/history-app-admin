@@ -1,5 +1,6 @@
 // src/components/layout/Sidebar.tsx
 import type { TabId } from '../../pages/DashboardPage';
+import { APP_CONFIG } from '../../config';
 import {
   IconOverview,
   IconGrade,
@@ -126,7 +127,7 @@ export function Sidebar({ activeTab, onTabChange, userName, userRole, userAvatar
           <div>
             <div style={{ fontSize: 15, fontWeight: 800, color: '#0f172a', lineHeight: 1.2, display: 'flex', alignItems: 'baseline', gap: 4 }}>
               <span>Sắc Sử</span>
-              <span style={{ fontSize: 10, fontWeight: 600, color: '#64748b' }}>v2.0.0</span>
+              <span style={{ fontSize: 10, fontWeight: 600, color: '#64748b' }}>v{APP_CONFIG.VERSION}</span>
             </div>
             <div style={{ fontSize: 11, color: isSuperAdmin ? '#ef4444' : primaryColor, fontWeight: 700, letterSpacing: '0.05em' }}>
               {isSuperAdmin ? 'SUPER ADMIN' : 'ADMIN PANEL'}

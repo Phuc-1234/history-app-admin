@@ -56,6 +56,18 @@ html, body {
   to { opacity: 1; transform: translateX(0); }
 }
 
+@keyframes floatSlow1 {
+  0% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-22px) rotate(6deg); }
+  100% { transform: translateY(0px) rotate(0deg); }
+}
+
+@keyframes floatSlow2 {
+  0% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(20px) rotate(-8deg); }
+  100% { transform: translateY(0px) rotate(0deg); }
+}
+
 /* Select option */
 select option {
   background: #ffffff;

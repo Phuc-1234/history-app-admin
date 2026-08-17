@@ -236,7 +236,7 @@ export interface UpdateRewardRuleBody {
 }
 
 export type ItemDefinitionType = 'SKIN' | 'XP_MUL' | 'GOLD_MUL' | 'BADGE';
-export type EquipmentSlot = 'AVT_FRAME' | 'BACKGROUND';
+export type EquipmentSlot = 'AVT_FRAME' | 'BACKGROUND' | 'LEADERBOARD_BG';
 
 export interface ItemDefinitionDto {
   id: number;
