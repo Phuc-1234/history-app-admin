@@ -20,7 +20,7 @@ interface AiUsagePanelProps {
 
 
 
-type TimeSpanOption = '7' | '30' | '90' | 'all' | 'custom';
+type TimeSpanOption = '3' | '7' | '30' | '90' | 'all' | 'custom';
 
 function formatNumber(num: number): string {
   if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
@@ -103,6 +103,24 @@ export function AiUsagePanel({ onToast }: AiUsagePanelProps) {
     );
   }, [data?.rankings, searchUser]);
 
+  const periodDaysCount = useMemo(() => {
+    if (!data?.summary) return 1;
+    if (typeof data.summary.periodDays === 'number') return Math.max(1, data.summary.periodDays);
+    if (data.timeSeries && data.timeSeries.length > 0) return Math.max(1, data.timeSeries.length);
+    return 1;
+  }, [data?.summary, data?.timeSeries]);
+
+  const approxSystemLimit = periodDaysCount * 4500000;
+  const percentToSystemLimit = data?.summary
+    ? (data.summary.totalTokensInPeriod / approxSystemLimit) * 100
+    : 0;
+  const percentDisplay =
+    percentToSystemLimit === 0
+      ? '0%'
+      : percentToSystemLimit < 0.01
+      ? '<0.01%'
+      : `${percentToSystemLimit.toFixed(percentToSystemLimit < 1 ? 2 : 1)}%`;
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       {/* Top Header & Filters */}
@@ -142,71 +160,6 @@ export function AiUsagePanel({ onToast }: AiUsagePanelProps) {
                 <h2 style={{ margin: 0, fontSize: 19, fontWeight: 800, color: '#0f172a' }}>
                   Thống kê tiêu thụ AI Token
                 </h2>
-
-                {/* Info Hover Badge & Tooltip */}
-                <div
-                  style={{ position: 'relative', display: 'inline-flex', cursor: 'pointer' }}
-                  onMouseEnter={() => setShowInfoTooltip(true)}
-                  onMouseLeave={() => setShowInfoTooltip(false)}
-                >
-                  <span
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: 20,
-                      height: 20,
-                      borderRadius: '50%',
-                      background: '#f1f5f9',
-                      color: '#64748b',
-                      fontSize: 12,
-                      fontWeight: 700,
-                      border: '1px solid #cbd5e1',
-                    }}
-                  >
-                    i
-                  </span>
-
-                  {showInfoTooltip && (
-                    <div
-                      style={{
-                        position: 'absolute',
-                        top: 28,
-                        left: 0,
-                        width: 340,
-                        background: '#0f172a',
-                        color: '#f8fafc',
-                        padding: '16px 18px',
-                        borderRadius: 14,
-                        boxShadow: '0 12px 30px rgba(15,23,42,0.25)',
-                        zIndex: 100,
-                        fontSize: 12,
-                        lineHeight: 1.6,
-                        pointerEvents: 'none',
-                      }}
-                    >
-                      <div style={{ fontWeight: 700, fontSize: 13, color: '#38bdf8', marginBottom: 6 }}>
-                        Thông tin Hạn mức 3 Gemini API Keys
-                      </div>
-                      <div style={{ marginBottom: 8, paddingBottom: 8, borderBottom: '1px solid #334155' }}>
-                        <div><b>Hạn mức tổng API Keys:</b> 4.500 requests/ngày (~4.5M - 13.5M tokens)</div>
-                        <div><b>Tốc độ xử lý tối đa:</b> 45 requests/phút</div>
-                      </div>
-                      <div style={{ marginBottom: 8, paddingBottom: 8, borderBottom: '1px solid #334155' }}>
-                        <div><b>Hạn mức Free User:</b> 50.000 tokens/ngày (~15-30 câu)</div>
-                        <div><b>Hạn mức PRO User:</b> 500.000 tokens/ngày (~150-300 câu)</div>
-                      </div>
-                      <div style={{ color: '#fbbf24', fontWeight: 600 }}>
-                        Ngưỡng chạm giới hạn 3 API Keys:
-                      </div>
-                      <div style={{ color: '#cbd5e1' }}>
-                        • ~90 Free Users dùng hết quota/ngày<br />
-                        • ~9 PRO Users dùng hết quota/ngày<br />
-                        • &gt;45 requests đồng thời trong 1 phút
-                      </div>
-                    </div>
-                  )}
-                </div>
               </div>
               <p style={{ margin: '2px 0 0', fontSize: 13, color: '#64748b' }}>
                 Theo dõi lượng token tiêu thụ theo thời gian & bảng xếp hạng người dùng
@@ -229,6 +182,7 @@ export function AiUsagePanel({ onToast }: AiUsagePanelProps) {
             }}
           >
             {[
+              { id: '3', label: '3 ngày' },
               { id: '7', label: '7 ngày' },
               { id: '30', label: '30 ngày' },
               { id: '90', label: '90 ngày' },
@@ -409,13 +363,98 @@ export function AiUsagePanel({ onToast }: AiUsagePanelProps) {
                 borderRadius: 20,
                 border: '1px solid #e2e8f0',
                 boxShadow: '0 2px 8px rgba(15,23,42,0.04)',
+                position: 'relative',
               }}
             >
-              <div style={{ fontSize: 12, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                Tổng AI Tokens
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ fontSize: 12, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Tổng AI Tokens
+                </div>
+
+                {/* Info Hover Badge & Tooltip */}
+                <div
+                  style={{ position: 'relative', display: 'inline-flex', cursor: 'pointer' }}
+                  onMouseEnter={() => setShowInfoTooltip(true)}
+                  onMouseLeave={() => setShowInfoTooltip(false)}
+                >
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: 18,
+                      height: 18,
+                      borderRadius: '50%',
+                      background: '#f1f5f9',
+                      color: '#64748b',
+                      fontSize: 11,
+                      fontWeight: 700,
+                      border: '1px solid #cbd5e1',
+                    }}
+                  >
+                    i
+                  </span>
+
+                  {showInfoTooltip && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: 24,
+                        right: 0,
+                        width: 340,
+                        background: '#0f172a',
+                        color: '#f8fafc',
+                        padding: '16px 18px',
+                        borderRadius: 14,
+                        boxShadow: '0 12px 30px rgba(15,23,42,0.25)',
+                        zIndex: 100,
+                        fontSize: 12,
+                        lineHeight: 1.6,
+                        pointerEvents: 'none',
+                      }}
+                    >
+                      <div style={{ fontWeight: 700, fontSize: 13, color: '#38bdf8', marginBottom: 6 }}>
+                        Thông tin Hạn mức 3 Gemini API Keys
+                      </div>
+                      <div style={{ marginBottom: 8, paddingBottom: 8, borderBottom: '1px solid #334155' }}>
+                        <div><b>Hạn mức tổng API Keys:</b> 4.500 requests/ngày (~4.5M - 13.5M tokens)</div>
+                        <div><b>Tốc độ xử lý tối đa:</b> 45 requests/phút</div>
+                      </div>
+                      <div style={{ marginBottom: 8, paddingBottom: 8, borderBottom: '1px solid #334155' }}>
+                        <div><b>Hạn mức Free User:</b> 50.000 tokens/ngày (~15-30 câu)</div>
+                        <div><b>Hạn mức PRO User:</b> 500.000 tokens/ngày (~150-300 câu)</div>
+                      </div>
+                      <div style={{ color: '#fbbf24', fontWeight: 600 }}>
+                        Ngưỡng chạm giới hạn 3 API Keys:
+                      </div>
+                      <div style={{ color: '#cbd5e1' }}>
+                        • ~90 Free Users dùng hết quota/ngày<br />
+                        • ~9 PRO Users dùng hết quota/ngày<br />
+                        • &gt;45 requests đồng thời trong 1 phút
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
-              <div style={{ fontSize: 28, fontWeight: 800, color: '#c37938', margin: '8px 0 4px' }}>
-                {formatFullNumber(data.summary.totalTokensInPeriod)}
+
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6, margin: '8px 0 4px' }}>
+                <div style={{ fontSize: 28, fontWeight: 800, color: '#c37938' }}>
+                  {formatFullNumber(data.summary.totalTokensInPeriod)}
+                </div>
+                <div
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 700,
+                    color: percentToSystemLimit > 80 ? '#ef4444' : percentToSystemLimit > 50 ? '#d97706' : '#16a34a',
+                    background: percentToSystemLimit > 80 ? '#fef2f2' : percentToSystemLimit > 50 ? '#fffbeb' : '#f0fdf4',
+                    padding: '2px 8px',
+                    borderRadius: 12,
+                    border: `1px solid ${percentToSystemLimit > 80 ? '#fecaca' : percentToSystemLimit > 50 ? '#fde68a' : '#bbf7d0'}`,
+                  }}
+                  title={`~${percentDisplay} so với hạn mức hệ thống (~${formatNumber(approxSystemLimit)} tokens)`}
+                >
+                  ~{percentDisplay} hạn mức
+                </div>
               </div>
               <div style={{ fontSize: 12, color: '#94a3b8' }}>
                 {selectedUserId ? 'Của người dùng chọn' : 'Trong khoảng thời gian'}
