@@ -163,6 +163,9 @@ export function VideoPanel({ onToast }: VideoPanelProps) {
       lessonId: String(v.lessonId ?? '')
     });
     setUploadType('url');
+    setVideoFile(null);
+    setUploadProgress(0);
+    if (fileInputRef.current) fileInputRef.current.value = '';
     setModalOpen(true);
   };
 
@@ -195,17 +198,41 @@ export function VideoPanel({ onToast }: VideoPanelProps) {
 
       if (editVideo) {
         // Thực hiện Cập nhật thông tin (Update)
-        const payload = {
-          title: form.title.trim(),
-          position: positionNum,
-          summary: form.summary.trim() || null,
-          hlsUrl: form.hlsUrl.trim(),
-          lessonId: lessonIdNum
-        };
-        await client.patch(`/api/admin/videos/${editVideo.id}`, payload);
-        onToast(`Đã cập nhật video: ${form.title}`, 'success');
-        setModalOpen(false);
-        fetchVideos();
+        if (uploadType === 'file' && videoFile) {
+          // Có tải video mới để thay thế -> Dùng FormData gửi PATCH
+          const formData = new FormData();
+          formData.append('title', form.title.trim());
+          formData.append('position', String(positionNum));
+          formData.append('summary', form.summary.trim());
+          if (lessonIdNum !== null) formData.append('lessonId', String(lessonIdNum));
+          formData.append('video', videoFile);
+
+          await client.patch(`/api/admin/videos/${editVideo.id}`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+            onUploadProgress: (progressEvent) => {
+              const total = progressEvent.total ?? 1;
+              const percentCompleted = Math.round((progressEvent.loaded * 100) / total);
+              setUploadProgress(percentCompleted);
+            }
+          });
+
+          onToast(`Đang tải lên video thay thế cho ${form.title}. Video sẽ được xử lý ngầm dưới background.`, 'success');
+          setModalOpen(false);
+          fetchVideos();
+        } else {
+          // Cập nhật thông tin bình thường (không thay thế video hoặc dùng URL HLS mới)
+          const payload = {
+            title: form.title.trim(),
+            position: positionNum,
+            summary: form.summary.trim() || null,
+            hlsUrl: form.hlsUrl.trim(),
+            lessonId: lessonIdNum
+          };
+          await client.patch(`/api/admin/videos/${editVideo.id}`, payload);
+          onToast(`Đã cập nhật thông tin video: ${form.title}`, 'success');
+          setModalOpen(false);
+          fetchVideos();
+        }
       } else {
         // Tạo video mới (Create)
         if (uploadType === 'file') {
@@ -426,52 +453,55 @@ export function VideoPanel({ onToast }: VideoPanelProps) {
         )}
 
         {/* Option: Upload File MP4 hoặc nhập URL HLS */}
-        {!editVideo ? (
-          <div style={{ marginBottom: 16 }}>
-            <span style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#475569', marginBottom: 8 }}>Phương thức nguồn video</span>
-            <div style={{ display: 'inline-flex', marginBottom: 12 }}>
-              <button 
-                type="button" 
-                className={`tab-btn ${uploadType === 'file' ? 'active' : ''}`}
-                onClick={() => setUploadType('file')}
-              >
-                Tải lên file MP4
-              </button>
-              <button 
-                type="button" 
-                className={`tab-btn ${uploadType === 'url' ? 'active' : ''}`}
-                onClick={() => setUploadType('url')}
-              >
-                Nhập link phát HLS (.m3u8)
-              </button>
-            </div>
-
-            {uploadType === 'file' ? (
-              <div style={{ border: '2px dashed #cbd5e1', borderRadius: 12, padding: 20, textAlign: 'center', background: '#f8fafc' }}>
-                <input 
-                  type="file" 
-                  accept="video/mp4" 
-                  onChange={handleFileChange} 
-                  ref={fileInputRef}
-                  style={{ display: 'block', margin: '0 auto', fontSize: 14 }}
-                />
-                <p style={{ margin: '8px 0 0', fontSize: 12, color: '#64748b' }}>Hỗ trợ file định dạng .mp4 (Dung lượng tối đa 100MB)</p>
-                {videoFile && (
-                  <div style={{ marginTop: 12, fontSize: 13, color: '#0f172a', fontWeight: 600 }}>
-                    Đã chọn: {videoFile.name} ({(videoFile.size / (1024 * 1024)).toFixed(2)} MB)
-                  </div>
-                )}
-              </div>
-            ) : (
-              <Input label="Đường dẫn phát (HLS .m3u8)" value={form.hlsUrl} onChange={(e) => setForm((f) => ({ ...f, hlsUrl: e.target.value }))} placeholder="https://example.com/stream/video.m3u8" />
-            )}
+        <div style={{ marginBottom: 16 }}>
+          <span style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#475569', marginBottom: 8 }}>
+            {editVideo ? 'Thay đổi nguồn video (Tùy chọn)' : 'Phương thức nguồn video'}
+          </span>
+          <div style={{ display: 'inline-flex', marginBottom: 12 }}>
+            <button 
+              type="button" 
+              className={`tab-btn ${uploadType === 'file' ? 'active' : ''}`}
+              onClick={() => setUploadType('file')}
+            >
+              Tải lên file MP4
+            </button>
+            <button 
+              type="button" 
+              className={`tab-btn ${uploadType === 'url' ? 'active' : ''}`}
+              onClick={() => setUploadType('url')}
+            >
+              Nhập link phát HLS (.m3u8)
+            </button>
           </div>
-        ) : (
-          <Input label="Đường dẫn phát (HLS .m3u8)" value={form.hlsUrl} onChange={(e) => setForm((f) => ({ ...f, hlsUrl: e.target.value }))} placeholder="https://example.com/stream/video.m3u8" />
-        )}
+
+          {uploadType === 'file' ? (
+            <div style={{ border: '2px dashed #cbd5e1', borderRadius: 12, padding: 20, textAlign: 'center', background: '#f8fafc' }}>
+              <input 
+                type="file" 
+                accept="video/mp4" 
+                onChange={handleFileChange} 
+                ref={fileInputRef}
+                style={{ display: 'block', margin: '0 auto', fontSize: 14 }}
+              />
+              <p style={{ margin: '8px 0 0', fontSize: 12, color: '#64748b' }}>Hỗ trợ file định dạng .mp4 (Dung lượng tối đa 100MB)</p>
+              {videoFile && (
+                <div style={{ marginTop: 12, fontSize: 13, color: '#0f172a', fontWeight: 600 }}>
+                  Đã chọn: {videoFile.name} ({(videoFile.size / (1024 * 1024)).toFixed(2)} MB)
+                </div>
+              )}
+              {editVideo && !videoFile && (
+                <div style={{ marginTop: 12, fontSize: 13, color: '#64748b', fontStyle: 'italic' }}>
+                  (Để trống nếu không muốn thay thế file video cũ)
+                </div>
+              )}
+            </div>
+          ) : (
+            <Input label="Đường dẫn phát (HLS .m3u8)" value={form.hlsUrl} onChange={(e) => setForm((f) => ({ ...f, hlsUrl: e.target.value }))} placeholder="https://example.com/stream/video.m3u8" />
+          )}
+        </div>
 
         {/* Thanh tiến trình upload */}
-        {saving && uploadType === 'file' && uploadProgress > 0 && (
+        {saving && uploadType === 'file' && uploadProgress >= 0 && (
           <div style={{ marginBottom: 16 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 4 }}>
               <span>Đang tải lên file MP4 lên server...</span>
