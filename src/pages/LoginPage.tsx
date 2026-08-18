@@ -150,10 +150,10 @@ export function LoginPage() {
       <div
         style={{
           position: 'fixed',
-          top: -50,
-          left: -70,
-          width: 280,
-          height: 280,
+          top: -100,
+          left: -140,
+          width: 560,
+          height: 560,
           pointerEvents: 'none',
           zIndex: 0,
           animation: 'spin 40s linear infinite',
@@ -181,10 +181,10 @@ export function LoginPage() {
       <div
         style={{
           position: 'fixed',
-          bottom: -80,
-          right: -100,
-          width: 400,
-          height: 400,
+          bottom: -160,
+          right: -200,
+          width: 800,
+          height: 800,
           pointerEvents: 'none',
           zIndex: 0,
           animation: 'spin 40s linear infinite',
