@@ -146,6 +146,69 @@ export function LoginPage() {
       position: 'relative',
       overflow: 'hidden',
     }}>
+      {/* Rotating Dong Son Drums */}
+      <div
+        style={{
+          position: 'fixed',
+          top: -50,
+          left: -70,
+          width: 280,
+          height: 280,
+          pointerEvents: 'none',
+          zIndex: 0,
+          animation: 'spin 40s linear infinite',
+          willChange: 'transform',
+        }}
+      >
+        <div
+          style={{
+            width: '100%',
+            height: '100%',
+            backgroundColor: '#c37938',
+            WebkitMaskImage: 'url(/trongdong_dongson.png)',
+            maskImage: 'url(/trongdong_dongson.png)',
+            WebkitMaskSize: 'contain',
+            maskSize: 'contain',
+            WebkitMaskRepeat: 'no-repeat',
+            maskRepeat: 'no-repeat',
+            WebkitMaskPosition: 'center',
+            maskPosition: 'center',
+            opacity: 0.18,
+          }}
+        />
+      </div>
+
+      <div
+        style={{
+          position: 'fixed',
+          bottom: -80,
+          right: -100,
+          width: 400,
+          height: 400,
+          pointerEvents: 'none',
+          zIndex: 0,
+          animation: 'spin 40s linear infinite',
+          willChange: 'transform',
+        }}
+      >
+        <div
+          style={{
+            width: '100%',
+            height: '100%',
+            backgroundColor: '#E5A93B',
+            WebkitMaskImage: 'url(/trongdong_dongson.png)',
+            maskImage: 'url(/trongdong_dongson.png)',
+            WebkitMaskSize: 'contain',
+            maskSize: 'contain',
+            WebkitMaskRepeat: 'no-repeat',
+            maskRepeat: 'no-repeat',
+            WebkitMaskPosition: 'center',
+            maskPosition: 'center',
+            opacity: 0.15,
+          }}
+        />
+      </div>
+
       {/* Decorative blobs */}
       <div style={{ position: 'fixed', top: -120, left: -120, width: 500, height: 500, borderRadius: '50%', background: 'radial-gradient(circle, rgba(195,121,56,0.12) 0%, transparent 70%)', pointerEvents: 'none' }} />
       <div style={{ position: 'fixed', bottom: -100, right: -80, width: 450, height: 450, borderRadius: '50%', background: 'radial-gradient(circle, rgba(166,98,40,0.08) 0%, transparent 70%)', pointerEvents: 'none' }} />

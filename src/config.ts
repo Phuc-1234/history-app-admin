@@ -1,4 +1,4 @@
 // src/config.ts
 export const APP_CONFIG = {
-  VERSION: '2.1.0',
+  VERSION: '2.1.1',
 };
