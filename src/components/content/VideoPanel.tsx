@@ -78,19 +78,73 @@ export function VideoPanel({ onToast }: VideoPanelProps) {
     return () => clearInterval(interval);
   }, [videos]);
 
-  // Tải danh sách Khối lớp khi mở modal tạo mới
-  const loadGradesData = async () => {
+  // Tải phân cấp Khối lớp - Chủ đề - Bài học
+  const loadHierarchy = async (targetLessonId?: number | null) => {
     try {
       const res = await client.get('/api/content/grades');
-      const gs = res.data.grades ?? [];
+      const gs: GradeDto[] = res.data.grades ?? [];
       setGrades(gs);
-      if (gs.length > 0) {
-        const firstGradeId = String(gs[0].id);
-        setSelectedGradeId(firstGradeId);
-        await loadTopicsData(firstGradeId);
+      if (gs.length === 0) {
+        setTopics([]);
+        setLessons([]);
+        setSelectedGradeId('');
+        setSelectedTopicId('');
+        return;
+      }
+
+      if (targetLessonId) {
+        // Tìm nhanh Khối lớp và Chủ đề chứa targetLessonId
+        const topicPromises = gs.map(async (g) => {
+          const tRes = await client.get(`/api/content/grades/${g.id}/topics`);
+          const ts: TopicDto[] = tRes.data.topics ?? [];
+          const lessonPromises = ts.map(async (t) => {
+            const lRes = await client.get(`/api/content/topics/${t.id}/lessons`);
+            const ls: LessonDto[] = lRes.data.lessons ?? [];
+            return { topic: t, lessons: ls, hasTarget: ls.some(l => l.id === targetLessonId) };
+          });
+          const topicResults = await Promise.all(lessonPromises);
+          const matched = topicResults.find(r => r.hasTarget);
+          return {
+            grade: g,
+            topics: ts,
+            matchedTopicResult: matched,
+          };
+        });
+
+        const gradeResults = await Promise.all(topicPromises);
+        const matchedGrade = gradeResults.find(r => r.matchedTopicResult);
+
+        if (matchedGrade && matchedGrade.matchedTopicResult) {
+          setSelectedGradeId(String(matchedGrade.grade.id));
+          setTopics(matchedGrade.topics);
+          setSelectedTopicId(String(matchedGrade.matchedTopicResult.topic.id));
+          setLessons(matchedGrade.matchedTopicResult.lessons);
+          setForm(f => ({ ...f, lessonId: String(targetLessonId) }));
+          return;
+        }
+      }
+
+      // Mặc định chọn khối lớp & chủ đề đầu tiên nếu chưa liên kết bài học
+      const firstGradeId = String(gs[0].id);
+      setSelectedGradeId(firstGradeId);
+      const tRes = await client.get(`/api/content/grades/${firstGradeId}/topics`);
+      const ts: TopicDto[] = tRes.data.topics ?? [];
+      setTopics(ts);
+      if (ts.length > 0) {
+        const firstTopicId = String(ts[0].id);
+        setSelectedTopicId(firstTopicId);
+        const lRes = await client.get(`/api/content/topics/${firstTopicId}/lessons`);
+        const ls: LessonDto[] = lRes.data.lessons ?? [];
+        setLessons(ls);
+        if (targetLessonId === undefined && ls.length > 0) {
+          setForm(f => ({ ...f, lessonId: String(ls[0].id) }));
+        }
+      } else {
+        setSelectedTopicId('');
+        setLessons([]);
       }
     } catch {
-      onToast('Không tải được danh sách khối lớp', 'error');
+      onToast('Không tải được danh mục phân cấp bài học', 'error');
     }
   };
 
@@ -150,7 +204,7 @@ export function VideoPanel({ onToast }: VideoPanelProps) {
     setUploadProgress(0);
     if (fileInputRef.current) fileInputRef.current.value = '';
     setModalOpen(true);
-    loadGradesData();
+    loadHierarchy();
   };
 
   const openEdit = (v: AdminVideoDto) => {
@@ -160,13 +214,14 @@ export function VideoPanel({ onToast }: VideoPanelProps) {
       position: String(v.position ?? 0),
       summary: v.summary ?? '',
       hlsUrl: v.hlsUrl,
-      lessonId: String(v.lessonId ?? '')
+      lessonId: v.lessonId ? String(v.lessonId) : ''
     });
     setUploadType('url');
     setVideoFile(null);
     setUploadProgress(0);
     if (fileInputRef.current) fileInputRef.current.value = '';
     setModalOpen(true);
+    loadHierarchy(v.lessonId);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -204,7 +259,7 @@ export function VideoPanel({ onToast }: VideoPanelProps) {
           formData.append('title', form.title.trim());
           formData.append('position', String(positionNum));
           formData.append('summary', form.summary.trim());
-          if (lessonIdNum !== null) formData.append('lessonId', String(lessonIdNum));
+          formData.append('lessonId', lessonIdNum !== null ? String(lessonIdNum) : '');
           formData.append('video', videoFile);
 
           await client.patch(`/api/admin/videos/${editVideo.id}`, formData, {
@@ -423,34 +478,32 @@ export function VideoPanel({ onToast }: VideoPanelProps) {
         <Input label="Vị trí hiển thị (Thứ tự)" type="number" value={form.position} onChange={(e) => setForm((f) => ({ ...f, position: e.target.value }))} placeholder="Ví dụ: 1" />
         <Textarea label="Tóm tắt nội dung video" value={form.summary} onChange={(e) => setForm((f) => ({ ...f, summary: e.target.value }))} placeholder="Mô tả tóm tắt nội dung video lịch sử..." />
 
-        {/* Liên kết bài học (Chỉ hiển thị khi tạo mới) */}
-        {!editVideo && (
-          <div style={{ border: '1px solid #e2e8f0', borderRadius: 12, padding: 14, marginBottom: 16, background: '#fafbff' }}>
-            <span style={{ display: 'block', fontSize: 13, fontWeight: 700, color: '#334155', marginBottom: 10 }}>Bài học liên kết</span>
-            
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
-              <Select label="Khối lớp" value={selectedGradeId} onChange={handleGradeChange}>
-                {grades.map(g => (
-                  <option key={g.id} value={g.id}>Lớp {g.id}</option>
-                ))}
-              </Select>
+        {/* Liên kết bài học */}
+        <div style={{ border: '1px solid #e2e8f0', borderRadius: 12, padding: 14, marginBottom: 16, background: '#fafbff' }}>
+          <span style={{ display: 'block', fontSize: 13, fontWeight: 700, color: '#334155', marginBottom: 10 }}>Bài học liên kết</span>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+            <Select label="Khối lớp" value={selectedGradeId} onChange={handleGradeChange}>
+              {grades.map(g => (
+                <option key={g.id} value={g.id}>Lớp {g.id}</option>
+              ))}
+            </Select>
 
-              <Select label="Chủ đề" value={selectedTopicId} onChange={handleTopicChange} disabled={topics.length === 0}>
-                {topics.length === 0 && <option value="">(Không có chủ đề)</option>}
-                {topics.map(t => (
-                  <option key={t.id} value={t.id}>{t.name}</option>
-                ))}
-              </Select>
-            </div>
-
-            <Select label="Bài học" value={form.lessonId} onChange={(e) => setForm(f => ({ ...f, lessonId: e.target.value }))}>
-              <option value="">Không liên kết bài học</option>
-              {lessons.map(l => (
-                <option key={l.id} value={l.id}>Bài {l.position}: {l.name}</option>
+            <Select label="Chủ đề" value={selectedTopicId} onChange={handleTopicChange} disabled={topics.length === 0}>
+              {topics.length === 0 && <option value="">(Không có chủ đề)</option>}
+              {topics.map(t => (
+                <option key={t.id} value={t.id}>{t.name}</option>
               ))}
             </Select>
           </div>
-        )}
+
+          <Select label="Bài học" value={form.lessonId} onChange={(e) => setForm(f => ({ ...f, lessonId: e.target.value }))}>
+            <option value="">Không liên kết bài học</option>
+            {lessons.map(l => (
+              <option key={l.id} value={l.id}>Bài {l.position}: {l.name}</option>
+            ))}
+          </Select>
+        </div>
 
         {/* Option: Upload File MP4 hoặc nhập URL HLS */}
         <div style={{ marginBottom: 16 }}>
