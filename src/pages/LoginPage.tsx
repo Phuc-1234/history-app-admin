@@ -156,7 +156,7 @@ export function LoginPage() {
           height: 560,
           pointerEvents: 'none',
           zIndex: 0,
-          animation: 'spin 40s linear infinite',
+          animation: 'spin 90s linear infinite',
           willChange: 'transform',
         }}
       >
@@ -173,7 +173,7 @@ export function LoginPage() {
             maskRepeat: 'no-repeat',
             WebkitMaskPosition: 'center',
             maskPosition: 'center',
-            opacity: 0.18,
+            opacity: 0.16,
           }}
         />
       </div>
@@ -187,7 +187,7 @@ export function LoginPage() {
           height: 800,
           pointerEvents: 'none',
           zIndex: 0,
-          animation: 'spin 40s linear infinite',
+          animation: 'spin 120s linear infinite',
           willChange: 'transform',
         }}
       >
@@ -204,7 +204,7 @@ export function LoginPage() {
             maskRepeat: 'no-repeat',
             WebkitMaskPosition: 'center',
             maskPosition: 'center',
-            opacity: 0.15,
+            opacity: 0.13,
           }}
         />
       </div>

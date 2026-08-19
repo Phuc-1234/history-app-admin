@@ -10,6 +10,10 @@ import { TestOverviewCards } from './TestOverviewCards';
 import { QuestionStatsPanel } from './QuestionStatsPanel';
 import { Leaderboard } from './Leaderboard';
 import { ActivityFeed } from './ActivityFeed';
+import { UserGrowthPanel } from './UserGrowthPanel';
+import { RevenuePanel } from './RevenuePanel';
+import { ContentProgressPanel } from './ContentProgressPanel';
+import { DashboardSectionNav, SECTION_SCROLL_MARGIN } from './DashboardSectionNav';
 
 export function OverviewPanel() {
   const { data, loading, partial } = useDashboardData();
@@ -47,29 +51,60 @@ export function OverviewPanel() {
       </p>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
-        {/* Phần 1 — Stats Cards + KPI */}
-        <StatsCards stats={stats} derived={derived} />
+        {/* Điều hướng nội bộ — cuộn tới từng phần */}
+        <DashboardSectionNav />
 
-        {/* Phần 2 — Biểu đồ tăng trưởng */}
-        <GrowthCharts />
+        {/* Phần 1 — Stats Cards + KPI */}
+        <div id="sec-overview" style={{ scrollMarginTop: SECTION_SCROLL_MARGIN }}>
+          <StatsCards stats={stats} derived={derived} />
+        </div>
+
+        {/* Phần 2 — Tăng trưởng người dùng mới */}
+        <div id="sec-user-growth" style={{ scrollMarginTop: SECTION_SCROLL_MARGIN }}>
+          <UserGrowthPanel />
+        </div>
+
+        {/* Phần 3 — Doanh thu */}
+        <div id="sec-revenue" style={{ scrollMarginTop: SECTION_SCROLL_MARGIN }}>
+          <RevenuePanel />
+        </div>
+
+        {/* Phần 4 — Tiến độ học nội dung */}
+        <div id="sec-content-progress" style={{ scrollMarginTop: SECTION_SCROLL_MARGIN }}>
+          <ContentProgressPanel />
+        </div>
+
+        {/* Phần 5 — Biểu đồ hoạt động */}
+        <div id="sec-activity" style={{ scrollMarginTop: SECTION_SCROLL_MARGIN }}>
+          <GrowthCharts />
+        </div>
 
         {/* Phần AI — Thống kê & Bảng xếp hạng AI Token */}
-        <AiUsagePanel />
+        <div id="sec-ai" style={{ scrollMarginTop: SECTION_SCROLL_MARGIN }}>
+          <AiUsagePanel />
+        </div>
 
-        {/* Phần 3 — Phân tích người dùng */}
-        <UserAnalytics roleSlices={roleSlices} streakBuckets={streakBuckets} derived={derived} />
+        {/* Phần 6 — Phân tích người dùng */}
+        <div id="sec-users" style={{ scrollMarginTop: SECTION_SCROLL_MARGIN }}>
+          <UserAnalytics roleSlices={roleSlices} streakBuckets={streakBuckets} derived={derived} />
+        </div>
 
+        {/* Phần 7 — Thống kê làm bài & câu hỏi */}
+        <div id="sec-tests" style={{ scrollMarginTop: SECTION_SCROLL_MARGIN, display: 'flex', flexDirection: 'column', gap: 28 }}>
+          <TestActivityCharts />
+          <TestOverviewCards />
+          <QuestionStatsPanel />
+        </div>
 
-        {/* Phần 4 — Thống kê làm bài & câu hỏi */}
-        <TestActivityCharts />
-        <TestOverviewCards />
-        <QuestionStatsPanel />
+        {/* Phần 8 — Bảng xếp hạng */}
+        <div id="sec-leaderboard" style={{ scrollMarginTop: SECTION_SCROLL_MARGIN }}>
+          <Leaderboard topXp={topXp} topStreak={topStreak} topGold={topGold} />
+        </div>
 
-        {/* Phần 5 — Bảng xếp hạng */}
-        <Leaderboard topXp={topXp} topStreak={topStreak} topGold={topGold} />
-
-        {/* Phần 6 — Hoạt động gần đây */}
-        <ActivityFeed items={activityFeed} />
+        {/* Phần 9 — Hoạt động gần đây */}
+        <div id="sec-feed" style={{ scrollMarginTop: SECTION_SCROLL_MARGIN }}>
+          <ActivityFeed items={activityFeed} />
+        </div>
       </div>
     </div>
   );
