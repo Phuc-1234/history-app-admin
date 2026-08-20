@@ -34,7 +34,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'lessons', label: 'Danh sách bài học', description: 'Lessons' },
   { id: 'sections', label: 'Nội dung bài học', description: 'Lesson Content' },
   { id: 'mindmaps', label: 'Sơ đồ tư duy', description: 'Mindmaps' },
-  { id: 'flashcards', label: 'Thẻ ghi nhớ', description: 'Flashcards' },
+  { id: 'flashcards', label: 'Thẻ lật', description: 'Flashcards' },
   { id: 'users', label: 'Người dùng', description: 'Users' },
   { id: 'videos', label: 'Video bài học', description: 'Videos' },
   { id: 'questions', label: 'Ngân hàng câu hỏi', description: 'Questions' },

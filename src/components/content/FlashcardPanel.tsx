@@ -8,11 +8,19 @@ import { Modal } from '../ui/Modal';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { Textarea, Select } from '../ui/FormField';
 import { Spinner } from '../ui/Spinner';
-import { IconPlus, IconEdit, IconDelete, IconFlashcard, IconMagicWand, IconAlert } from '../ui/Icons';
+import { IconPlus, IconEdit, IconDelete, IconFlashcard, IconMagicWand, IconAlert, IconInfo, IconDownload, IconUpload } from '../ui/Icons';
 import type { TabId, NavParams } from '../../pages/DashboardPage';
+import XLSX from 'xlsx-js-style';
 
 export interface SectionWithDepth extends SectionDto {
   depth: number;
+}
+
+export interface FormCardItem {
+  key: string;
+  frontText: string;
+  backText: string;
+  isAiGenerated?: boolean;
 }
 
 interface FlashcardPanelProps {
@@ -40,15 +48,17 @@ export function FlashcardPanel({ onToast, navParams, onNavigate: _onNavigate }: 
   const [editCard, setEditCard] = useState<FlashcardDto | null>(null);
 
   // Form modal scope & inputs
-  const [form, setForm] = useState({
-    frontText: '',
-    backText: '',
+  const [formScope, setFormScope] = useState({
     gradeId: '',
     topicId: '',
     lessonId: '',
     sectionId: '',
     nodeId: '',
   });
+
+  const [formCards, setFormCards] = useState<FormCardItem[]>([
+    { key: Math.random().toString(), frontText: '', backText: '' }
+  ]);
 
   // Modal cascade options
   const [formTopics, setFormTopics] = useState<TopicDto[]>([]);
@@ -64,8 +74,6 @@ export function FlashcardPanel({ onToast, navParams, onNavigate: _onNavigate }: 
   const [aiModalOpen, setAiModalOpen] = useState(false);
   const [aiText, setAiText] = useState('');
   const [aiGenerating, setAiGenerating] = useState(false);
-  const [aiPreviewList, setAiPreviewList] = useState<{ frontText: string; backText: string }[]>([]);
-  const [aiSaveConfirmOpen, setAiSaveConfirmOpen] = useState(false);
 
   // 1. Sequential Cascade Select Fetches
   useEffect(() => {
@@ -259,7 +267,7 @@ export function FlashcardPanel({ onToast, navParams, onNavigate: _onNavigate }: 
       const res = await client.get(`/api/admin/flashcards?lessonId=${lessonId}`);
       setFlashcards(res.data.flashcards ?? []);
     } catch {
-      onToast('Không tải được danh sách thẻ ghi nhớ', 'error');
+      onToast('Không tải được danh sách thẻ lật', 'error');
     } finally {
       setLoading(false);
     }
@@ -330,7 +338,7 @@ export function FlashcardPanel({ onToast, navParams, onNavigate: _onNavigate }: 
 
   // Modal cascade triggers
   const handleFormGradeChange = async (gIdStr: string) => {
-    setForm(prev => ({ ...prev, gradeId: gIdStr, topicId: '', lessonId: '', sectionId: '', nodeId: '' }));
+    setFormScope(prev => ({ ...prev, gradeId: gIdStr, topicId: '', lessonId: '', sectionId: '', nodeId: '' }));
     setFormTopics([]);
     setFormLessons([]);
     setFormSections([]);
@@ -345,7 +353,7 @@ export function FlashcardPanel({ onToast, navParams, onNavigate: _onNavigate }: 
   };
 
   const handleFormTopicChange = async (tIdStr: string) => {
-    setForm(prev => ({ ...prev, topicId: tIdStr, lessonId: '', sectionId: '', nodeId: '' }));
+    setFormScope(prev => ({ ...prev, topicId: tIdStr, lessonId: '', sectionId: '', nodeId: '' }));
     setFormLessons([]);
     setFormSections([]);
     setFormNodes([]);
@@ -359,7 +367,7 @@ export function FlashcardPanel({ onToast, navParams, onNavigate: _onNavigate }: 
   };
 
   const handleFormLessonChange = async (lIdStr: string) => {
-    setForm(prev => ({ ...prev, lessonId: lIdStr, sectionId: '', nodeId: '' }));
+    setFormScope(prev => ({ ...prev, lessonId: lIdStr, sectionId: '', nodeId: '' }));
     setFormSections([]);
     setFormNodes([]);
     if (!lIdStr) return;
@@ -386,10 +394,10 @@ export function FlashcardPanel({ onToast, navParams, onNavigate: _onNavigate }: 
   };
 
   const handleFormSectionChange = (sIdStr: string) => {
-    setForm(prev => ({ ...prev, sectionId: sIdStr, nodeId: '' }));
+    setFormScope(prev => ({ ...prev, sectionId: sIdStr, nodeId: '' }));
   };
 
-  // 2. Individual CRUD Handlers
+  // 2. Individual CRUD Handlers & Batch Helpers
   const openCreate = () => {
     setEditCard(null);
     const gId = selectedGradeId ? String(selectedGradeId) : (grades.length > 0 ? String(grades[0].id) : '');
@@ -398,15 +406,14 @@ export function FlashcardPanel({ onToast, navParams, onNavigate: _onNavigate }: 
     const sId = selectedSectionId ? String(selectedSectionId) : '';
     const nId = selectedNodeId ? String(selectedNodeId) : '';
 
-    setForm({
-      frontText: '',
-      backText: '',
+    setFormScope({
       gradeId: gId,
       topicId: tId,
       lessonId: lId,
       sectionId: sId,
       nodeId: nId,
     });
+    setFormCards([{ key: Math.random().toString(), frontText: '', backText: '' }]);
     setFormTopics(topics);
     setFormLessons(lessons);
     setFormSections(sections);
@@ -429,15 +436,14 @@ export function FlashcardPanel({ onToast, navParams, onNavigate: _onNavigate }: 
       }
     }
 
-    setForm({
-      frontText: card.frontText,
-      backText: card.backText,
+    setFormScope({
       gradeId: gId,
       topicId: tId,
       lessonId: lId,
       sectionId: sId,
       nodeId: nId,
     });
+    setFormCards([{ key: 'edit', frontText: card.frontText, backText: card.backText }]);
     setFormTopics(topics);
     setFormLessons(lessons);
     setFormSections(sections);
@@ -445,53 +451,247 @@ export function FlashcardPanel({ onToast, navParams, onNavigate: _onNavigate }: 
     setModalOpen(true);
   };
 
-  const handleSave = async () => {
-    if (!form.frontText.trim() || !form.backText.trim()) {
-      onToast('Mặt trước và mặt sau không được để trống', 'error');
-      return;
+  const addCardItem = () => {
+    setFormCards(prev => [...prev, { key: Math.random().toString(), frontText: '', backText: '' }]);
+  };
+
+  const removeCardItem = (idx: number) => {
+    setFormCards(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  const updateCardField = (idx: number, field: 'frontText' | 'backText', val: string) => {
+    setFormCards(prev => prev.map((c, i) => i === idx ? { ...c, [field]: val } : c));
+  };
+
+  // Excel Template Download & Import Handlers
+  const downloadExcelTemplate = () => {
+    const headers = [
+      'Mặt trước (Câu hỏi / Thuật ngữ)',
+      'Mặt sau (Câu trả lời / Định nghĩa)'
+    ];
+
+    const instructions = [
+      'Nhập câu hỏi, sự kiện hoặc thuật ngữ lịch sử ở mặt trước của thẻ lật',
+      'Nhập nội dung giải thích, câu trả lời hoặc định nghĩa tương ứng ở mặt sau của thẻ lật'
+    ];
+
+    const sample1 = [
+      'Chiến thắng Điện Biên Phủ diễn ra vào năm nào?',
+      'Năm 1954 (ngày 07/05/1954)'
+    ];
+
+    const sample2 = [
+      'Ai là người đọc bản Tuyên ngôn Độc lập ngày 2/9/1945 tại Quảng trường Ba Đình?',
+      'Chủ tịch Hồ Chí Minh'
+    ];
+
+    const sample3 = [
+      'Chiến dịch Hồ Chí Minh toàn thắng vào thời gian nào?',
+      '11 giờ 30 phút ngày 30 tháng 4 năm 1975'
+    ];
+
+    const sample4 = [
+      'Thủ đô đầu tiên của nước Việt Nam độc lập sau thời Bắc thuộc đóng ở đâu?',
+      'Hoa Lư (Ninh Bình)'
+    ];
+
+    const data = [headers, instructions, sample1, sample2, sample3, sample4];
+
+    const worksheet = XLSX.utils.aoa_to_sheet(data);
+
+    // Apply custom column widths
+    worksheet['!cols'] = [
+      { wch: 45 }, // Mặt trước
+      { wch: 45 }  // Mặt sau
+    ];
+
+    // Apply custom row heights
+    worksheet['!rows'] = [
+      { hpt: 30 }, // Header
+      { hpt: 35 }, // Instruction
+      { hpt: 25 }, // Sample 1
+      { hpt: 25 }, // Sample 2
+      { hpt: 25 }, // Sample 3
+      { hpt: 25 }  // Sample 4
+    ];
+
+    // Styling worksheet cells
+    for (const key in worksheet) {
+      if (key.startsWith('!')) continue;
+      const cell = worksheet[key];
+      if (!cell) continue;
+
+      const decoded = XLSX.utils.decode_cell(key);
+      const row = decoded.r;
+
+      const style: any = {
+        font: { name: 'Segoe UI', sz: 10 },
+        alignment: { vertical: 'center', wrapText: true },
+        border: {
+          top: { style: 'thin', color: { rgb: 'E2E8F0' } },
+          bottom: { style: 'thin', color: { rgb: 'E2E8F0' } },
+          left: { style: 'thin', color: { rgb: 'E2E8F0' } },
+          right: { style: 'thin', color: { rgb: 'E2E8F0' } }
+        }
+      };
+
+      if (row === 0) {
+        // Title/Header row
+        style.font = { name: 'Segoe UI', sz: 10, bold: true, color: { rgb: 'FFFFFF' } };
+        style.fill = { fgColor: { rgb: '5B21B6' } };
+        style.alignment = { horizontal: 'center', vertical: 'center', wrapText: true };
+        style.border = {
+          top: { style: 'medium', color: { rgb: '4C1D95' } },
+          bottom: { style: 'medium', color: { rgb: '4C1D95' } },
+          left: { style: 'thin', color: { rgb: '7C3AED' } },
+          right: { style: 'thin', color: { rgb: '7C3AED' } }
+        };
+      } else if (row === 1) {
+        // Instruction row
+        style.font = { name: 'Segoe UI', sz: 9.5, italic: true, color: { rgb: '4B5563' } };
+        style.fill = { fgColor: { rgb: 'F3E8FF' } };
+        style.alignment = { horizontal: 'left', vertical: 'center', wrapText: true };
+        style.border = {
+          top: { style: 'thin', color: { rgb: 'DDD6FE' } },
+          bottom: { style: 'medium', color: { rgb: 'C084FC' } },
+          left: { style: 'thin', color: { rgb: 'E9D5FF' } },
+          right: { style: 'thin', color: { rgb: 'E9D5FF' } }
+        };
+      } else {
+        // Sample data rows
+        style.font = { name: 'Segoe UI', sz: 10, color: { rgb: '1F2937' } };
+        style.alignment = { horizontal: 'left', vertical: 'center', wrapText: true };
+        if (row % 2 === 0) {
+          style.fill = { fgColor: { rgb: 'F9FAFB' } };
+        } else {
+          style.fill = { fgColor: { rgb: 'FFFFFF' } };
+        }
+      }
+
+      cell.s = style;
     }
 
-    const nodeId = form.nodeId ? Number(form.nodeId) : null;
-    const sectionId = form.sectionId ? Number(form.sectionId) : null;
-    const lessonId = form.lessonId ? Number(form.lessonId) : null;
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Template Thẻ Lật');
+    XLSX.writeFile(workbook, 'Mau_Import_The_Lat.xlsx');
+  };
+
+  const handleImportExcel = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const ab = event.target?.result;
+        if (!ab) {
+          onToast('Không đọc được dữ liệu tệp tin', 'error');
+          return;
+        }
+
+        const workbook = XLSX.read(ab, { type: 'array' });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+
+        const rows: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        if (rows.length <= 2) {
+          onToast('Tệp excel không chứa dữ liệu thẻ lật hợp lệ', 'error');
+          return;
+        }
+
+        const importedCards: FormCardItem[] = [];
+
+        for (let i = 2; i < rows.length; i++) {
+          const row = rows[i];
+          if (!row || row.length === 0) continue;
+
+          const frontText = String(row[0] || '').trim();
+          const backText = String(row[1] || '').trim();
+
+          if (frontText && backText) {
+            importedCards.push({
+              key: Math.random().toString(),
+              frontText,
+              backText
+            });
+          }
+        }
+
+        if (importedCards.length === 0) {
+          onToast('Không tìm thấy dòng dữ liệu thẻ lật nào hợp lệ trong tệp excel', 'error');
+          return;
+        }
+
+        setFormCards(prev => {
+          const isOnlyBlank = prev.length === 1 && !prev[0].frontText.trim() && !prev[0].backText.trim();
+          return isOnlyBlank ? importedCards : [...prev, ...importedCards];
+        });
+        onToast(`Đã tải nhập thành công ${importedCards.length} thẻ lật vào form. Bạn vui lòng xem lại trước khi lưu!`, 'success');
+      } catch (err: any) {
+        onToast('Đã xảy ra lỗi khi xử lý tệp excel: ' + (err.message || ''), 'error');
+      }
+    };
+
+    reader.readAsArrayBuffer(file);
+    e.target.value = '';
+  };
+
+  const handleSave = async () => {
+    const nodeId = formScope.nodeId ? Number(formScope.nodeId) : null;
+    const sectionId = formScope.sectionId ? Number(formScope.sectionId) : null;
+    const lessonId = formScope.lessonId ? Number(formScope.lessonId) : null;
 
     if (!nodeId && !sectionId && !lessonId) {
       onToast('Vui lòng chọn ít nhất Bài học, Phần hoặc Nút kiến thức', 'error');
       return;
     }
 
+    if (formCards.length === 0) {
+      onToast('Vui lòng thêm ít nhất một thẻ lật', 'error');
+      return;
+    }
+
+    for (let i = 0; i < formCards.length; i++) {
+      const card = formCards[i];
+      if (!card.frontText.trim() || !card.backText.trim()) {
+        onToast(`Mặt trước và mặt sau ở thẻ #${i + 1} không được để trống`, 'error');
+        return;
+      }
+    }
+
     try {
       setSaving(true);
       if (editCard) {
         await client.patch(`/api/admin/flashcards/${editCard.id}`, {
-          frontText: form.frontText.trim(),
-          backText: form.backText.trim(),
+          frontText: formCards[0].frontText.trim(),
+          backText: formCards[0].backText.trim(),
           lessonId: nodeId ? null : sectionId ? null : lessonId,
           sectionId: nodeId ? null : sectionId,
           nodeId: nodeId,
         });
-        onToast('Đã cập nhật thẻ ghi nhớ', 'success');
+        onToast('Đã cập nhật thẻ lật', 'success');
       } else {
-        const payload: any = {
-          frontText: form.frontText.trim(),
-          backText: form.backText.trim(),
-        };
-        // Add only the lowest scope ID
-        if (nodeId) {
-          payload.nodeId = nodeId;
-        } else if (sectionId) {
-          payload.sectionId = sectionId;
-        } else if (lessonId) {
-          payload.lessonId = lessonId;
-        }
+        for (const card of formCards) {
+          const payload: any = {
+            frontText: card.frontText.trim(),
+            backText: card.backText.trim(),
+          };
+          if (nodeId) {
+            payload.nodeId = nodeId;
+          } else if (sectionId) {
+            payload.sectionId = sectionId;
+          } else if (lessonId) {
+            payload.lessonId = lessonId;
+          }
 
-        await client.post('/api/admin/flashcards', payload);
-        onToast('Đã tạo thẻ ghi nhớ mới', 'success');
+          await client.post('/api/admin/flashcards', payload);
+        }
+        onToast(`Đã tạo thành công ${formCards.length} thẻ lật mới`, 'success');
       }
       setModalOpen(false);
       if (selectedLessonId) fetchFlashcards(selectedLessonId);
     } catch (err: any) {
-      onToast(err?.response?.data?.error ?? 'Lỗi khi lưu', 'error');
+      onToast(err?.response?.data?.error ?? 'Lỗi khi lưu thẻ lật', 'error');
     } finally {
       setSaving(false);
     }
@@ -502,7 +702,7 @@ export function FlashcardPanel({ onToast, navParams, onNavigate: _onNavigate }: 
     try {
       setDeleting(true);
       await client.delete(`/api/admin/flashcards/${deleteTarget.id}`);
-      onToast('Đã xóa thẻ ghi nhớ', 'success');
+      onToast('Đã xóa thẻ lật', 'success');
       setDeleteTarget(null);
       if (selectedLessonId) fetchFlashcards(selectedLessonId);
     } catch (err: any) {
@@ -512,7 +712,7 @@ export function FlashcardPanel({ onToast, navParams, onNavigate: _onNavigate }: 
     }
   };
 
-  // 3. AI Generation Handlers
+  // 3. AI Generation Handler
   const handleAIGenerate = async () => {
     if (!aiText.trim()) {
       onToast('Vui lòng nhập đoạn văn bản lịch sử cần tóm tắt', 'error');
@@ -531,39 +731,30 @@ export function FlashcardPanel({ onToast, navParams, onNavigate: _onNavigate }: 
         throw new Error('Định dạng dữ liệu trả về từ AI không đúng cấu trúc flashcards');
       }
 
-      setAiPreviewList(data.flashcards);
-      onToast(`Sinh thành công ${data.flashcards.length} thẻ ghi nhớ từ AI!`, 'success');
-    } catch (err: any) {
-      console.error(err);
-      onToast(err?.response?.data?.error || err.message || 'Lỗi khi sinh câu hỏi từ AI', 'error');
-    } finally {
-      setAiGenerating(false);
-    }
-  };
+      const generatedCards: FormCardItem[] = data.flashcards.map((f: any) => ({
+        key: Math.random().toString(),
+        frontText: f.frontText ? String(f.frontText).trim() : '',
+        backText: f.backText ? String(f.backText).trim() : '',
+        isAiGenerated: true,
+      })).filter((f: FormCardItem) => f.frontText && f.backText);
 
-  const handleAISave = async () => {
-    if (!selectedLessonId) return;
-    if (aiPreviewList.length === 0) {
-      onToast('Không có thẻ nào để lưu', 'error');
-      return;
-    }
-    try {
-      setSaving(true);
-      await client.post(`/api/admin/lessons/${selectedLessonId}/flashcards/bulk`, {
-        flashcards: aiPreviewList.map(f => ({
-          frontText: f.frontText.trim(),
-          backText: f.backText.trim(),
-        }))
+      if (generatedCards.length === 0) {
+        throw new Error('AI không tạo được thẻ lật hợp lệ từ đoạn văn bản');
+      }
+
+      setFormCards(prev => {
+        const isOnlyBlank = prev.length === 1 && !prev[0].frontText.trim() && !prev[0].backText.trim();
+        return isOnlyBlank ? generatedCards : [...prev, ...generatedCards];
       });
-      onToast('Đã lưu hàng loạt thẻ ghi nhớ thành công!', 'success');
+
       setAiModalOpen(false);
       setAiText('');
-      setAiPreviewList([]);
-      fetchFlashcards(selectedLessonId);
+      onToast(`Đã tự động thêm ${generatedCards.length} thẻ lật từ AI vào form!`, 'success');
     } catch (err: any) {
-      onToast(err?.response?.data?.error ?? 'Lỗi khi lưu thẻ hàng loạt', 'error');
+      console.error(err);
+      onToast(err?.response?.data?.error || err.message || 'Lỗi khi sinh thẻ lật từ AI', 'error');
     } finally {
-      setSaving(false);
+      setAiGenerating(false);
     }
   };
 
@@ -693,34 +884,16 @@ export function FlashcardPanel({ onToast, navParams, onNavigate: _onNavigate }: 
       {/* Main Actions & Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
         <div>
-          <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: '#0f172a' }}>Thẻ ghi nhớ (Flashcards)</h2>
+          <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: '#0f172a' }}>Thẻ lật (Flashcards)</h2>
           <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: 14 }}>
-            {selectedLessonId ? `Có ${filteredFlashcards.length} thẻ ghi nhớ trong bài học này` : 'Vui lòng chọn bài học'}
+            {selectedLessonId ? `Có ${filteredFlashcards.length} thẻ lật trong bài học này` : 'Vui lòng chọn bài học'}
           </p>
         </div>
 
         {selectedLessonId && (
-          <div style={{ display: 'flex', gap: 12 }}>
-            <Button
-              variant="secondary"
-              icon={<IconMagicWand size={16} color="#c37938" />}
-              onClick={() => {
-                setAiPreviewList([]);
-                setAiModalOpen(true);
-              }}
-              style={{
-                borderColor: 'rgba(195, 121, 56, 0.25)',
-                background: 'rgba(195, 121, 56, 0.05)',
-                color: '#c37938',
-                fontWeight: 600,
-              }}
-            >
-              Trợ lý AI
-            </Button>
-            <Button icon={<IconPlus size={16} />} onClick={openCreate}>
-              Thêm Thẻ thủ công
-            </Button>
-          </div>
+          <Button icon={<IconPlus size={16} />} onClick={openCreate}>
+            Thêm thẻ lật
+          </Button>
         )}
       </div>
 
@@ -729,12 +902,12 @@ export function FlashcardPanel({ onToast, navParams, onNavigate: _onNavigate }: 
         <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}><Spinner size={36} /></div>
       ) : !selectedLessonId ? (
         <div style={{ padding: 48, textAlign: 'center', background: '#ffffff', borderRadius: 16, border: '1px solid #e2e8f0', color: '#64748b' }}>
-          Vui lòng chọn Khối lớp, Chủ đề và Bài học để tải danh sách thẻ ghi nhớ.
+          Vui lòng chọn Khối lớp, Chủ đề và Bài học để tải danh sách thẻ lật.
         </div>
       ) : filteredFlashcards.length === 0 ? (
         <div style={{ padding: 60, textAlign: 'center', background: '#ffffff', borderRadius: 16, border: '1px solid #e2e8f0', color: '#94a3b8' }}>
           <div style={{ marginBottom: 16 }}><IconFlashcard size={48} color="#cbd5e1" /></div>
-          Chưa có thẻ ghi nhớ nào. Bạn có thể tự thêm hoặc nhấn "Tạo bằng AI" để tự sinh nhanh từ sách giáo khoa!
+          Chưa có thẻ lật nào. Bạn có thể tự thêm hoặc mở form và dùng Trợ lý AI để tự sinh nhanh từ sách giáo khoa!
         </div>
       ) : (
         <div style={{
@@ -817,31 +990,18 @@ export function FlashcardPanel({ onToast, navParams, onNavigate: _onNavigate }: 
       <Modal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
-        title={editCard ? `Chỉnh sửa thẻ #${editCard.id}` : 'Thêm thẻ ghi nhớ mới'}
+        title={editCard ? `Chỉnh sửa thẻ #${editCard.id}` : 'Thêm thẻ lật mới'}
+        width={780}
       >
-        <div style={{ width: 500, maxWidth: '100%', display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <Textarea
-            label="Mặt trước (Câu hỏi / Thuật ngữ)"
-            value={form.frontText}
-            onChange={(e) => setForm({ ...form, frontText: e.target.value })}
-            placeholder="Ví dụ: Chiến dịch Điện Biên Phủ bắt đầu vào ngày nào?"
-            rows={3}
-          />
-          <Textarea
-            label="Mặt sau (Câu trả lời / Định nghĩa)"
-            value={form.backText}
-            onChange={(e) => setForm({ ...form, backText: e.target.value })}
-            placeholder="Ví dụ: Ngày 13 tháng 3 năm 1954."
-            rows={3}
-          />
-
-          <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: 12 }}>
-            <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: '#334155', marginBottom: 8 }}>
-              Phạm vi thuộc về
+        <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {/* Scope fields on top */}
+          <div style={{ background: '#f8fafc', padding: 16, borderRadius: 12, border: '1px solid #e2e8f0' }}>
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: '#334155', marginBottom: 10 }}>
+              Phạm vi thuộc về (Scope)
             </label>
 
             {(() => {
-              const activeScope = form.nodeId ? 'node' : form.sectionId ? 'section' : form.lessonId ? 'lesson' : form.topicId ? 'topic' : form.gradeId ? 'grade' : null;
+              const activeScope = formScope.nodeId ? 'node' : formScope.sectionId ? 'section' : formScope.lessonId ? 'lesson' : formScope.topicId ? 'topic' : formScope.gradeId ? 'grade' : null;
               const glowStyle = {
                 borderColor: '#059669',
                 borderWidth: '2px',
@@ -853,10 +1013,10 @@ export function FlashcardPanel({ onToast, navParams, onNavigate: _onNavigate }: 
               };
 
               return (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
                   <Select
                     label="Khối lớp"
-                    value={form.gradeId}
+                    value={formScope.gradeId}
                     onChange={(e) => handleFormGradeChange(e.target.value)}
                     style={activeScope === 'grade' ? glowStyle : undefined}
                   >
@@ -868,9 +1028,9 @@ export function FlashcardPanel({ onToast, navParams, onNavigate: _onNavigate }: 
 
                   <Select
                     label="Chủ đề"
-                    value={form.topicId}
+                    value={formScope.topicId}
                     onChange={(e) => handleFormTopicChange(e.target.value)}
-                    disabled={!form.gradeId || formTopics.length === 0}
+                    disabled={!formScope.gradeId || formTopics.length === 0}
                     style={activeScope === 'topic' ? glowStyle : undefined}
                   >
                     <option value="">-- Chọn Chủ đề --</option>
@@ -881,9 +1041,9 @@ export function FlashcardPanel({ onToast, navParams, onNavigate: _onNavigate }: 
 
                   <Select
                     label="Bài học"
-                    value={form.lessonId}
+                    value={formScope.lessonId}
                     onChange={(e) => handleFormLessonChange(e.target.value)}
-                    disabled={!form.topicId || formLessons.length === 0}
+                    disabled={!formScope.topicId || formLessons.length === 0}
                     style={activeScope === 'lesson' ? glowStyle : undefined}
                   >
                     <option value="">-- Chọn Bài học --</option>
@@ -894,9 +1054,9 @@ export function FlashcardPanel({ onToast, navParams, onNavigate: _onNavigate }: 
 
                   <Select
                     label="Phần/Nhánh sơ đồ (Tùy chọn)"
-                    value={form.sectionId}
+                    value={formScope.sectionId}
                     onChange={(e) => handleFormSectionChange(e.target.value)}
-                    disabled={!form.lessonId || formSections.length === 0}
+                    disabled={!formScope.lessonId || formSections.length === 0}
                     style={activeScope === 'section' ? glowStyle : undefined}
                   >
                     <option value="">-- Thuộc toàn bộ Bài học --</option>
@@ -909,14 +1069,14 @@ export function FlashcardPanel({ onToast, navParams, onNavigate: _onNavigate }: 
 
                   <Select
                     label="Nút kiến thức cụ thể (Tùy chọn)"
-                    value={form.nodeId}
-                    onChange={(e) => setForm({ ...form, nodeId: e.target.value })}
-                    disabled={!form.sectionId}
+                    value={formScope.nodeId}
+                    onChange={(e) => setFormScope(prev => ({ ...prev, nodeId: e.target.value }))}
+                    disabled={!formScope.sectionId}
                     style={activeScope === 'node' ? glowStyle : undefined}
                   >
                     <option value="">-- Thuộc toàn bộ Nhánh --</option>
                     {formNodes
-                      .filter((n) => n.sectionId === Number(form.sectionId))
+                      .filter((n) => n.sectionId === Number(formScope.sectionId))
                       .map((node) => (
                         <option key={node.id} value={node.id}>
                           {node.header || node.body.slice(0, 40) + '...'}
@@ -928,9 +1088,199 @@ export function FlashcardPanel({ onToast, navParams, onNavigate: _onNavigate }: 
             })()}
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 12 }}>
+          {/* Quick Import / AI Row (only when creating) */}
+          {!editCard && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '14px 18px',
+              background: 'linear-gradient(135deg, #f5f3ff, #f0fdf4)',
+              borderRadius: 12,
+              border: '1px solid #e9d5ff',
+              boxShadow: '0 2px 8px rgba(108,99,255,0.05)',
+              gap: 12,
+              flexWrap: 'wrap'
+            }}>
+              <div>
+                <span style={{ fontWeight: 700, fontSize: 13, color: '#5b21b6' }}>Công cụ nhập nhanh</span>
+                <p style={{ margin: '2px 0 0 0', fontSize: 12, color: '#6b7280' }}>Sử dụng Trợ lý AI hoặc nhập danh sách thẻ lật từ file Excel.</p>
+              </div>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
+                <Button
+                  variant="secondary"
+                  icon={<IconMagicWand size={14} color="#c37938" />}
+                  onClick={() => {
+                    setAiText('');
+                    setAiModalOpen(true);
+                  }}
+                  style={{
+                    padding: '0 14px',
+                    fontSize: 13,
+                    fontWeight: 600,
+                    borderColor: 'rgba(195, 121, 56, 0.3)',
+                    background: '#fff8f3',
+                    color: '#c37938',
+                    whiteSpace: 'nowrap',
+                    height: 36,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    boxSizing: 'border-box'
+                  }}
+                >
+                  Trợ lý AI
+                </Button>
+                <Button
+                  variant="secondary"
+                  icon={<IconDownload size={14} />}
+                  onClick={downloadExcelTemplate}
+                  style={{
+                    padding: '0 14px',
+                    fontSize: 13,
+                    fontWeight: 600,
+                    background: '#ffffff',
+                    border: '1px solid #cbd5e1',
+                    whiteSpace: 'nowrap',
+                    height: 36,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    boxSizing: 'border-box'
+                  }}
+                >
+                  Tải Excel mẫu
+                </Button>
+                <label style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                  padding: '0 14px',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: '#ffffff',
+                  background: '#10b981',
+                  borderRadius: 8,
+                  cursor: 'pointer',
+                  userSelect: 'none',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                  transition: 'background 0.2s',
+                  height: 36,
+                  boxSizing: 'border-box',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0
+                }}>
+                  <IconUpload size={14} />
+                  Nhập Excel
+                  <input
+                    type="file"
+                    accept=".xlsx, .xls"
+                    onChange={handleImportExcel}
+                    style={{ display: 'none' }}
+                  />
+                </label>
+              </div>
+            </div>
+          )}
+
+          {/* Cards List */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14, maxHeight: '42vh', overflowY: 'auto', paddingRight: 4 }}>
+            {formCards.map((card, idx) => (
+              <div
+                key={card.key}
+                style={{
+                  background: '#ffffff',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: 12,
+                  padding: 14,
+                  position: 'relative'
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {(!editCard || formCards.length > 1) && (
+                      <span style={{ fontSize: 12, fontWeight: 700, color: '#64748b' }}>Thẻ #{idx + 1}</span>
+                    )}
+                    {card.isAiGenerated && (
+                      <span style={{
+                        fontSize: 11,
+                        fontWeight: 700,
+                        color: '#b45309',
+                        background: '#fef3c7',
+                        border: '1px solid #fde68a',
+                        padding: '2px 8px',
+                        borderRadius: 12,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 4
+                      }}>
+                        <IconMagicWand size={11} color="#b45309" /> AI tạo
+                      </span>
+                    )}
+                  </div>
+                  {!editCard && formCards.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeCardItem(idx)}
+                      style={{
+                        border: 'none',
+                        background: 'transparent',
+                        color: '#ef4444',
+                        cursor: 'pointer',
+                        fontSize: 12,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 4,
+                        padding: '2px 6px',
+                        borderRadius: 4
+                      }}
+                    >
+                      <IconDelete size={14} /> Xóa thẻ
+                    </button>
+                  )}
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <Textarea
+                    label="Mặt trước (Câu hỏi / Thuật ngữ)"
+                    value={card.frontText}
+                    onChange={(e) => updateCardField(idx, 'frontText', e.target.value)}
+                    placeholder="Ví dụ: Chiến dịch Điện Biên Phủ bắt đầu vào ngày nào?"
+                    rows={2}
+                  />
+                  <Textarea
+                    label="Mặt sau (Câu trả lời / Định nghĩa)"
+                    value={card.backText}
+                    onChange={(e) => updateCardField(idx, 'backText', e.target.value)}
+                    placeholder="Ví dụ: Ngày 13 tháng 3 năm 1954."
+                    rows={2}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Add Another Card Button */}
+          {!editCard && (
+            <Button
+              variant="secondary"
+              icon={<IconPlus size={14} />}
+              onClick={addCardItem}
+              style={{
+                width: '100%',
+                padding: '10px',
+                borderStyle: 'dashed',
+                borderRadius: 10,
+                background: '#f8fafc',
+                color: '#c37938',
+                borderColor: '#fdba74'
+              }}
+            >
+              Thêm thẻ khác
+            </Button>
+          )}
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 4, borderTop: '1px solid #f1f5f9', paddingTop: 12 }}>
             <Button variant="secondary" onClick={() => setModalOpen(false)} disabled={saving}>Hủy</Button>
-            <Button onClick={handleSave} disabled={saving}>{saving ? 'Đang lưu...' : 'Lưu lại'}</Button>
+            <Button onClick={handleSave} disabled={saving}>{saving ? 'Đang lưu...' : (editCard ? 'Lưu thay đổi' : 'Lưu lại')}</Button>
           </div>
         </div>
       </Modal>
@@ -939,131 +1289,59 @@ export function FlashcardPanel({ onToast, navParams, onNavigate: _onNavigate }: 
       <Modal
         open={aiModalOpen}
         onClose={() => !aiGenerating && setAiModalOpen(false)}
-        title="Tự động sinh Thẻ ghi nhớ bằng Trợ lý AI"
+        title="Trợ lý AI tạo thẻ lật tự động"
+        width={640}
       >
-        <div style={{ width: 680, maxWidth: '100%', maxHeight: '76vh', display: 'flex', flexDirection: 'column', overflowY: 'auto', paddingRight: '4px' }}>
-          
-          {/* Key & Model settings */}
+        <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div style={{
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
-            padding: '8px 14px',
+            padding: '10px 14px',
             background: '#fffbeb',
             borderRadius: 8,
             border: '1px solid #fef3c7',
-            marginBottom: 16,
             fontSize: 13,
             color: '#b45309',
-            width: 'fit-content',
             fontWeight: 500,
           }}>
-            <IconAlert size={16} color="#b45309" />
-            <span>AI có thể mắc sai sót. Hãy kiểm tra kỹ thông tin trước khi lưu.</span>
+            <IconAlert size={16} color="#b45309" style={{ flexShrink: 0 }} />
+            <span><strong>Lưu ý: </strong>AI có thể mắc sai sót, vui lòng kiểm tra kỹ thông tin.</span>
           </div>
 
-          {/* Text Input */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '10px 14px',
+            background: '#eff6ff',
+            borderRadius: 8,
+            border: '1px solid #dbeafe',
+            fontSize: 13,
+            color: '#1d4ed8',
+            fontWeight: 500,
+          }}>
+            <IconInfo size={16} color="#2563eb" style={{ flexShrink: 0 }} />
+            <span>Các thẻ được sinh ra sẽ được đưa trực tiếp vào form để bạn rà soát và chỉnh sửa trước khi lưu.</span>
+          </div>
+
           <Textarea
-            label="Nội dung/Văn bản lịch sử cần tóm tắt"
+            label="Nội dung/Văn bản lịch sử cần tóm tắt thành thẻ lật"
             value={aiText}
             onChange={(e) => setAiText(e.target.value)}
             placeholder="Dán nội dung sách giáo khoa hoặc đoạn sử liệu vào đây..."
-            rows={6}
+            rows={8}
             disabled={aiGenerating}
           />
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <span style={{ fontSize: 13, color: '#64748b' }}>
-              {aiPreviewList.length > 0 && `Đang xem trước ${aiPreviewList.length} thẻ ghi nhớ`}
-            </span>
-            <Button
-              variant="secondary"
-              icon={aiGenerating ? <Spinner size={14} /> : <IconMagicWand size={14} color="#c37938" />}
-              onClick={handleAIGenerate}
-              disabled={aiGenerating}
-              style={{
-                borderColor: 'rgba(195, 121, 56, 0.25)',
-                background: 'rgba(195, 121, 56, 0.05)',
-                color: '#c37938',
-              }}
-            >
-              {aiGenerating ? 'Đang phân tích...' : 'Bắt đầu sinh bằng AI'}
-            </Button>
-          </div>
-
-          {/* AI Result Preview / Editing List */}
-          {aiPreviewList.length > 0 && (
-            <div style={{
-              flex: 1,
-              overflowY: 'auto',
-              border: '1px solid #e2e8f0',
-              borderRadius: 12,
-              padding: 16,
-              background: '#f8fafc',
-              maxHeight: 250,
-              marginBottom: 16,
-            }}>
-              <h4 style={{ margin: '0 0 12px', fontSize: 14, fontWeight: 700, color: '#334155' }}>Xem trước kết quả sinh từ AI</h4>
-              {aiPreviewList.map((item, idx) => (
-                <div key={idx} style={{
-                  background: '#ffffff',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: 10,
-                  padding: 14,
-                  marginBottom: 10,
-                  position: 'relative'
-                }}>
-                  <button
-                    onClick={() => setAiPreviewList(aiPreviewList.filter((_, i) => i !== idx))}
-                    style={{ position: 'absolute', top: 12, right: 12, background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: 12 }}
-                  >
-                    Bỏ thẻ
-                  </button>
-                  <div style={{ marginRight: 60 }}>
-                    <div style={{ marginBottom: 6 }}>
-                      <strong style={{ fontSize: 11, color: '#94a3b8' }}>Mặt trước (Q):</strong>
-                      <input
-                        value={item.frontText}
-                        onChange={(e) => {
-                          const newList = [...aiPreviewList];
-                          newList[idx].frontText = e.target.value;
-                          setAiPreviewList(newList);
-                        }}
-                        style={{ width: '100%', border: 'none', borderBottom: '1px solid #f1f5f9', padding: '4px 0', fontSize: 13, outline: 'none', fontWeight: 600, color: '#0f172a' }}
-                      />
-                    </div>
-                    <div>
-                      <strong style={{ fontSize: 11, color: '#94a3b8' }}>Mặt sau (A):</strong>
-                      <input
-                        value={item.backText}
-                        onChange={(e) => {
-                          const newList = [...aiPreviewList];
-                          newList[idx].backText = e.target.value;
-                          setAiPreviewList(newList);
-                        }}
-                        style={{ width: '100%', border: 'none', borderBottom: '1px solid #f1f5f9', padding: '4px 0', fontSize: 13, outline: 'none', color: '#475569' }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              ))}
-              <button
-                onClick={() => setAiPreviewList([...aiPreviewList, { frontText: 'Câu hỏi mới', backText: 'Câu trả lời mới' }])}
-                style={{ width: '100%', padding: 10, border: '1px dashed #cbd5e1', borderRadius: 8, background: '#fff', color: '#64748b', cursor: 'pointer', fontSize: 13 }}
-              >
-                + Thêm một thẻ trống
-              </button>
-            </div>
-          )}
-
-          {/* Action buttons */}
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, borderTop: '1px solid #f1f5f9', paddingTop: 16 }}>
-            <Button variant="secondary" onClick={() => setAiModalOpen(false)} disabled={aiGenerating || saving}>Hủy</Button>
+            <Button variant="secondary" onClick={() => setAiModalOpen(false)} disabled={aiGenerating}>Hủy</Button>
             <Button
-              onClick={() => setAiSaveConfirmOpen(true)}
-              disabled={aiGenerating || saving || aiPreviewList.length === 0}
+              icon={aiGenerating ? <Spinner size={14} /> : <IconMagicWand size={14} color="#ffffff" />}
+              onClick={handleAIGenerate}
+              disabled={aiGenerating || !aiText.trim()}
             >
-              {saving ? 'Đang lưu...' : 'Lưu tất cả vào Bài học (Ghi đè)'}
+              {aiGenerating ? 'Đang trích xuất...' : 'Trích xuất vào form'}
             </Button>
           </div>
         </div>
@@ -1074,24 +1352,13 @@ export function FlashcardPanel({ onToast, navParams, onNavigate: _onNavigate }: 
         open={deleteTarget !== null}
         onCancel={() => setDeleteTarget(null)}
         onConfirm={handleDelete}
-        title="Xóa thẻ ghi nhớ"
-        message="Bạn có chắc chắn muốn xóa thẻ ghi nhớ này? Hành động này không thể hoàn tác."
+        title="Xóa thẻ lật"
+        message="Bạn có chắc chắn muốn xóa thẻ lật này? Hành động này không thể hoàn tác."
         loading={deleting}
-      />
-
-      {/* AI Save Confirmation */}
-      <ConfirmDialog
-        open={aiSaveConfirmOpen}
-        onCancel={() => setAiSaveConfirmOpen(false)}
-        onConfirm={async () => {
-          setAiSaveConfirmOpen(false);
-          await handleAISave();
-        }}
-        title="Xác nhận ghi đè danh sách thẻ ghi nhớ"
-        message="Hành động này sẽ ghi đè và THAY THẾ hoàn toàn tất cả các thẻ ghi nhớ hiện tại của bài học này bằng danh sách thẻ ghi nhớ mới từ AI. Bạn có chắc chắn muốn tiếp tục không?"
-        loading={saving}
       />
     </div>
   );
 }
+
+
 

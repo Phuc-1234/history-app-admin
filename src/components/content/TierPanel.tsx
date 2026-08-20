@@ -70,11 +70,11 @@ export function TierPanel({ onToast }: TierPanelProps) {
     fetchItemDefs();
   }, [fetchTiers, fetchItemDefs]);
 
-  // const openCreate = () => {
-  //   setEditTier(null);
-  //   setForm(EMPTY_FORM);
-  //   setModalOpen(true);
-  // };
+  const openCreate = () => {
+    setEditTier(null);
+    setForm(EMPTY_FORM);
+    setModalOpen(true);
+  };
 
   const openEdit = (tier: TierDto) => {
     setEditTier(tier);
@@ -119,7 +119,7 @@ export function TierPanel({ onToast }: TierPanelProps) {
     const xpRewardVal = Number(form.xpReward);
     const goldRewardVal = Number(form.goldReward);
 
-    if (isNaN(indexVal) || indexVal < 0) {
+    if (form.index.trim() === '' || isNaN(indexVal) || indexVal < 0 || !Number.isInteger(indexVal)) {
       onToast('Chỉ mục (Index) danh hiệu phải là số nguyên không âm', 'error');
       return;
     }
@@ -129,7 +129,7 @@ export function TierPanel({ onToast }: TierPanelProps) {
       return;
     }
 
-    if (isNaN(xpThreshVal) || xpThreshVal < 0) {
+    if (form.xpThreshold.trim() === '' || isNaN(xpThreshVal) || xpThreshVal < 0) {
       onToast('Ngưỡng XP phải là số không âm', 'error');
       return;
     }
@@ -219,9 +219,9 @@ export function TierPanel({ onToast }: TierPanelProps) {
             Quản lý các cấp độ danh hiệu người dùng đạt được dựa trên tổng XP, và thiết lập phần thưởng khi đạt hạng.
           </p>
         </div>
-        {/* <Button variant="primary" icon={<IconPlus size={18} />} onClick={openCreate}>
+        <Button variant="primary" icon={<IconPlus size={18} />} onClick={openCreate}>
           Thêm danh hiệu mới
-        </Button> */}
+        </Button>
       </div>
 
       {/* Search */}
@@ -413,9 +413,15 @@ export function TierPanel({ onToast }: TierPanelProps) {
           </div>
 
           {/* XP Threshold */}
-          <div style={{ fontSize: 14, fontWeight: 600, color: '#334155' }}>
-            Mốc XP: {form.xpThreshold}
-          </div>
+          <Input
+            label="Mốc XP yêu cầu (XP Threshold)"
+            type="number"
+            min="0"
+            placeholder="Ví dụ: 0, 500, 1000..."
+            value={form.xpThreshold}
+            onChange={(e) => setForm(prev => ({ ...prev, xpThreshold: e.target.value }))}
+            hint="Số điểm XP tối thiểu để đạt danh hiệu này"
+          />
 
           {/* Description */}
           <div>

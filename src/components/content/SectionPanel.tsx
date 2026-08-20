@@ -426,7 +426,7 @@ export function SectionPanel({ onToast, navParams, onNavigate }: SectionPanelPro
                       <Td align="right">
                         <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', alignItems: 'center', whiteSpace: 'nowrap' }}>
                           <Button variant="secondary" onClick={() => openCreateNode(s.id)} style={{ padding: '6px 12px', fontSize: 13, borderColor: '#10b981', color: '#10b981', borderRadius: 30 }}>+ Nút</Button>
-                          <Button variant="secondary" title="Thẻ ghi nhớ" aria-label="Thẻ ghi nhớ" icon={<img src={flashcardIcon} alt="Thẻ ghi nhớ" style={{ width: 16, height: 16, objectFit: 'contain' }} />} onClick={() => onNavigate?.('flashcards', { gradeId: selectedGradeId, topicId: selectedTopicId, lessonId: selectedLessonId, sectionId: s.id, nodeId: null })} style={{ padding: '6px 10px', fontSize: 13, borderColor: '#ec4899', color: '#ec4899', borderRadius: 30 }} />
+                          <Button variant="secondary" title="Thẻ lật" aria-label="Thẻ lật" icon={<img src={flashcardIcon} alt="Thẻ lật" style={{ width: 16, height: 16, objectFit: 'contain' }} />} onClick={() => onNavigate?.('flashcards', { gradeId: selectedGradeId, topicId: selectedTopicId, lessonId: selectedLessonId, sectionId: s.id, nodeId: null })} style={{ padding: '6px 10px', fontSize: 13, borderColor: '#ec4899', color: '#ec4899', borderRadius: 30 }} />
                           <Button variant="secondary" icon={<IconEdit size={14} />} onClick={() => openEdit(s)} style={{ padding: '6px 12px', fontSize: 13, borderRadius: 30 }}>Sửa</Button>
                           <Button variant="danger" icon={<IconDelete size={14} />} onClick={() => setDeleteTarget(s)} style={{ padding: '6px 12px', fontSize: 13, borderRadius: 30 }}>Xóa</Button>
                         </div>
@@ -469,7 +469,7 @@ export function SectionPanel({ onToast, navParams, onNavigate }: SectionPanelPro
                                     </div>
                                   </div>
                                   <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }}>
-                                    <Button variant="secondary" title="Thẻ ghi nhớ" aria-label="Thẻ ghi nhớ" icon={<img src={flashcardIcon} alt="Thẻ ghi nhớ" style={{ width: 16, height: 16, objectFit: 'contain' }} />} onClick={() => onNavigate?.('flashcards', { gradeId: selectedGradeId, topicId: selectedTopicId, lessonId: selectedLessonId, sectionId: s.id, nodeId: n.id })} style={{ padding: '6px 10px', fontSize: 13, borderColor: '#ec4899', color: '#ec4899', borderRadius: 30 }} />
+                                    <Button variant="secondary" title="Thẻ lật" aria-label="Thẻ lật" icon={<img src={flashcardIcon} alt="Thẻ lật" style={{ width: 16, height: 16, objectFit: 'contain' }} />} onClick={() => onNavigate?.('flashcards', { gradeId: selectedGradeId, topicId: selectedTopicId, lessonId: selectedLessonId, sectionId: s.id, nodeId: n.id })} style={{ padding: '6px 10px', fontSize: 13, borderColor: '#ec4899', color: '#ec4899', borderRadius: 30 }} />
                                     <Button variant="secondary" icon={<IconEdit size={14} />} onClick={() => openEditNode(n)} style={{ padding: '6px 12px', fontSize: 13, borderRadius: 30 }}>Sửa</Button>
                                     <Button variant="danger" icon={<IconDelete size={14} />} onClick={() => setNodeDeleteTarget(n)} style={{ padding: '6px 12px', fontSize: 13, borderRadius: 30 }}>Xóa</Button>
                                   </div>
