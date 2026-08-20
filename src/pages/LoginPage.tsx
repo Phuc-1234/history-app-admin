@@ -26,31 +26,31 @@ import type { UserProfile } from '../types/api';
 import { APP_CONFIG } from '../config';
 
 const FLOATING_BACKGROUND_ICONS = [
-  { Icon: IconOverview, top: '4%', left: '6%', size: 76, opacity: 0.16, anim: 'floatSlow1', duration: '13s', delay: '0s' },
-  { Icon: IconGrade, top: '12%', left: '84%', size: 92, opacity: 0.18, anim: 'floatSlow2', duration: '17s', delay: '-3s' },
-  { Icon: IconTopic, top: '24%', left: '10%', size: 68, opacity: 0.15, anim: 'floatSlow2', duration: '15s', delay: '-5s' },
-  { Icon: IconLesson, top: '76%', left: '5%', size: 96, opacity: 0.18, anim: 'floatSlow1', duration: '19s', delay: '-2s' },
-  { Icon: IconSection, top: '44%', left: '3%', size: 64, opacity: 0.15, anim: 'floatSlow1', duration: '16s', delay: '-7s' },
-  { Icon: IconMindMap, top: '6%', left: '42%', size: 84, opacity: 0.16, anim: 'floatSlow2', duration: '18s', delay: '-4s' },
-  { Icon: IconFlashcard, top: '88%', left: '22%', size: 72, opacity: 0.16, anim: 'floatSlow1', duration: '14s', delay: '-1s' },
-  { Icon: IconUser, top: '34%', left: '90%', size: 80, opacity: 0.18, anim: 'floatSlow1', duration: '16s', delay: '-6s' },
-  { Icon: IconVideo, top: '60%', left: '86%', size: 88, opacity: 0.17, anim: 'floatSlow2', duration: '20s', delay: '-8s' },
-  { Icon: IconQuestion, top: '82%', left: '80%', size: 104, opacity: 0.19, anim: 'floatSlow1', duration: '15s', delay: '-3s' },
-  { Icon: IconTest, top: '16%', left: '24%', size: 64, opacity: 0.15, anim: 'floatSlow2', duration: '13s', delay: '-9s' },
-  { Icon: IconTarget, top: '68%', left: '16%', size: 76, opacity: 0.16, anim: 'floatSlow2', duration: '17s', delay: '-4s' },
-  { Icon: IconTier, top: '20%', left: '70%', size: 72, opacity: 0.15, anim: 'floatSlow1', duration: '15s', delay: '-2s' },
-  { Icon: IconSparkles, top: '50%', left: '78%', size: 76, opacity: 0.17, anim: 'floatSlow2', duration: '12s', delay: '-5s' },
-  { Icon: IconInventory, top: '90%', left: '50%', size: 84, opacity: 0.17, anim: 'floatSlow1', duration: '16s', delay: '-7s' },
-  { Icon: IconPackagePricing, top: '3%', left: '64%', size: 64, opacity: 0.15, anim: 'floatSlow1', duration: '14s', delay: '-6s' },
-  { Icon: IconFeedback, top: '66%', left: '66%', size: 68, opacity: 0.15, anim: 'floatSlow2', duration: '18s', delay: '-10s' },
-  // Extra icons for denser coverage
-  { Icon: IconOverview, top: '56%', left: '12%', size: 60, opacity: 0.14, anim: 'floatSlow2', duration: '16s', delay: '-8s' },
-  { Icon: IconQuestion, top: '10%', left: '20%', size: 72, opacity: 0.16, anim: 'floatSlow1', duration: '15s', delay: '-4s' },
-  { Icon: IconTest, top: '46%', left: '92%', size: 64, opacity: 0.15, anim: 'floatSlow1', duration: '14s', delay: '-11s' },
-  { Icon: IconSparkles, top: '82%', left: '38%', size: 80, opacity: 0.17, anim: 'floatSlow2', duration: '17s', delay: '-2s' },
-  { Icon: IconGrade, top: '38%', left: '20%', size: 68, opacity: 0.15, anim: 'floatSlow1', duration: '19s', delay: '-5s' },
-  { Icon: IconTopic, top: '74%', left: '72%', size: 76, opacity: 0.16, anim: 'floatSlow2', duration: '15s', delay: '-9s' },
-  { Icon: IconMindMap, top: '2%', left: '80%', size: 70, opacity: 0.15, anim: 'floatSlow1', duration: '16s', delay: '-1s' },
+  { Icon: IconOverview, top: '8%', left: '32%', size: 54, opacity: 0.15, anim: 'floatSlow1', duration: '13s', delay: '0s' },
+  { Icon: IconGrade, top: '14%', left: '68%', size: 63, opacity: 0.16, anim: 'floatSlow2', duration: '17s', delay: '-3s' },
+  { Icon: IconTopic, top: '28%', left: '26%', size: 51, opacity: 0.14, anim: 'floatSlow2', duration: '15s', delay: '-5s' },
+  { Icon: IconLesson, top: '78%', left: '24%', size: 66, opacity: 0.16, anim: 'floatSlow1', duration: '19s', delay: '-2s' },
+  { Icon: IconSection, top: '48%', left: '8%', size: 45, opacity: 0.12, anim: 'floatSlow1', duration: '16s', delay: '-7s' },
+  { Icon: IconMindMap, top: '6%', left: '91%', size: 63, opacity: 0.16, anim: 'floatSlow2', duration: '18s', delay: '-4s' },
+  { Icon: IconFlashcard, top: '86%', left: '36%', size: 54, opacity: 0.15, anim: 'floatSlow1', duration: '14s', delay: '-1s' },
+  { Icon: IconUser, top: '32%', left: '74%', size: 57, opacity: 0.15, anim: 'floatSlow1', duration: '16s', delay: '-6s' },
+  { Icon: IconVideo, top: '58%', left: '88%', size: 60, opacity: 0.13, anim: 'floatSlow2', duration: '20s', delay: '-8s' },
+  { Icon: IconQuestion, top: '84%', left: '64%', size: 69, opacity: 0.16, anim: 'floatSlow1', duration: '15s', delay: '-3s' },
+  { Icon: IconTest, top: '18%', left: '44%', size: 48, opacity: 0.14, anim: 'floatSlow2', duration: '13s', delay: '-9s' },
+  { Icon: IconTarget, top: '66%', left: '30%', size: 54, opacity: 0.15, anim: 'floatSlow2', duration: '17s', delay: '-4s' },
+  { Icon: IconTier, top: '22%', left: '58%', size: 52, opacity: 0.14, anim: 'floatSlow1', duration: '15s', delay: '-2s' },
+  { Icon: IconSparkles, top: '44%', left: '62%', size: 56, opacity: 0.15, anim: 'floatSlow2', duration: '12s', delay: '-5s' },
+  { Icon: IconInventory, top: '88%', left: '6%', size: 60, opacity: 0.16, anim: 'floatSlow1', duration: '16s', delay: '-7s' },
+  { Icon: IconPackagePricing, top: '4%', left: '60%', size: 48, opacity: 0.14, anim: 'floatSlow1', duration: '14s', delay: '-6s' },
+  { Icon: IconFeedback, top: '68%', left: '54%', size: 51, opacity: 0.14, anim: 'floatSlow2', duration: '18s', delay: '-10s' },
+  // Extra icons
+  { Icon: IconOverview, top: '60%', left: '18%', size: 44, opacity: 0.12, anim: 'floatSlow2', duration: '16s', delay: '-8s' },
+  { Icon: IconQuestion, top: '12%', left: '16%', size: 50, opacity: 0.13, anim: 'floatSlow1', duration: '15s', delay: '-4s' },
+  { Icon: IconTest, top: '44%', left: '38%', size: 48, opacity: 0.14, anim: 'floatSlow1', duration: '14s', delay: '-11s' },
+  { Icon: IconSparkles, top: '80%', left: '46%', size: 57, opacity: 0.15, anim: 'floatSlow2', duration: '17s', delay: '-2s' },
+  { Icon: IconGrade, top: '36%', left: '12%', size: 46, opacity: 0.12, anim: 'floatSlow1', duration: '19s', delay: '-5s' },
+  { Icon: IconTopic, top: '72%', left: '76%', size: 52, opacity: 0.13, anim: 'floatSlow2', duration: '15s', delay: '-9s' },
+  { Icon: IconMindMap, top: '3%', left: '76%', size: 50, opacity: 0.13, anim: 'floatSlow1', duration: '16s', delay: '-1s' },
 ];
 
 export function LoginPage() {
@@ -173,7 +173,7 @@ export function LoginPage() {
             maskRepeat: 'no-repeat',
             WebkitMaskPosition: 'center',
             maskPosition: 'center',
-            opacity: 0.16,
+            opacity: 0.08,
           }}
         />
       </div>
@@ -204,7 +204,7 @@ export function LoginPage() {
             maskRepeat: 'no-repeat',
             WebkitMaskPosition: 'center',
             maskPosition: 'center',
-            opacity: 0.13,
+            opacity: 0.06,
           }}
         />
       </div>
@@ -242,8 +242,8 @@ export function LoginPage() {
             src="/logo-main.png"
             alt="Sắc Sử Logo"
             style={{
-              width: 72,
-              height: 72,
+              width: 115,
+              height: 115,
               objectFit: 'contain',
               display: 'block',
               margin: '0 auto 16px',
@@ -335,7 +335,7 @@ export function LoginPage() {
         </div>
 
         <p style={{ textAlign: 'center', marginTop: 20, fontSize: 13, color: '#94a3b8' }}>
-          chỉ dành cho tài khoản ADMIN hoặc SUPER ADMIN
+          Chỉ dành cho tài khoản ADMIN hoặc SUPER ADMIN
         </p>
       </div>
     </div>
