@@ -77,9 +77,21 @@ interface SidebarProps {
   userAvatar?: string | null;
   isMobile?: boolean;
   sidebarOpen?: boolean;
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
-export function Sidebar({ activeTab, onTabChange, userName, userRole, userAvatar, isMobile, sidebarOpen }: SidebarProps) {
+export function Sidebar({
+  activeTab,
+  onTabChange,
+  userName,
+  userRole,
+  userAvatar,
+  isMobile,
+  sidebarOpen,
+  collapsed = false,
+  onToggleCollapse,
+}: SidebarProps) {
   const isSuperAdmin = userRole === 'SUPER_ADMIN';
   const primaryColor = '#c37938';
   const darkPrimaryColor = '#a66228';
@@ -92,7 +104,7 @@ export function Sidebar({ activeTab, onTabChange, userName, userRole, userAvatar
   return (
     <aside
       style={{
-        width: 240,
+        width: isMobile ? 240 : (collapsed ? 68 : 240),
         minHeight: '100vh',
         background: '#ffffff',
         borderRight: '1px solid #e2e8f0',
@@ -105,15 +117,59 @@ export function Sidebar({ activeTab, onTabChange, userName, userRole, userAvatar
         bottom: 0,
         zIndex: isMobile ? 1000 : 100,
         boxShadow: '2px 0 12px rgba(15,23,42,0.05)',
-        transition: 'left 0.3s ease',
+        transition: 'left 0.3s ease, width 0.3s ease',
       }}
     >
+      {/* Collapse Toggle Button (Desktop only) */}
+      {!isMobile && onToggleCollapse && (
+        <button
+          onClick={onToggleCollapse}
+          style={{
+            position: 'absolute',
+            top: 24,
+            right: -12,
+            width: 24,
+            height: 24,
+            borderRadius: '50%',
+            background: '#ffffff',
+            border: '1px solid #e2e8f0',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+            zIndex: 10,
+            color: '#64748b',
+            transition: 'transform 0.3s ease, color 0.2s',
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.color = primaryColor}
+          onMouseLeave={(e) => e.currentTarget.style.color = '#64748b'}
+        >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            style={{
+              transform: collapsed ? 'rotate(180deg)' : 'rotate(0deg)',
+              transition: 'transform 0.3s ease',
+            }}
+          >
+            <polyline points="15 18 9 12 15 6"></polyline>
+          </svg>
+        </button>
+      )}
+
       {/* Logo */}
       <div style={{
-        padding: '24px 20px 20px',
+        padding: collapsed ? '24px 0 20px' : '24px 24px 20px',
         borderBottom: '1px solid #f1f5f9',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: collapsed ? 'center' : 'flex-start', gap: collapsed ? 0 : 12 }}>
           <img
             src="/logo-main.png"
             alt="Sắc Sử Logo"
@@ -124,23 +180,27 @@ export function Sidebar({ activeTab, onTabChange, userName, userRole, userAvatar
               border: 'none'
             }}
           />
-          <div>
-            <div style={{ fontSize: 15, fontWeight: 800, color: '#0f172a', lineHeight: 1.2, display: 'flex', alignItems: 'baseline', gap: 4 }}>
-              <span>Sắc Sử</span>
-              <span style={{ fontSize: 10, fontWeight: 600, color: '#64748b' }}>v{APP_CONFIG.VERSION}</span>
+          {!collapsed && (
+            <div>
+              <div style={{ fontSize: 15, fontWeight: 800, color: '#0f172a', lineHeight: 1.2, display: 'flex', alignItems: 'baseline', gap: 4 }}>
+                <span>Sắc Sử</span>
+                <span style={{ fontSize: 10, fontWeight: 600, color: '#64748b' }}>v{APP_CONFIG.VERSION}</span>
+              </div>
+              <div style={{ fontSize: 11, color: isSuperAdmin ? '#ef4444' : primaryColor, fontWeight: 700, letterSpacing: '0.05em' }}>
+                {isSuperAdmin ? 'SUPER ADMIN' : 'ADMIN PANEL'}
+              </div>
             </div>
-            <div style={{ fontSize: 11, color: isSuperAdmin ? '#ef4444' : primaryColor, fontWeight: 700, letterSpacing: '0.05em' }}>
-              {isSuperAdmin ? 'SUPER ADMIN' : 'ADMIN PANEL'}
-            </div>
-          </div>
+          )}
         </div>
       </div>
 
       {/* Nav */}
-      <nav style={{ flex: 1, padding: '12px 12px', overflowY: 'auto' }}>
-        <div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 700, letterSpacing: '0.1em', padding: '8px 8px 6px', textTransform: 'uppercase' }}>
-          Quản lý nội dung
-        </div>
+      <nav style={{ flex: 1, padding: collapsed ? '12px 6px' : '12px 12px', overflowY: 'auto' }}>
+        {!collapsed && (
+          <div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 700, letterSpacing: '0.1em', padding: '8px 8px 6px', textTransform: 'uppercase' }}>
+            Quản lý nội dung
+          </div>
+        )}
         {NAV_ITEMS.map((item) => {
           const isActive = activeTab === item.id;
           const IconComponent = ICON_MAP[item.id];
@@ -149,12 +209,14 @@ export function Sidebar({ activeTab, onTabChange, userName, userRole, userAvatar
               key={item.id}
               id={`nav-${item.id}`}
               onClick={() => onTabChange(item.id)}
+              title={collapsed ? item.label : undefined}
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: 12,
+                justifyContent: collapsed ? 'center' : 'flex-start',
+                gap: collapsed ? 0 : 12,
                 width: '100%',
-                padding: '10px 12px',
+                padding: collapsed ? '10px 0' : '10px 12px',
                 borderRadius: 10,
                 border: 'none',
                 cursor: 'pointer',
@@ -186,18 +248,20 @@ export function Sidebar({ activeTab, onTabChange, userName, userRole, userAvatar
               <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 24, flexShrink: 0 }}>
                 <IconComponent size={20} color={isActive ? darkPrimaryColor : '#64748b'} />
               </span>
-              <div>
-                <div style={{
-                  fontSize: 14, fontWeight: isActive ? 700 : 500,
-                  color: isActive ? darkPrimaryColor : '#475569',
-                  lineHeight: 1.3,
-                }}>
-                  {item.label}
+              {!collapsed && (
+                <div>
+                  <div style={{
+                    fontSize: 14, fontWeight: isActive ? 700 : 500,
+                    color: isActive ? darkPrimaryColor : '#475569',
+                    lineHeight: 1.3,
+                  }}>
+                    {item.label}
+                  </div>
+                  <div style={{ fontSize: 11, color: isActive ? primaryColor : '#94a3b8' }}>
+                    {item.description}
+                  </div>
                 </div>
-                <div style={{ fontSize: 11, color: isActive ? primaryColor : '#94a3b8' }}>
-                  {item.description}
-                </div>
-              </div>
+              )}
             </button>
           );
         })}
@@ -205,11 +269,11 @@ export function Sidebar({ activeTab, onTabChange, userName, userRole, userAvatar
 
       {/* User info */}
       <div style={{
-        padding: '16px 16px',
+        padding: collapsed ? '16px 0' : '16px 16px',
         borderTop: '1px solid #f1f5f9',
         background: userBoxBg,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: collapsed ? 0 : 10 }}>
           <div style={{ position: 'relative', width: 36, height: 36, flexShrink: 0 }}>
             {userAvatar ? (
               <img
@@ -221,6 +285,7 @@ export function Sidebar({ activeTab, onTabChange, userName, userRole, userAvatar
                   borderRadius: '50%',
                   objectFit: 'cover',
                   display: 'block',
+                  border: '1px solid #e2e8f0',
                 }}
                 onError={(e) => {
                   e.currentTarget.style.display = 'none';
@@ -245,19 +310,22 @@ export function Sidebar({ activeTab, onTabChange, userName, userRole, userAvatar
                 fontSize: 15,
                 fontWeight: 700,
                 color: '#fff',
+                border: '1px solid #e2e8f0',
               }}
             >
               {userName?.[0]?.toUpperCase() ?? 'A'}
             </div>
           </div>
-          <div style={{ overflow: 'hidden' }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {userName ?? 'Admin'}
+          {!collapsed && (
+            <div style={{ overflow: 'hidden', flex: 1 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {userName ?? 'Admin'}
+              </div>
+              <div style={{ fontSize: 11, color: isSuperAdmin ? '#ef4444' : primaryColor, fontWeight: 600 }}>
+                {userRole ?? 'ADMIN'}
+              </div>
             </div>
-            <div style={{ fontSize: 11, color: isSuperAdmin ? '#ef4444' : primaryColor, fontWeight: 600 }}>
-              {userRole ?? 'ADMIN'}
-            </div>
-          </div>
+          )}
         </div>
       </div>
     </aside>
