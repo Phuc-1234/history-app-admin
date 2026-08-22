@@ -1,6 +1,7 @@
 // src/components/layout/Sidebar.tsx
 import type { TabId } from '../../pages/DashboardPage';
 import { APP_CONFIG } from '../../config';
+import { IS_LOCAL } from '../../api/client';
 import {
   IconOverview,
   IconGrade,
@@ -174,10 +175,11 @@ export function Sidebar({
             src="/logo-main.png"
             alt="Sắc Sử Logo"
             style={{
-              width: 40,
-              height: 40,
+              width: 52,
+              height: 52,
               objectFit: 'contain',
-              border: 'none'
+              border: 'none',
+              margin: '-6px',
             }}
           />
           {!collapsed && (
@@ -188,6 +190,9 @@ export function Sidebar({
               </div>
               <div style={{ fontSize: 11, color: isSuperAdmin ? '#ef4444' : primaryColor, fontWeight: 700, letterSpacing: '0.05em' }}>
                 {isSuperAdmin ? 'SUPER ADMIN' : 'ADMIN PANEL'}
+              </div>
+              <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 2, fontWeight: 500 }}>
+                {IS_LOCAL ? 'Đã kết nối local' : 'Đã kết nối server'}
               </div>
             </div>
           )}
