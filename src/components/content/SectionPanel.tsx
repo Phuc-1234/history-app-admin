@@ -12,6 +12,7 @@ import { IconPlus, IconEdit, IconDelete, IconSection, IconMindMap } from '../ui/
 import { RichTextEditor } from '../ui/RichTextEditor';
 import flashcardIcon from '../../assets/flashcard_ic.png';
 import type { TabId, NavParams } from '../../pages/DashboardPage';
+import { getDeleteErrorMessage } from '../../utils/deleteHelper';
 
 const isBodyEmpty = (html: string) => {
   const text = html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, '').trim();
@@ -282,7 +283,7 @@ export function SectionPanel({ onToast, navParams, onNavigate }: SectionPanelPro
       setDeleteTarget(null);
       if (selectedLessonId) fetchSections(selectedLessonId);
     } catch (err: any) {
-      onToast(err?.response?.data?.error ?? 'Lỗi khi xóa', 'error');
+      onToast(getDeleteErrorMessage(err), 'error');
     } finally { setDeleting(false); }
   };
 
@@ -341,7 +342,7 @@ export function SectionPanel({ onToast, navParams, onNavigate }: SectionPanelPro
       setNodeDeleteTarget(null);
       if (selectedLessonId) fetchSections(selectedLessonId);
     } catch (err: any) {
-      onToast(err?.response?.data?.error ?? 'Lỗi khi xóa', 'error');
+      onToast(getDeleteErrorMessage(err), 'error');
     } finally {
       setNodeDeleting(false);
     }

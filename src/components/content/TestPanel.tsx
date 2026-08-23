@@ -18,6 +18,7 @@ import {
   IconClock,
   IconTarget
 } from '../ui/Icons';
+import { getDeleteErrorMessage } from '../../utils/deleteHelper';
 
 interface TestPanelProps {
   onToast: (msg: string, type: ToastType) => void;
@@ -54,6 +55,7 @@ export function TestPanel({ onToast }: TestPanelProps) {
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<AdminTestDto | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [expandedQIds, setExpandedQIds] = useState<Set<number>>(new Set());
 
   // Cascading dropdowns inside Form Modal
   const [formTopics, setFormTopics] = useState<TopicDto[]>([]);
@@ -120,6 +122,7 @@ export function TestPanel({ onToast }: TestPanelProps) {
     setEditTest(null);
     setForm(EMPTY_FORM);
     setSelectedQIds([]);
+    setExpandedQIds(new Set());
     setModalOpen(true);
   };
 
@@ -163,7 +166,22 @@ export function TestPanel({ onToast }: TestPanelProps) {
       imgUrl: t.imgUrl ?? ''
     });
     setSelectedQIds(t.questionIds ?? []);
+    setExpandedQIds(new Set());
     setModalOpen(true);
+  };
+
+  const toggleQuestionExpand = (qid: number, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setExpandedQIds(prev => {
+      const next = new Set(prev);
+      if (next.has(qid)) {
+        next.delete(qid);
+      } else {
+        next.add(qid);
+      }
+      return next;
+    });
   };
 
   const toggleQuestionSelection = (qid: number) => {
@@ -238,7 +256,7 @@ export function TestPanel({ onToast }: TestPanelProps) {
       setDeleteTarget(null);
       fetchTests();
     } catch (err: any) {
-      onToast(err?.response?.data?.error ?? 'Lỗi khi xóa đề thi', 'error');
+      onToast(getDeleteErrorMessage(err), 'error');
     } finally {
       setDeleting(false);
     }
@@ -367,125 +385,219 @@ export function TestPanel({ onToast }: TestPanelProps) {
       )}
 
       {/* Create / Edit Modal */}
-      <Modal open={modalOpen} title={editTest ? `Sửa đề thi: ${editTest.title}` : 'Tạo đề thi mới'} onClose={() => setModalOpen(false)}>
-
-        {/* Scope Type & Test Preset */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
-          <Select label="Mẫu cấu hình đề thi (Preset)" value={form.presetId} onChange={(e) => setForm(f => ({ ...f, presetId: e.target.value }))}>
-            <option value="">Chọn một mẫu cấu hình</option>
-            {presets.map(p => <option key={p.id} value={p.id}>{p.name} ({p.purposeType === 'EXAM' ? 'Thi' : 'Luyện tập'})</option>)}
-          </Select>
-
-          <Select label="Cấp độ phạm vi (Scope Level)" value={form.scopeType} onChange={(e) => setForm(f => ({ ...f, scopeType: e.target.value as any }))}>
-            <option value="NATIONAL">NATIONAL — Quốc gia</option>
-            <option value="GRADE">GRADE — Khối lớp</option>
-            <option value="TOPIC">TOPIC — Chủ đề</option>
-            <option value="LESSON">LESSON — Bài học</option>
-            <option value="SECTION">SECTION — Phần</option>
-          </Select>
-        </div>
-
-        {/* Cascade selections depending on Scope Type */}
-        {form.scopeType !== 'NATIONAL' && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 12 }}>
-            <Select
-              label="Khối lớp"
-              value={form.gradeId}
-              onChange={(e) => setForm(f => ({ ...f, gradeId: e.target.value, topicId: '', lessonId: '', sectionId: '' }))}
-            >
-              <option value="">Chọn Khối</option>
-              {grades.map(g => <option key={g.id} value={g.id}>Khối {g.id}</option>)}
-            </Select>
-
-            {['TOPIC', 'LESSON', 'SECTION'].includes(form.scopeType) && (
-              <Select
-                label="Chủ đề"
-                value={form.topicId}
-                onChange={(e) => setForm(f => ({ ...f, topicId: e.target.value, lessonId: '', sectionId: '' }))}
-                disabled={!formTopics.length}
-              >
-                <option value="">Chọn Chủ đề</option>
-                {formTopics.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+      <Modal open={modalOpen} title={editTest ? `Sửa đề thi: ${editTest.title}` : 'Tạo đề thi mới'} onClose={() => setModalOpen(false)} width={1100}>
+        <div style={{ display: 'flex', gap: 24, alignItems: 'stretch' }}>
+          {/* Left Column: Form Fields */}
+          <div style={{ flex: '1', display: 'flex', flexDirection: 'column', gap: 12, minWidth: 400 }}>
+            {/* Scope Type & Test Preset */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <Select label="Mẫu cấu hình đề thi (Preset)" value={form.presetId} onChange={(e) => setForm(f => ({ ...f, presetId: e.target.value }))}>
+                <option value="">Chọn một mẫu cấu hình</option>
+                {presets.map(p => <option key={p.id} value={p.id}>{p.name} ({p.purposeType === 'EXAM' ? 'Thi' : 'Luyện tập'})</option>)}
               </Select>
+
+              <Select label="Cấp độ phạm vi (Scope Level)" value={form.scopeType} onChange={(e) => setForm(f => ({ ...f, scopeType: e.target.value as any }))}>
+                <option value="NATIONAL">NATIONAL — Quốc gia</option>
+                <option value="GRADE">GRADE — Khối lớp</option>
+                <option value="TOPIC">TOPIC — Chủ đề</option>
+                <option value="LESSON">LESSON — Bài học</option>
+                <option value="SECTION">SECTION — Phần</option>
+              </Select>
+            </div>
+
+            {/* Cascade selections depending on Scope Type */}
+            {form.scopeType !== 'NATIONAL' && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <Select
+                  label="Khối lớp"
+                  value={form.gradeId}
+                  onChange={(e) => setForm(f => ({ ...f, gradeId: e.target.value, topicId: '', lessonId: '', sectionId: '' }))}
+                >
+                  <option value="">Chọn Khối</option>
+                  {grades.map(g => <option key={g.id} value={g.id}>Khối {g.id}</option>)}
+                </Select>
+
+                {['TOPIC', 'LESSON', 'SECTION'].includes(form.scopeType) && (
+                  <Select
+                    label="Chủ đề"
+                    value={form.topicId}
+                    onChange={(e) => setForm(f => ({ ...f, topicId: e.target.value, lessonId: '', sectionId: '' }))}
+                    disabled={!formTopics.length}
+                  >
+                    <option value="">Chọn Chủ đề</option>
+                    {formTopics.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                  </Select>
+                )}
+
+                {['LESSON', 'SECTION'].includes(form.scopeType) && (
+                  <Select
+                    label="Bài học"
+                    value={form.lessonId}
+                    onChange={(e) => setForm(f => ({ ...f, lessonId: e.target.value, sectionId: '' }))}
+                    disabled={!formLessons.length}
+                  >
+                    <option value="">Chọn Bài học</option>
+                    {formLessons.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+                  </Select>
+                )}
+
+                {form.scopeType === 'SECTION' && (
+                  <Select
+                    label="Phần"
+                    value={form.sectionId}
+                    onChange={(e) => setForm(f => ({ ...f, sectionId: e.target.value }))}
+                    disabled={!formSections.length}
+                  >
+                    <option value="">Chọn Phần</option>
+                    {formSections.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  </Select>
+                )}
+              </div>
             )}
 
-            {['LESSON', 'SECTION'].includes(form.scopeType) && (
-              <Select
-                label="Bài học"
-                value={form.lessonId}
-                onChange={(e) => setForm(f => ({ ...f, lessonId: e.target.value, sectionId: '' }))}
-                disabled={!formLessons.length}
-              >
-                <option value="">Chọn Bài học</option>
-                {formLessons.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+            <Input label="Tiêu đề đề thi" value={form.title} onChange={(e) => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Ví dụ: Đề thi thử học kỳ II lớp 10" />
+            <Input label="Mô tả tóm tắt" value={form.summary} onChange={(e) => setForm(f => ({ ...f, summary: e.target.value }))} placeholder="Mô tả ngắn gọn..." />
+            <ImageUploadInput label="Hình ảnh đề thi" value={form.imgUrl} onChange={(val) => setForm(f => ({ ...f, imgUrl: val }))} placeholder="Đường dẫn ảnh hoặc tải lên..." />
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <Select label="Đề thi quốc gia" value={form.isNationalTest ? 'true' : 'false'} onChange={(e) => setForm(f => ({ ...f, isNationalTest: e.target.value === 'true' }))}>
+                <option value="false">Không</option>
+                <option value="true">Đúng (National Test)</option>
               </Select>
-            )}
-
-            {form.scopeType === 'SECTION' && (
-              <Select
-                label="Phần"
-                value={form.sectionId}
-                onChange={(e) => setForm(f => ({ ...f, sectionId: e.target.value }))}
-                disabled={!formSections.length}
-              >
-                <option value="">Chọn Phần</option>
-                {formSections.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-              </Select>
-            )}
-          </div>
-        )}
-
-        <Input label="Tiêu đề đề thi" value={form.title} onChange={(e) => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Ví dụ: Đề thi thử học kỳ II lớp 10" />
-        <Input label="Mô tả tóm tắt" value={form.summary} onChange={(e) => setForm(f => ({ ...f, summary: e.target.value }))} placeholder="Mô tả ngắn gọn..." />
-        <ImageUploadInput label="Hình ảnh đề thi" value={form.imgUrl} onChange={(val) => setForm(f => ({ ...f, imgUrl: val }))} placeholder="Đường dẫn ảnh hoặc tải lên..." />
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
-          <Select label="Đề thi quốc gia" value={form.isNationalTest ? 'true' : 'false'} onChange={(e) => setForm(f => ({ ...f, isNationalTest: e.target.value === 'true' }))}>
-            <option value="false">Không</option>
-            <option value="true">Đúng (National Test)</option>
-          </Select>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 24 }}>
-            <input
-              type="checkbox"
-              id="test-is-pro"
-              checked={form.isPro}
-              onChange={(e) => setForm(f => ({ ...f, isPro: e.target.checked }))}
-              style={{ width: 16, height: 16, cursor: 'pointer' }}
-            />
-            <label htmlFor="test-is-pro" style={{ fontSize: 14, fontWeight: 600, color: '#334155', cursor: 'pointer' }}>
-              Chỉ dành cho tài khoản PRO
-            </label>
-          </div>
-        </div>
-
-        {/* Question mapper */}
-        <div style={{ marginTop: 16 }}>
-          <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: '#475569', marginBottom: 8 }}>
-            Gán câu hỏi tĩnh từ Ngân hàng ({selectedQIds.length} đã chọn)
-          </label>
-          <div style={{ border: '1px solid #cbd5e1', borderRadius: 8, height: 160, overflowY: 'auto', padding: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {questions.map((q) => {
-              const isChecked = selectedQIds.includes(q.id);
-              return (
-                <label key={q.id} style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, cursor: 'pointer', padding: '4px 6px', borderRadius: 6, background: isChecked ? '#f5f3ff' : 'transparent' }}>
-                  <input
-                    type="checkbox"
-                    checked={isChecked}
-                    onChange={() => toggleQuestionSelection(q.id)}
-                    style={{ cursor: 'pointer' }}
-                  />
-                  <span style={{ color: '#64748b', fontWeight: 600 }}>#{q.id}</span>
-                  <span style={{ background: '#f1f5f9', fontSize: 10, padding: '1px 4px', borderRadius: 4, fontWeight: 700 }}>{q.type}</span>
-                  <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1, color: '#334155' }}>
-                    {stripHtml(q.promptText)}
-                  </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 24 }}>
+                <input
+                  type="checkbox"
+                  id="test-is-pro"
+                  checked={form.isPro}
+                  onChange={(e) => setForm(f => ({ ...f, isPro: e.target.checked }))}
+                  style={{ width: 16, height: 16, cursor: 'pointer' }}
+                />
+                <label htmlFor="test-is-pro" style={{ fontSize: 14, fontWeight: 600, color: '#334155', cursor: 'pointer' }}>
+                  Chỉ dành cho tài khoản PRO
                 </label>
-              );
-            })}
+              </div>
+            </div>
+          </div>
+
+          {/* Vertical Divider */}
+          <div style={{ width: 1, background: '#e2e8f0', alignSelf: 'stretch' }} />
+
+          {/* Right Column: Question Selection */}
+          <div style={{ flex: '1.2', display: 'flex', flexDirection: 'column', minWidth: 500 }}>
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: '#475569', marginBottom: 8 }}>
+              Gán câu hỏi tĩnh từ Ngân hàng ({selectedQIds.length} đã chọn)
+            </label>
+            <div style={{ border: '1px solid #cbd5e1', borderRadius: 8, flex: 1, overflowY: 'auto', padding: 8, display: 'flex', flexDirection: 'column', gap: 8, background: '#f8fafc', maxHeight: '55vh' }}>
+              {questions.map((q) => {
+                const isChecked = selectedQIds.includes(q.id);
+                const isExpanded = expandedQIds.has(q.id);
+                return (
+                  <div key={q.id} style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '8px 10px', borderRadius: 8, background: isChecked ? '#f5f3ff' : '#ffffff', border: isChecked ? '1px solid #ddd6fe' : '1px solid #e2e8f0', transition: 'all 0.15s ease' }}>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', width: '100%' }}>
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => toggleQuestionSelection(q.id)}
+                        style={{ cursor: 'pointer', marginTop: 3 }}
+                      />
+                      <div
+                        onClick={(e) => toggleQuestionExpand(q.id, e)}
+                        style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1, cursor: 'pointer' }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                            <span style={{ color: '#64748b', fontWeight: 600, fontSize: 12.5 }}>#{q.id}</span>
+                            <span style={{ background: '#e2e8f0', fontSize: 9.5, padding: '1px 5px', borderRadius: 4, fontWeight: 700, color: '#475569' }}>{q.type}</span>
+                          </div>
+                          <span style={{ fontSize: 11, color: '#c37938', display: 'flex', alignItems: 'center', gap: 2, fontWeight: 600 }}>
+                            {isExpanded ? 'Thu gọn' : 'Xem chi tiết'}
+                            <svg
+                              width="12"
+                              height="12"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2.5"
+                              style={{
+                                transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                                transition: 'transform 0.2s ease',
+                              }}
+                            >
+                              <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                          </span>
+                        </div>
+
+                        {!isExpanded && (
+                          <div style={{
+                            color: '#334155',
+                            fontSize: 13,
+                            lineHeight: 1.4,
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                          }}>
+                            {stripHtml(q.promptText)}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {isExpanded && (
+                      <div style={{ padding: '8px 10px', background: '#f8fafc', border: '1px dashed #cbd5e1', borderRadius: 6, marginLeft: 22, marginTop: 4, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {/* Full prompt text */}
+                        <div style={{ fontWeight: 600, color: '#1e293b', fontSize: 12.5, lineHeight: 1.4 }}>
+                          {stripHtml(q.promptText)}
+                        </div>
+
+                        {/* Document if exists */}
+                        {q.document && (
+                          <div style={{ background: '#f1f5f9', padding: 8, borderRadius: 6, fontSize: 11.5, color: '#475569', borderLeft: '3px solid #cbd5e1' }}>
+                            <strong>Tài liệu:</strong> {stripHtml(q.document)}
+                          </div>
+                        )}
+
+                        {/* Answer Choices */}
+                        {q.answers && q.answers.length > 0 && (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, paddingLeft: 8 }}>
+                            {q.answers.map((ans) => {
+                              let isAnsCorrect = ans.isCorrect;
+                              let answerText = ans.content;
+                              if (q.type === 'MATCH') {
+                                answerText = `${ans.leftText} ➔ ${ans.rightText}`;
+                                isAnsCorrect = true;
+                              } else if (q.type === 'FILL') {
+                                answerText = ans.correctAnswer || ans.content;
+                                isAnsCorrect = true;
+                              }
+                              return (
+                                <div key={ans.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 6, fontSize: 12, color: isAnsCorrect ? '#16a34a' : '#475569', fontWeight: isAnsCorrect ? 600 : 400 }}>
+                                  <span style={{ fontSize: 13, lineHeight: 1 }}>{isAnsCorrect ? '✓' : '◦'}</span>
+                                  <span style={{ flex: 1 }}>{stripHtml(answerText || '')}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {/* Explanation */}
+                        {q.explanation && (
+                          <div style={{ fontSize: 11, color: '#a66228', padding: '6px 8px', background: '#fffbeb', borderRadius: 6, borderLeft: '3px solid #fbbf24' }}>
+                            <strong>Giải thích:</strong> {stripHtml(q.explanation)}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 20 }}>
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 20, borderTop: '1px solid #f1f5f9', paddingTop: 16 }}>
           <Button variant="ghost" onClick={() => setModalOpen(false)}>Hủy</Button>
           <Button onClick={handleSave} loading={saving}>{editTest ? 'Lưu thay đổi' : 'Tạo mới'}</Button>
         </div>

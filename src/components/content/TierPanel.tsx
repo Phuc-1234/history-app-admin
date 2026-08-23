@@ -9,6 +9,7 @@ import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { Input } from '../ui/FormField';
 import { Spinner } from '../ui/Spinner';
 import { IconPlus, IconEdit, IconDelete, IconXP, IconGold, IconSearch, IconUpload } from '../ui/Icons';
+import { getDeleteErrorMessage } from '../../utils/deleteHelper';
 
 interface TierPanelProps {
   onToast: (msg: string, type: ToastType) => void;
@@ -196,7 +197,7 @@ export function TierPanel({ onToast }: TierPanelProps) {
       setDeleteTarget(null);
       fetchTiers();
     } catch (err: any) {
-      onToast(err?.response?.data?.error ?? 'Lỗi khi xóa danh hiệu', 'error');
+      onToast(getDeleteErrorMessage(err), 'error');
     } finally {
       setDeleting(false);
     }
@@ -219,9 +220,9 @@ export function TierPanel({ onToast }: TierPanelProps) {
             Quản lý các cấp độ danh hiệu người dùng đạt được dựa trên tổng XP, và thiết lập phần thưởng khi đạt hạng.
           </p>
         </div>
-        <Button variant="primary" icon={<IconPlus size={18} />} onClick={openCreate}>
+        {/* <Button variant="primary" icon={<IconPlus size={18} />} onClick={openCreate}>
           Thêm danh hiệu mới
-        </Button>
+        </Button> */}
       </div>
 
       {/* Search */}
@@ -294,7 +295,7 @@ export function TierPanel({ onToast }: TierPanelProps) {
                         <img
                           src={tier.badgeImgUrl}
                           alt={tier.name}
-                          style={{ width: 40, height: 40, borderRadius: 8, objectFit: 'cover', border: '1px solid #e2e8f0' }}
+                          style={{ width: 40, height: 40, borderRadius: 8, objectFit: 'contain', border: '1px solid #e2e8f0', boxSizing: 'border-box', background: '#f8fafc', padding: 2 }}
                         />
                       ) : (
                         <div style={{
@@ -498,7 +499,7 @@ export function TierPanel({ onToast }: TierPanelProps) {
                 <img
                   src={form.badgeImgUrl}
                   alt="Badge preview"
-                  style={{ width: 48, height: 48, borderRadius: 10, objectFit: 'cover', border: '1px solid #e2e8f0' }}
+                  style={{ width: 48, height: 48, borderRadius: 10, objectFit: 'contain', border: '1px solid #e2e8f0', boxSizing: 'border-box', background: '#f8fafc', padding: 2 }}
                 />
                 <span style={{ fontSize: 12, color: '#64748b' }}>Xem trước huy hiệu</span>
               </div>

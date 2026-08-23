@@ -10,6 +10,7 @@ import { Input, Select } from '../ui/FormField';
 import { Spinner } from '../ui/Spinner';
 import { IconPlus, IconEdit, IconDelete, IconTopic } from '../ui/Icons';
 import type { TabId, NavParams } from '../../pages/DashboardPage';
+import { getDeleteErrorMessage } from '../../utils/deleteHelper';
 
 interface TopicPanelProps {
   onToast: (msg: string, type: ToastType) => void;
@@ -121,7 +122,7 @@ export function TopicPanel({ onToast, navParams, onNavigate }: TopicPanelProps) 
       setDeleteTarget(null);
       if (selectedGradeId) handleGradeChange(selectedGradeId);
     } catch (err: any) {
-      onToast(err?.response?.data?.error ?? 'Lỗi khi xóa', 'error');
+      onToast(getDeleteErrorMessage(err), 'error');
     } finally { setDeleting(false); }
   };
 

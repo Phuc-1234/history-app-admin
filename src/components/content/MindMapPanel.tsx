@@ -11,6 +11,7 @@ import { Input, Textarea, Select } from '../ui/FormField';
 import { Spinner } from '../ui/Spinner';
 import { IconMindMap, IconMagicWand, IconAlert } from '../ui/Icons';
 import { RichTextEditor } from '../ui/RichTextEditor';
+import { getDeleteErrorMessage } from '../../utils/deleteHelper';
 import {
   ReactFlow,
   Controls,
@@ -1220,7 +1221,7 @@ export function MindMapPanel({ onToast, navParams, onNavigate: _onNavigate }: Mi
       setDeleteTarget(null);
       fetchLessonTree(selectedLessonId);
     } catch (err: any) {
-      onToast(err?.response?.data?.error ?? 'Lỗi khi xóa dữ liệu', 'error');
+      onToast(getDeleteErrorMessage(err), 'error');
     } finally {
       setDeleting(false);
     }

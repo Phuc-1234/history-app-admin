@@ -15,7 +15,7 @@ export const DASHBOARD_SECTIONS = [
 ] as const;
 
 /** scroll-margin-top cho wrapper của từng section (chiều cao nav sticky + khe hở). */
-export const SECTION_SCROLL_MARGIN = 76;
+export const SECTION_SCROLL_MARGIN = 132;
 
 /**
  * Thanh điều hướng nội bộ của tab Tổng quan: bấm để cuộn tới section,
@@ -53,8 +53,10 @@ export function DashboardSectionNav() {
     <div
       style={{
         position: 'sticky',
-        top: 8,
+        top: 72,
         zIndex: 6,
+        alignSelf: 'flex-start',
+        maxWidth: '100%',
         display: 'flex',
         gap: 4,
         background: 'rgba(255, 255, 255, 0.92)',

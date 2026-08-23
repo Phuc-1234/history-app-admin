@@ -11,6 +11,7 @@ import { Input, Select } from '../ui/FormField';
 import { ImageUploadInput } from '../ui/ImageUploadInput';
 import { Spinner } from '../ui/Spinner';
 import { IconPlus, IconEdit, IconDelete, IconGrade } from '../ui/Icons';
+import { getDeleteErrorMessage } from '../../utils/deleteHelper';
 
 import type { TabId, NavParams } from '../../pages/DashboardPage';
 
@@ -76,7 +77,7 @@ export function GradePanel({ onToast, onNavigate }: GradePanelProps) {
       setDeleteTarget(null);
       fetchGrades();
     } catch (err: any) {
-      onToast(err?.response?.data?.error ?? 'Lỗi khi xóa', 'error');
+      onToast(getDeleteErrorMessage(err), 'error');
     } finally { setDeleting(false); }
   };
 

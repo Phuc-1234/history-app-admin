@@ -9,6 +9,7 @@ import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { Input, Textarea, Select } from '../ui/FormField';
 import { Spinner } from '../ui/Spinner';
 import { IconPlus, IconEdit, IconDelete, IconVideo } from '../ui/Icons';
+import { getDeleteErrorMessage } from '../../utils/deleteHelper';
 
 interface VideoPanelProps {
   onToast: (msg: string, type: ToastType) => void;
@@ -342,7 +343,7 @@ export function VideoPanel({ onToast }: VideoPanelProps) {
       setDeleteTarget(null);
       fetchVideos();
     } catch (err: any) {
-      onToast(err?.response?.data?.error ?? 'Lỗi khi xóa video', 'error');
+      onToast(getDeleteErrorMessage(err), 'error');
     } finally {
       setDeleting(false);
     }

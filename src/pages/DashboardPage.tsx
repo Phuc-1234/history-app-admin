@@ -69,6 +69,17 @@ export function DashboardPage() {
 
   const [isMobile, setIsMobile] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    return localStorage.getItem('admin_sidebar_collapsed') === 'true';
+  });
+
+  const toggleSidebarCollapse = () => {
+    setSidebarCollapsed((prev) => {
+      const newVal = !prev;
+      localStorage.setItem('admin_sidebar_collapsed', String(newVal));
+      return newVal;
+    });
+  };
 
   // Sync hash changes if user uses browser back/forward buttons
   useEffect(() => {
@@ -162,17 +173,19 @@ export function DashboardPage() {
         userAvatar={user?.profileImgUrl}
         isMobile={isMobile}
         sidebarOpen={sidebarOpen}
+        collapsed={sidebarCollapsed}
+        onToggleCollapse={toggleSidebarCollapse}
       />
       <div 
         style={{ 
           flex: 1, 
-          marginLeft: isMobile ? 0 : 240, 
+          marginLeft: isMobile ? 0 : (sidebarCollapsed ? 68 : 240), 
           display: 'flex', 
           flexDirection: 'column', 
           minHeight: '100vh',
-          width: isMobile ? '100%' : 'calc(100% - 240px)',
+          width: isMobile ? '100%' : `calc(100% - ${sidebarCollapsed ? 68 : 240}px)`,
           boxSizing: 'border-box',
-          transition: 'margin-left 0.3s ease',
+          transition: 'margin-left 0.3s ease, width 0.3s ease',
         }}
       >
         <TopBar 
