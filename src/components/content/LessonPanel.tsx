@@ -13,6 +13,7 @@ import { Spinner } from '../ui/Spinner';
 import { IconPlus, IconEdit, IconDelete, IconLesson, IconMindMap } from '../ui/Icons';
 import flashcardIcon from '../../assets/flashcard_ic.png';
 import type { TabId, NavParams } from '../../pages/DashboardPage';
+import { getDeleteErrorMessage } from '../../utils/deleteHelper';
 
 interface LessonPanelProps {
   onToast: (msg: string, type: ToastType) => void;
@@ -201,7 +202,7 @@ export function LessonPanel({ onToast, navParams, onNavigate }: LessonPanelProps
       setDeleteTarget(null);
       if (selectedTopicId) handleTopicChange(selectedTopicId);
     } catch (err: any) {
-      onToast(err?.response?.data?.error ?? 'Lỗi khi xóa bài học', 'error');
+      onToast(getDeleteErrorMessage(err), 'error');
     } finally { setDeleting(false); }
   };
 

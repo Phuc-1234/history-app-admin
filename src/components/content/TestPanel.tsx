@@ -18,6 +18,7 @@ import {
   IconClock,
   IconTarget
 } from '../ui/Icons';
+import { getDeleteErrorMessage } from '../../utils/deleteHelper';
 
 interface TestPanelProps {
   onToast: (msg: string, type: ToastType) => void;
@@ -255,7 +256,7 @@ export function TestPanel({ onToast }: TestPanelProps) {
       setDeleteTarget(null);
       fetchTests();
     } catch (err: any) {
-      onToast(err?.response?.data?.error ?? 'Lỗi khi xóa đề thi', 'error');
+      onToast(getDeleteErrorMessage(err), 'error');
     } finally {
       setDeleting(false);
     }

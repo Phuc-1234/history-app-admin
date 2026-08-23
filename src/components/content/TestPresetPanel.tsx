@@ -9,6 +9,7 @@ import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { Input, Select } from '../ui/FormField';
 import { Spinner } from '../ui/Spinner';
 import { IconPlus, IconEdit, IconDelete, IconClock, IconTarget, IconQuestion } from '../ui/Icons';
+import { getDeleteErrorMessage } from '../../utils/deleteHelper';
 
 interface TestPresetPanelProps {
   onToast: (msg: string, type: ToastType) => void;
@@ -169,7 +170,7 @@ export function TestPresetPanel({ onToast }: TestPresetPanelProps) {
       setPresetDeleteTarget(null);
       fetchPresets();
     } catch (err: any) {
-      onToast(err?.response?.data?.error ?? 'Lỗi khi xóa mẫu đề', 'error');
+      onToast(getDeleteErrorMessage(err), 'error');
     } finally {
       setPresetDeleting(false);
     }
@@ -199,7 +200,7 @@ export function TestPresetPanel({ onToast }: TestPresetPanelProps) {
       onToast('Đã xóa cấu hình mặc định', 'success');
       fetchDefaults();
     } catch (err: any) {
-      onToast(err?.response?.data?.error ?? 'Lỗi khi xóa cấu hình mặc định', 'error');
+      onToast(getDeleteErrorMessage(err), 'error');
     }
   };
 

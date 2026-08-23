@@ -8,6 +8,7 @@ import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { Input } from '../ui/FormField';
 import { Spinner } from '../ui/Spinner';
 import { IconPlus, IconEdit, IconDelete, IconGold, IconSparkles } from '../ui/Icons';
+import { getDeleteErrorMessage } from '../../utils/deleteHelper';
 
 interface PackagePricingPanelProps {
   onToast: (msg: string, type: ToastType) => void;
@@ -224,7 +225,7 @@ export function PackagePricingPanel({ onToast }: PackagePricingPanelProps) {
       setDeleteGoldTarget(null);
       fetchGoldPackages();
     } catch (err: any) {
-      onToast(err?.response?.data?.error ?? 'Lỗi khi xóa gói vàng', 'error');
+      onToast(getDeleteErrorMessage(err), 'error');
     } finally {
       setDeletingGold(false);
     }
@@ -327,7 +328,7 @@ export function PackagePricingPanel({ onToast }: PackagePricingPanelProps) {
       setDeleteProTarget(null);
       fetchProPackages();
     } catch (err: any) {
-      onToast(err?.response?.data?.error ?? 'Lỗi khi xóa gói Pro', 'error');
+      onToast(getDeleteErrorMessage(err), 'error');
     } finally {
       setDeletingPro(false);
     }

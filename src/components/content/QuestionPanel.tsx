@@ -11,6 +11,7 @@ import { Spinner } from '../ui/Spinner';
 import { IconPlus, IconEdit, IconDelete, IconQuestion, IconXP, IconChevronDown, IconChevronUp, IconDownload, IconUpload } from '../ui/Icons';
 import { RichTextEditor } from '../ui/RichTextEditor';
 import { stripHtml } from '../../utils/html';
+import { getDeleteErrorMessage } from '../../utils/deleteHelper';
 import XLSX from 'xlsx-js-style';
 
 interface QuestionPanelProps {
@@ -846,7 +847,7 @@ export function QuestionPanel({ onToast }: QuestionPanelProps) {
       setDeleteTarget(null);
       fetchQuestions();
     } catch (err: any) {
-      onToast(err?.response?.data?.error ?? 'Lỗi khi xóa câu hỏi', 'error');
+      onToast(getDeleteErrorMessage(err), 'error');
     } finally {
       setDeleting(false);
     }

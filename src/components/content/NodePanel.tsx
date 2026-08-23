@@ -10,6 +10,7 @@ import { Input, Select } from '../ui/FormField';
 import { Spinner } from '../ui/Spinner';
 import { IconPlus, IconEdit, IconDelete, IconNode } from '../ui/Icons';
 import { RichTextEditor } from '../ui/RichTextEditor';
+import { getDeleteErrorMessage } from '../../utils/deleteHelper';
 
 const isBodyEmpty = (html: string) => {
   const text = html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, '').trim();
@@ -254,7 +255,7 @@ export function NodePanel({ onToast }: NodePanelProps) {
       setDeleteTarget(null);
       if (selectedLessonId && selectedSectionId) handleSectionChange(selectedLessonId, selectedSectionId);
     } catch (err: any) {
-      onToast(err?.response?.data?.error ?? 'Lỗi khi xóa', 'error');
+      onToast(getDeleteErrorMessage(err), 'error');
     } finally { setDeleting(false); }
   };
 

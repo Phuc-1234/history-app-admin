@@ -10,6 +10,7 @@ import { Textarea, Select } from '../ui/FormField';
 import { Spinner } from '../ui/Spinner';
 import { IconPlus, IconEdit, IconDelete, IconFlashcard, IconMagicWand, IconAlert, IconInfo, IconDownload, IconUpload } from '../ui/Icons';
 import type { TabId, NavParams } from '../../pages/DashboardPage';
+import { getDeleteErrorMessage } from '../../utils/deleteHelper';
 import XLSX from 'xlsx-js-style';
 
 export interface SectionWithDepth extends SectionDto {
@@ -706,7 +707,7 @@ export function FlashcardPanel({ onToast, navParams, onNavigate: _onNavigate }: 
       setDeleteTarget(null);
       if (selectedLessonId) fetchFlashcards(selectedLessonId);
     } catch (err: any) {
-      onToast(err?.response?.data?.error ?? 'Lỗi khi xóa', 'error');
+      onToast(getDeleteErrorMessage(err), 'error');
     } finally {
       setDeleting(false);
     }

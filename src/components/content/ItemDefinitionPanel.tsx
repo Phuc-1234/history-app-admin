@@ -9,6 +9,7 @@ import { Input, Select } from '../ui/FormField';
 import { ImageUploadInput } from '../ui/ImageUploadInput';
 import { Spinner } from '../ui/Spinner';
 import { IconPlus, IconEdit, IconDelete, IconSearch, IconGold } from '../ui/Icons';
+import { getDeleteErrorMessage } from '../../utils/deleteHelper';
 
 interface ItemDefinitionPanelProps {
   onToast: (msg: string, type: ToastType) => void;
@@ -162,7 +163,7 @@ export function ItemDefinitionPanel({ onToast }: ItemDefinitionPanelProps) {
       setDeleteTarget(null);
       fetchItems();
     } catch (err: any) {
-      onToast(err?.response?.data?.error ?? 'Lỗi khi xóa vật phẩm', 'error');
+      onToast(getDeleteErrorMessage(err), 'error');
     } finally {
       setDeleting(false);
     }

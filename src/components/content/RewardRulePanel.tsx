@@ -9,6 +9,7 @@ import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { Input, Select } from '../ui/FormField';
 import { Spinner } from '../ui/Spinner';
 import { IconPlus, IconEdit, IconDelete, IconXP, IconGold, IconSearch } from '../ui/Icons';
+import { getDeleteErrorMessage } from '../../utils/deleteHelper';
 
 interface RewardRulePanelProps {
   onToast: (msg: string, type: ToastType) => void;
@@ -206,7 +207,7 @@ export function RewardRulePanel({ onToast }: RewardRulePanelProps) {
       setDeleteTarget(null);
       fetchRules();
     } catch (err: any) {
-      onToast(err?.response?.data?.error ?? 'Lỗi khi xóa quy tắc phần thưởng', 'error');
+      onToast(getDeleteErrorMessage(err), 'error');
     } finally {
       setDeleting(false);
     }
