@@ -24,6 +24,73 @@ const IconGrid = ({ size = 20, color = 'currentColor' }: { size?: number; color?
   </svg>
 );
 
+const TOGGLE_CHAR_THRESHOLD = 90;
+
+// Ngữ cảnh góp ý (grade/lesson/node/question) có thể dài —
+// thu gọn còn 2 dòng, bấm "Xem thêm"/"Thu gọn" để xem hết nội dung
+function FeedbackTargetTag({ name }: { name: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const canToggle = name.length > TOGGLE_CHAR_THRESHOLD;
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: 6,
+        padding: '6px 12px',
+        background: '#f8fafc',
+        border: '1px solid #e2e8f0',
+        borderRadius: 8,
+        fontSize: 12,
+        fontWeight: 600,
+        color: '#64748b',
+        alignSelf: 'flex-start',
+        maxWidth: '100%',
+      }}
+    >
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 2 }}>
+        <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
+        <line x1="4" y1="22" x2="4" y2="15" />
+      </svg>
+      <span
+        style={
+          canToggle && !expanded
+            ? {
+                flex: 1,
+                display: '-webkit-box',
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: 'vertical',
+                overflow: 'hidden',
+                wordBreak: 'break-word',
+              }
+            : { flex: 1, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }
+        }
+      >
+        {name}
+      </span>
+      {canToggle && (
+        <button
+          onClick={() => setExpanded((prev) => !prev)}
+          style={{
+            background: 'none',
+            border: 'none',
+            padding: 0,
+            marginLeft: 4,
+            fontSize: 12,
+            fontWeight: 600,
+            color: '#2563eb',
+            cursor: 'pointer',
+            flexShrink: 0,
+          }}
+        >
+          {expanded ? 'Thu gọn' : 'Xem thêm'}
+        </button>
+      )}
+    </div>
+  );
+}
+
 interface FeedbackPanelProps {
   onToast: (msg: string, type: ToastType) => void;
 }
@@ -51,18 +118,6 @@ export function FeedbackPanel({ onToast }: FeedbackPanelProps) {
   const [viewMode, setViewMode] = useState<'full' | 'compact'>('full');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
-  const fetchFeedbacks = useCallback(async () => {
-    try {
-      setLoading(true);
-      const res = await client.get('/api/admin/feedback');
-      setFeedbacks(res.data ?? []);
-    } catch {
-      onToast('Không tải được danh sách góp ý', 'error');
-    } finally {
-      setLoading(false);
-    }
-  }, [onToast]);
-
   const handleUpdateStatus = useCallback(async (id: string, newStatus: 'PENDING' | 'RESOLVED' | 'IGNORED') => {
     try {
       await client.patch(`/api/admin/feedback/${id}`, { status: newStatus });
@@ -75,9 +130,24 @@ export function FeedbackPanel({ onToast }: FeedbackPanelProps) {
     }
   }, [onToast]);
 
+  // `loading` starts as true, so setState only happens after the await —
+  // no synchronous setState in the effect body, and cleanup guards unmount
   useEffect(() => {
-    fetchFeedbacks();
-  }, [fetchFeedbacks]);
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await client.get('/api/admin/feedback');
+        if (!cancelled) setFeedbacks(res.data ?? []);
+      } catch {
+        if (!cancelled) onToast('Không tải được danh sách góp ý', 'error');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [onToast]);
 
   const filteredFeedbacks = useMemo(() => {
     let result = feedbacks;
@@ -419,27 +489,7 @@ export function FeedbackPanel({ onToast }: FeedbackPanelProps) {
                 {item.content}
               </div>
 
-              {item.targetName && (
-                <div style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  padding: '6px 12px',
-                  background: '#f8fafc',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: 8,
-                  fontSize: 12,
-                  fontWeight: 600,
-                  color: '#64748b',
-                  alignSelf: 'flex-start',
-                }}>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
-                    <line x1="4" y1="22" x2="4" y2="15" />
-                  </svg>
-                  <span>{item.targetName}</span>
-                </div>
-              )}
+              {item.targetName && <FeedbackTargetTag name={item.targetName} />}
 
               {/* Status and Action Row */}
               <div style={{
