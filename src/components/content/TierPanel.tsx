@@ -115,12 +115,12 @@ export function TierPanel({ onToast }: TierPanelProps) {
   };
 
   const handleSave = async () => {
-    const indexVal = Number(form.index);
-    const xpThreshVal = Number(form.xpThreshold);
+    const indexVal = editTier ? editTier.index : Number(form.index);
+    const xpThreshVal = editTier ? editTier.xpThreshold : Number(form.xpThreshold);
     const xpRewardVal = Number(form.xpReward);
     const goldRewardVal = Number(form.goldReward);
 
-    if (form.index.trim() === '' || isNaN(indexVal) || indexVal < 0 || !Number.isInteger(indexVal)) {
+    if (!editTier && (form.index.trim() === '' || isNaN(indexVal) || indexVal < 0 || !Number.isInteger(indexVal))) {
       onToast('Chỉ mục (Index) danh hiệu phải là số nguyên không âm', 'error');
       return;
     }
@@ -130,7 +130,7 @@ export function TierPanel({ onToast }: TierPanelProps) {
       return;
     }
 
-    if (form.xpThreshold.trim() === '' || isNaN(xpThreshVal) || xpThreshVal < 0) {
+    if (!editTier && (form.xpThreshold.trim() === '' || isNaN(xpThreshVal) || xpThreshVal < 0)) {
       onToast('Ngưỡng XP phải là số không âm', 'error');
       return;
     }
@@ -367,7 +367,7 @@ export function TierPanel({ onToast }: TierPanelProps) {
                         {/* <button
                           onClick={() => setDeleteTarget(tier)}
                           style={{
-                            background: '#f8fafc', border: '1px solid #e2e8f0', color: '#475569',
+                            background: '#f8fafc', border: '1px solid #e2e8f0', color: '#ef4444',
                             width: 32, height: 32, borderRadius: 8, cursor: 'pointer',
                             display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s'
                           }}
@@ -395,16 +395,26 @@ export function TierPanel({ onToast }: TierPanelProps) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {/* Index & Name */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 16 }}>
-            <Input
-              label="Chỉ mục (Index)"
-              type="number"
-              min="0"
-              placeholder="Ví dụ: 1, 2, 3"
-              value={form.index}
-              onChange={(e) => setForm(prev => ({ ...prev, index: e.target.value }))}
-              disabled={editTier !== null}
-              hint="ID độc nhất của Tier"
-            />
+            {editTier ? (
+              <div style={{ marginBottom: 16 }}>
+                <span style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#475569', marginBottom: 6 }}>
+                  Chỉ mục (ID)
+                </span>
+                <span style={{ fontSize: 15, fontWeight: 700, color: '#c37938', display: 'block', padding: '10px 0' }}>
+                  #{editTier.index}
+                </span>
+              </div>
+            ) : (
+              <Input
+                label="Chỉ mục (ID)"
+                type="number"
+                min="0"
+                placeholder="Ví dụ: 1, 2, 3"
+                value={form.index}
+                onChange={(e) => setForm(prev => ({ ...prev, index: e.target.value }))}
+                hint="ID độc nhất của Tier"
+              />
+            )}
             <Input
               label="Tên danh hiệu"
               placeholder="Ví dụ: Sử Học Sinh, Trạng Nguyên..."
@@ -414,15 +424,26 @@ export function TierPanel({ onToast }: TierPanelProps) {
           </div>
 
           {/* XP Threshold */}
-          <Input
-            label="Mốc XP yêu cầu (XP Threshold)"
-            type="number"
-            min="0"
-            placeholder="Ví dụ: 0, 500, 1000..."
-            value={form.xpThreshold}
-            onChange={(e) => setForm(prev => ({ ...prev, xpThreshold: e.target.value }))}
-            hint="Số điểm XP tối thiểu để đạt danh hiệu này"
-          />
+          {editTier ? (
+            <div style={{ marginBottom: 16 }}>
+              <span style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#475569', marginBottom: 6 }}>
+                Mốc XP yêu cầu (XP Threshold)
+              </span>
+              <span style={{ fontSize: 15, fontWeight: 700, color: '#059669', display: 'block', padding: '4px 0' }}>
+                {editTier.xpThreshold.toLocaleString()} XP
+              </span>
+            </div>
+          ) : (
+            <Input
+              label="Mốc XP yêu cầu (XP Threshold)"
+              type="number"
+              min="0"
+              placeholder="Ví dụ: 0, 500, 1000..."
+              value={form.xpThreshold}
+              onChange={(e) => setForm(prev => ({ ...prev, xpThreshold: e.target.value }))}
+              hint="Số điểm XP tối thiểu để đạt danh hiệu này"
+            />
+          )}
 
           {/* Description */}
           <div>
