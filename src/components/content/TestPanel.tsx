@@ -126,7 +126,7 @@ export function TestPanel({ onToast }: TestPanelProps) {
     setModalOpen(true);
   };
 
-  const openEdit = (t: AdminTestDto) => {
+  const openEdit = async (t: AdminTestDto) => {
     setEditTest(t);
 
     const scopeTypeVal = (t.scopeType as any) || 'GRADE';
@@ -137,19 +137,23 @@ export function TestPanel({ onToast }: TestPanelProps) {
     let lessonId = '';
     let sectionId = '';
 
-    if (scopeTypeVal === 'GRADE' && scopeIdVal) gradeId = String(scopeIdVal);
-    else if (scopeTypeVal === 'TOPIC' && scopeIdVal) {
-      topicId = String(scopeIdVal);
-      gradeId = String(t.gradeId ?? '');
-    } else if (scopeTypeVal === 'LESSON' && scopeIdVal) {
-      lessonId = String(scopeIdVal);
-      topicId = String(t.topicId ?? '');
-      gradeId = String(t.gradeId ?? '');
-    } else if (scopeTypeVal === 'SECTION' && scopeIdVal) {
-      sectionId = String(scopeIdVal);
-      lessonId = String(t.lessonId ?? '');
-      topicId = String(t.topicId ?? '');
-      gradeId = String(t.gradeId ?? '');
+    if (scopeTypeVal === 'GRADE' && scopeIdVal) {
+      gradeId = String(scopeIdVal);
+    } else if (scopeIdVal && scopeTypeVal !== 'NATIONAL') {
+      try {
+        const lineageRes = await client.get('/api/content/scope-lineage', {
+          params: { scopeType: scopeTypeVal, scopeId: scopeIdVal },
+        });
+        const lineage = lineageRes.data || {};
+        if (lineage.gradeId) gradeId = String(lineage.gradeId);
+        if (lineage.topicId) topicId = String(lineage.topicId);
+        if (lineage.lessonId) lessonId = String(lineage.lessonId);
+        if (lineage.sectionId) sectionId = String(lineage.sectionId);
+      } catch {
+        if (scopeTypeVal === 'TOPIC') topicId = String(scopeIdVal);
+        else if (scopeTypeVal === 'LESSON') lessonId = String(scopeIdVal);
+        else if (scopeTypeVal === 'SECTION') sectionId = String(scopeIdVal);
+      }
     }
 
     setForm({
@@ -224,11 +228,6 @@ export function TestPanel({ onToast }: TestPanelProps) {
         isPro: form.isPro,
         imgUrl: form.imgUrl.trim() || null,
         questionIds: selectedQIds,
-        // legacy backups
-        gradeId: form.gradeId ? Number(form.gradeId) : null,
-        topicId: form.topicId ? Number(form.topicId) : null,
-        lessonId: form.lessonId ? Number(form.lessonId) : null,
-        sectionId: form.sectionId ? Number(form.sectionId) : null
       };
 
       if (editTest) {
