@@ -90,6 +90,11 @@ a, select, input {
 }
 
 /* CKEditor overrides */
+.ck.ck-editor {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+}
 .ck-editor__editable {
   background: #f8fafc !important;
   border: 1px solid #e2e8f0 !important;
@@ -101,6 +106,19 @@ a, select, input {
   box-shadow: none !important;
   transition: border-color 0.2s, box-shadow 0.2s;
   padding: 10px 16px !important;
+  word-break: break-word !important;
+  overflow-wrap: anywhere !important;
+  max-width: 100% !important;
+}
+.ck-content {
+  word-break: break-word !important;
+  overflow-wrap: anywhere !important;
+  max-width: 100% !important;
+}
+.ckeditor-wrapper {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
 }
 .ck-editor__editable.ck-focused {
   border-color: #c37938 !important;

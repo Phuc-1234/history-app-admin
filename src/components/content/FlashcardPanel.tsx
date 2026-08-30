@@ -7,6 +7,7 @@ import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { Textarea, Select } from '../ui/FormField';
+import { RichTextEditor } from '../ui/RichTextEditor';
 import { Spinner } from '../ui/Spinner';
 import { IconPlus, IconEdit, IconDelete, IconFlashcard, IconMagicWand, IconAlert, IconInfo, IconDownload, IconUpload } from '../ui/Icons';
 import type { TabId, NavParams } from '../../pages/DashboardPage';
@@ -930,6 +931,9 @@ export function FlashcardPanel({ onToast, navParams, onNavigate: _onNavigate }: 
                 justifyContent: 'space-between',
                 minHeight: 180,
                 transition: 'transform 0.2s, box-shadow 0.2s',
+                overflow: 'hidden',
+                wordBreak: 'break-word',
+                overflowWrap: 'anywhere',
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.transform = 'translateY(-2px)';
@@ -959,13 +963,19 @@ export function FlashcardPanel({ onToast, navParams, onNavigate: _onNavigate }: 
                     </span>
                   )}
                 </div>
-                <div style={{ marginBottom: 12 }}>
+                <div style={{ marginBottom: 12, overflow: 'hidden', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
                   <strong style={{ display: 'block', fontSize: 12, color: '#94a3b8', textTransform: 'uppercase', marginBottom: 2 }}>Mặt trước (Q)</strong>
-                  <p style={{ margin: 0, fontSize: 14, color: '#0f172a', fontWeight: 600, lineHeight: 1.4 }}>{card.frontText}</p>
+                  <div
+                    style={{ margin: 0, fontSize: 14, color: '#0f172a', fontWeight: 600, lineHeight: 1.4, wordBreak: 'break-word', overflowWrap: 'anywhere' }}
+                    dangerouslySetInnerHTML={{ __html: card.frontText }}
+                  />
                 </div>
-                <div style={{ borderTop: '1px dashed #f1f5f9', paddingTop: 10 }}>
+                <div style={{ borderTop: '1px dashed #f1f5f9', paddingTop: 10, overflow: 'hidden', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
                   <strong style={{ display: 'block', fontSize: 12, color: '#94a3b8', textTransform: 'uppercase', marginBottom: 2 }}>Mặt sau (A)</strong>
-                  <p style={{ margin: 0, fontSize: 14, color: '#475569', lineHeight: 1.4 }}>{card.backText}</p>
+                  <div
+                    style={{ margin: 0, fontSize: 14, color: '#475569', lineHeight: 1.4, wordBreak: 'break-word', overflowWrap: 'anywhere' }}
+                    dangerouslySetInnerHTML={{ __html: card.backText }}
+                  />
                 </div>
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 16 }}>
@@ -992,7 +1002,7 @@ export function FlashcardPanel({ onToast, navParams, onNavigate: _onNavigate }: 
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         title={editCard ? `Chỉnh sửa thẻ #${editCard.id}` : 'Thêm thẻ lật mới'}
-        width={780}
+        width={920}
       >
         <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 16 }}>
           {/* Scope fields on top */}
@@ -1184,7 +1194,7 @@ export function FlashcardPanel({ onToast, navParams, onNavigate: _onNavigate }: 
           )}
 
           {/* Cards List */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14, maxHeight: '42vh', overflowY: 'auto', paddingRight: 4 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14, maxHeight: '55vh', overflowY: 'auto', paddingRight: 4 }}>
             {formCards.map((card, idx) => (
               <div
                 key={card.key}
@@ -1239,21 +1249,23 @@ export function FlashcardPanel({ onToast, navParams, onNavigate: _onNavigate }: 
                     </button>
                   )}
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                  <Textarea
-                    label="Mặt trước (Câu hỏi / Thuật ngữ)"
-                    value={card.frontText}
-                    onChange={(e) => updateCardField(idx, 'frontText', e.target.value)}
-                    placeholder="Ví dụ: Chiến dịch Điện Biên Phủ bắt đầu vào ngày nào?"
-                    rows={2}
-                  />
-                  <Textarea
-                    label="Mặt sau (Câu trả lời / Định nghĩa)"
-                    value={card.backText}
-                    onChange={(e) => updateCardField(idx, 'backText', e.target.value)}
-                    placeholder="Ví dụ: Ngày 13 tháng 3 năm 1954."
-                    rows={2}
-                  />
+                <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 16, width: '100%', minWidth: 0 }}>
+                  <div style={{ minWidth: 0, width: '100%' }}>
+                    <RichTextEditor
+                      label="Mặt trước (Câu hỏi / Thuật ngữ)"
+                      value={card.frontText}
+                      onChange={(val) => updateCardField(idx, 'frontText', val)}
+                      placeholder="Ví dụ: Chiến dịch Điện Biên Phủ bắt đầu vào ngày nào?"
+                    />
+                  </div>
+                  <div style={{ minWidth: 0, width: '100%' }}>
+                    <RichTextEditor
+                      label="Mặt sau (Câu trả lời / Định nghĩa)"
+                      value={card.backText}
+                      onChange={(val) => updateCardField(idx, 'backText', val)}
+                      placeholder="Ví dụ: Ngày 13 tháng 3 năm 1954."
+                    />
+                  </div>
                 </div>
               </div>
             ))}

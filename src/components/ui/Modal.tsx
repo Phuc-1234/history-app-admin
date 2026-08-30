@@ -54,6 +54,9 @@ export function Modal({
           flexDirection: 'column',
           overflow: 'hidden',
           animation: 'slideUp 0.2s ease',
+          boxSizing: 'border-box',
+          wordBreak: 'break-word',
+          overflowWrap: 'anywhere',
         }}
       >
         {/* Header */}
