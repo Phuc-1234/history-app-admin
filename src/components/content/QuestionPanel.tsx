@@ -8,7 +8,7 @@ import { Modal } from '../ui/Modal';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { Select } from '../ui/FormField';
 import { Spinner } from '../ui/Spinner';
-import { IconPlus, IconEdit, IconDelete, IconQuestion, IconXP, IconChevronDown, IconChevronUp, IconDownload, IconUpload } from '../ui/Icons';
+import { IconPlus, IconEdit, IconDelete, IconQuestion, IconXP, IconChevronDown, IconChevronUp, IconDownload, IconUpload, IconSearch, IconChevronLeft, IconChevronRight } from '../ui/Icons';
 import { RichTextEditor } from '../ui/RichTextEditor';
 import { stripHtml } from '../../utils/html';
 import { getDeleteErrorMessage } from '../../utils/deleteHelper';
@@ -42,6 +42,16 @@ const EMPTY_ANSWER: FormAnswer = { content: '', isCorrect: false, leftText: '', 
 export function QuestionPanel({ onToast }: QuestionPanelProps) {
   const [questions, setQuestions] = useState<AdminQuestionDto[]>([]);
   const [loading, setLoading] = useState(false);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [page, setPage] = useState(1);
+  const [jumpPage, setJumpPage] = useState('1');
+  const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+
+  useEffect(() => {
+    setJumpPage(String(page));
+  }, [page]);
 
   // Hierarchy lists for filters and forms
   const [grades, setGrades] = useState<GradeDto[]>([]);
@@ -85,6 +95,15 @@ export function QuestionPanel({ onToast }: QuestionPanelProps) {
   const [formSections, setFormSections] = useState<SectionDto[]>([]);
   const [formNodes, setFormNodes] = useState<NodeDto[]>([]);
 
+  // 0. Search debounce
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
   // 1. Fetch grades on mount
   useEffect(() => {
     client.get('/api/content/grades').then((r) => {
@@ -102,6 +121,7 @@ export function QuestionPanel({ onToast }: QuestionPanelProps) {
     setLessons([]);
     setSections([]);
     setNodes([]);
+    setPage(1);
     if (!selGradeId) return;
 
     client.get(`/api/content/grades/${selGradeId}/topics`).then((r) => {
@@ -117,6 +137,7 @@ export function QuestionPanel({ onToast }: QuestionPanelProps) {
     setLessons([]);
     setSections([]);
     setNodes([]);
+    setPage(1);
     if (!selTopicId) return;
 
     client.get(`/api/content/topics/${selTopicId}/lessons`).then((r) => {
@@ -130,6 +151,7 @@ export function QuestionPanel({ onToast }: QuestionPanelProps) {
     setSelNodeId('');
     setSections([]);
     setNodes([]);
+    setPage(1);
     if (!selLessonId) return;
 
     client.get(`/api/content/lessons/${selLessonId}/sections`).then((r) => {
@@ -141,6 +163,7 @@ export function QuestionPanel({ onToast }: QuestionPanelProps) {
   useEffect(() => {
     setSelNodeId('');
     setNodes([]);
+    setPage(1);
     if (!selSectionId) return;
 
     client.get(`/api/content/sections/${selSectionId}/nodes`).then((r) => {
@@ -152,22 +175,47 @@ export function QuestionPanel({ onToast }: QuestionPanelProps) {
   const fetchQuestions = useCallback(async () => {
     try {
       setLoading(true);
-      const params: any = {};
-      if (selGradeId) params.gradeId = Number(selGradeId);
-      if (selTopicId) params.topicId = Number(selTopicId);
-      if (selLessonId) params.lessonId = Number(selLessonId);
-      if (selSectionId) params.sectionId = Number(selSectionId);
-      if (selNodeId) params.nodeId = Number(selNodeId);
+      let scopeType: string | undefined;
+      let scopeId: number | undefined;
+
+      if (selNodeId) {
+        scopeType = 'NODE';
+        scopeId = Number(selNodeId);
+      } else if (selSectionId) {
+        scopeType = 'SECTION';
+        scopeId = Number(selSectionId);
+      } else if (selLessonId) {
+        scopeType = 'LESSON';
+        scopeId = Number(selLessonId);
+      } else if (selTopicId) {
+        scopeType = 'TOPIC';
+        scopeId = Number(selTopicId);
+      } else if (selGradeId) {
+        scopeType = 'GRADE';
+        scopeId = Number(selGradeId);
+      }
+
+      const params: any = {
+        page,
+        limit: 50,
+      };
+      if (debouncedSearch.trim()) params.search = debouncedSearch.trim();
+      if (scopeType && scopeId) {
+        params.scopeType = scopeType;
+        params.scopeId = scopeId;
+      }
       if (selType) params.type = selType;
 
       const res = await client.get('/api/admin/questions', { params });
       setQuestions(res.data.questions ?? []);
+      setTotal(res.data.total ?? (res.data.questions ?? []).length);
+      setTotalPages(res.data.totalPages ?? 1);
     } catch {
       onToast('Không tải được danh sách câu hỏi', 'error');
     } finally {
       setLoading(false);
     }
-  }, [selGradeId, selTopicId, selLessonId, selSectionId, selNodeId, selType, onToast]);
+  }, [selGradeId, selTopicId, selLessonId, selSectionId, selNodeId, selType, debouncedSearch, page, onToast]);
 
   useEffect(() => {
     fetchQuestions();
@@ -868,45 +916,95 @@ export function QuestionPanel({ onToast }: QuestionPanelProps) {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
         <div>
           <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: '#0f172a' }}>Ngân hàng câu hỏi</h2>
-          <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: 14 }}>{questions.length} câu hỏi hiển thị</p>
+          <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: 14 }}>
+            {total} câu hỏi {totalPages > 1 ? `(Trang ${page}/${totalPages})` : ''}
+          </p>
         </div>
         <Button icon={<IconPlus size={16} />} onClick={openCreate}>Thêm câu hỏi</Button>
       </div>
 
-      {/* Dynamic Filters */}
-      <div style={{ background: '#ffffff', padding: 16, borderRadius: 16, border: '1px solid #e2e8f0', marginBottom: 20 }}>
+      {/* Search & Dynamic Filters */}
+      <div style={{ background: '#ffffff', padding: 16, borderRadius: 12, border: '1px solid #e2e8f0', marginBottom: 20 }}>
+        {/* Search input */}
+        <div style={{ position: 'relative', marginBottom: 14 }}>
+          <div style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', display: 'flex', alignItems: 'center' }}>
+            <IconSearch size={16} />
+          </div>
+          <input
+            type="text"
+            placeholder="Tìm kiếm câu hỏi theo nội dung, tài liệu, giải thích hoặc ID (#)..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '10px 14px 10px 40px',
+              borderRadius: 8,
+              border: '1px solid #e2e8f0',
+              outline: 'none',
+              fontSize: 14,
+              boxSizing: 'border-box',
+              background: '#f8fafc',
+            }}
+          />
+          {search && (
+            <button
+              onClick={() => { setSearch(''); setPage(1); }}
+              style={{
+                position: 'absolute',
+                right: 12,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                background: '#e2e8f0',
+                border: 'none',
+                borderRadius: '50%',
+                width: 20,
+                height: 20,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                fontSize: 12,
+                color: '#64748b',
+                padding: 0
+              }}
+            >
+              ✕
+            </button>
+          )}
+        </div>
+
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
           <div>
             <label style={LABEL_STYLE}>Khối</label>
-            <select value={selGradeId} onChange={(e) => setSelGradeId(e.target.value)} style={SELECT_STYLE}>
+            <select value={selGradeId} onChange={(e) => { setSelGradeId(e.target.value); setPage(1); }} style={SELECT_STYLE}>
               <option value="">Tất cả Khối</option>
               {grades.map(g => <option key={g.id} value={g.id}>Khối {g.id}</option>)}
             </select>
           </div>
           <div>
             <label style={LABEL_STYLE}>Chủ đề</label>
-            <select value={selTopicId} onChange={(e) => setSelTopicId(e.target.value)} disabled={!topics.length} style={SELECT_STYLE}>
+            <select value={selTopicId} onChange={(e) => { setSelTopicId(e.target.value); setPage(1); }} disabled={!topics.length} style={SELECT_STYLE}>
               <option value="">Tất cả Chủ đề</option>
               {topics.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
             </select>
           </div>
           <div>
             <label style={LABEL_STYLE}>Bài học</label>
-            <select value={selLessonId} onChange={(e) => setSelLessonId(e.target.value)} disabled={!lessons.length} style={SELECT_STYLE}>
+            <select value={selLessonId} onChange={(e) => { setSelLessonId(e.target.value); setPage(1); }} disabled={!lessons.length} style={SELECT_STYLE}>
               <option value="">Tất cả Bài học</option>
               {lessons.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
             </select>
           </div>
           <div>
             <label style={LABEL_STYLE}>Phần</label>
-            <select value={selSectionId} onChange={(e) => setSelSectionId(e.target.value)} disabled={!sections.length} style={SELECT_STYLE}>
+            <select value={selSectionId} onChange={(e) => { setSelSectionId(e.target.value); setPage(1); }} disabled={!sections.length} style={SELECT_STYLE}>
               <option value="">Tất cả Phần</option>
               {sections.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
           </div>
           <div>
             <label style={LABEL_STYLE}>Loại câu hỏi</label>
-            <select value={selType} onChange={(e) => setSelType(e.target.value)} style={SELECT_STYLE}>
+            <select value={selType} onChange={(e) => { setSelType(e.target.value); setPage(1); }} style={SELECT_STYLE}>
               <option value="">Tất cả loại</option>
               <option value="CHOOSE">CHOOSE — Trắc nghiệm</option>
               <option value="FILL">FILL — Điền từ</option>
@@ -919,75 +1017,202 @@ export function QuestionPanel({ onToast }: QuestionPanelProps) {
       {loading ? (
         <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}><Spinner size={36} /></div>
       ) : questions.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '60px 20px', background: '#ffffff', borderRadius: 16, border: '2px dashed #e2e8f0' }}>
+        <div style={{ textAlign: 'center', padding: '60px 20px', background: '#ffffff', borderRadius: 12, border: '2px dashed #e2e8f0' }}>
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
             <IconQuestion size={48} color="#94a3b8" />
           </div>
           <p style={{ color: '#94a3b8', margin: 0, fontSize: 15 }}>Chưa có câu hỏi nào khớp với bộ lọc</p>
         </div>
       ) : (
-        <div style={{ borderRadius: 16, overflow: 'hidden', border: '1px solid #e2e8f0', background: '#ffffff', boxShadow: '0 2px 12px rgba(15,23,42,0.05)' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ background: 'linear-gradient(135deg, rgba(108,99,255,0.06), rgba(79,70,229,0.03))' }}>
-                <th style={TH_STYLE}>ID</th>
-                <th style={TH_STYLE}>Nội dung câu hỏi</th>
-                <th style={TH_STYLE}>Loại</th>
-                <th style={TH_STYLE}>Độ khó</th>
-                <th style={TH_STYLE}>Phạm vi (Scope)</th>
-                <th style={TH_STYLE}>Trạng thái</th>
-                <th style={{ ...TH_STYLE, textAlign: 'right' }}>Thao tác</th>
-              </tr>
-            </thead>
-            <tbody>
-              {questions.map((q, idx) => (
-                <tr key={q.id} style={{ background: idx % 2 === 0 ? '#ffffff' : '#fafbff', borderTop: '1px solid #f1f5f9' }}>
-                  <td style={{ ...TD_STYLE, fontWeight: 700 }}>#{q.id}</td>
-                  <td style={{ ...TD_STYLE, fontWeight: 600, color: '#0f172a', maxWidth: 320 }}>
-                    <div>
-                      <div dangerouslySetInnerHTML={{ __html: q.promptText }} style={{ maxHeight: 80, overflowY: 'auto' }} />
-                      {q.document && (
-                        <div style={{ fontSize: 12, color: '#64748b', fontStyle: 'italic', marginTop: 4 }}>
-                          Trích dẫn: "{stripHtml(q.document).substring(0, 60)}..."
-                        </div>
-                      )}
-                    </div>
-                  </td>
-                  <td style={TD_STYLE}>
-                    <span style={{ fontSize: 12, padding: '4px 8px', borderRadius: 6, fontWeight: 700, background: q.type === 'CHOOSE' ? '#eff6ff' : q.type === 'FILL' ? '#ecfdf5' : '#fff7ed', color: q.type === 'CHOOSE' ? '#1d4ed8' : q.type === 'FILL' ? '#047857' : '#c2410c' }}>
-                      {q.type}
-                    </span>
-                  </td>
-                  <td style={TD_STYLE}>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                      <IconXP size={14} color="#eab308" /> {q.difficulty} / 4
-                    </span>
-                  </td>
-                  <td style={TD_STYLE}>
-                    <span style={{ fontWeight: 600, color: '#4f46e5', fontSize: 13 }}>
-                      {getScopeBadgeLabel(q)}
-                    </span>
-                  </td>
-                  <td style={TD_STYLE}>
-                    <span style={{
-                      fontSize: 11, padding: '3px 8px', borderRadius: 6, fontWeight: 700,
-                      background: q.isActive !== false ? '#ecfdf5' : '#fef2f2',
-                      color: q.isActive !== false ? '#047857' : '#ef4444'
-                    }}>
-                      {q.isActive !== false ? 'Hoạt động' : 'Tạm ẩn'}
-                    </span>
-                  </td>
-                  <td style={{ ...TD_STYLE, textAlign: 'right' }}>
-                    <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                      <Button variant="secondary" icon={<IconEdit size={14} />} onClick={() => openEdit(q)} style={{ padding: '6px 12px', fontSize: 13 }}>Sửa</Button>
-                      <Button variant="danger" icon={<IconDelete size={14} />} onClick={() => setDeleteTarget(q)} style={{ padding: '6px 12px', fontSize: 13 }}>Xóa</Button>
-                    </div>
-                  </td>
+        <>
+          <div style={{ borderRadius: 12, overflow: 'hidden', border: '1px solid #e2e8f0', background: '#ffffff' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ background: 'linear-gradient(135deg, rgba(108,99,255,0.06), rgba(79,70,229,0.03))' }}>
+                  <th style={TH_STYLE}>ID</th>
+                  <th style={TH_STYLE}>Nội dung câu hỏi</th>
+                  <th style={TH_STYLE}>Loại</th>
+                  <th style={TH_STYLE}>Độ khó</th>
+                  <th style={TH_STYLE}>Phạm vi (Scope)</th>
+                  <th style={TH_STYLE}>Trạng thái</th>
+                  <th style={{ ...TH_STYLE, textAlign: 'right' }}>Thao tác</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {questions.map((q, idx) => (
+                  <tr key={q.id} style={{ background: idx % 2 === 0 ? '#ffffff' : '#fafbff', borderTop: '1px solid #f1f5f9' }}>
+                    <td style={{ ...TD_STYLE, fontWeight: 700 }}>#{q.id}</td>
+                    <td style={{ ...TD_STYLE, fontWeight: 600, color: '#0f172a', maxWidth: 320 }}>
+                      <div>
+                        <div dangerouslySetInnerHTML={{ __html: q.promptText }} style={{ maxHeight: 80, overflowY: 'auto' }} />
+                        {q.document && (
+                          <div style={{ fontSize: 12, color: '#64748b', fontStyle: 'italic', marginTop: 4 }}>
+                            Trích dẫn: "{stripHtml(q.document).substring(0, 60)}..."
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    <td style={TD_STYLE}>
+                      <span style={{ fontSize: 12, padding: '4px 8px', borderRadius: 6, fontWeight: 700, background: q.type === 'CHOOSE' ? '#eff6ff' : q.type === 'FILL' ? '#ecfdf5' : '#fff7ed', color: q.type === 'CHOOSE' ? '#1d4ed8' : q.type === 'FILL' ? '#047857' : '#c2410c' }}>
+                        {q.type}
+                      </span>
+                    </td>
+                    <td style={TD_STYLE}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                        <IconXP size={14} color="#eab308" /> {q.difficulty} / 4
+                      </span>
+                    </td>
+                    <td style={TD_STYLE}>
+                      <span style={{ fontWeight: 600, color: '#4f46e5', fontSize: 13 }}>
+                        {getScopeBadgeLabel(q)}
+                      </span>
+                    </td>
+                    <td style={TD_STYLE}>
+                      <span style={{
+                        fontSize: 11, padding: '3px 8px', borderRadius: 6, fontWeight: 700,
+                        background: q.isActive !== false ? '#ecfdf5' : '#fef2f2',
+                        color: q.isActive !== false ? '#047857' : '#ef4444'
+                      }}>
+                        {q.isActive !== false ? 'Hoạt động' : 'Tạm ẩn'}
+                      </span>
+                    </td>
+                    <td style={{ ...TD_STYLE, textAlign: 'right' }}>
+                      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                        <Button variant="secondary" icon={<IconEdit size={14} />} onClick={() => openEdit(q)} style={{ padding: '6px 12px', fontSize: 13 }}>Sửa</Button>
+                        <Button variant="danger" icon={<IconDelete size={14} />} onClick={() => setDeleteTarget(q)} style={{ padding: '6px 12px', fontSize: 13 }}>Xóa</Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginTop: 16,
+              padding: '12px 16px',
+              background: '#ffffff',
+              borderRadius: 12,
+              border: '1px solid #e2e8f0',
+              flexWrap: 'wrap',
+              gap: 12
+            }}>
+              <div style={{ fontSize: 13, color: '#64748b' }}>
+                Hiển thị <strong>{questions.length > 0 ? (page - 1) * 50 + 1 : 0}</strong> – <strong>{Math.min(page * 50, total)}</strong> trên tổng số <strong>{total}</strong> câu hỏi
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <Button
+                  variant="secondary"
+                  disabled={page <= 1 || loading}
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  icon={<IconChevronLeft size={14} />}
+                  style={{ padding: '6px 12px', fontSize: 13 }}
+                >
+                  Trang trước
+                </Button>
+
+                <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1)
+                    .filter(p => p === 1 || p === totalPages || (p >= page - 2 && p <= page + 2))
+                    .reduce<(number | string)[]>((acc, p, idx, arr) => {
+                      if (idx > 0 && typeof arr[idx - 1] === 'number' && (p as number) - (arr[idx - 1] as number) > 1) {
+                        acc.push('...');
+                      }
+                      acc.push(p);
+                      return acc;
+                    }, [])
+                    .map((p, pIdx) => {
+                      if (typeof p === 'string') {
+                        return <span key={`ellipsis-${pIdx}`} style={{ padding: '0 4px', color: '#94a3b8' }}>...</span>;
+                      }
+                      const isCurrent = p === page;
+                      return (
+                        <button
+                          key={p}
+                          onClick={() => setPage(p)}
+                          disabled={loading}
+                          style={{
+                            minWidth: 32,
+                            height: 32,
+                            padding: '0 6px',
+                            borderRadius: 8,
+                            border: isCurrent ? '1px solid #4f46e5' : '1px solid #e2e8f0',
+                            background: isCurrent ? '#4f46e5' : '#ffffff',
+                            color: isCurrent ? '#ffffff' : '#334155',
+                            fontWeight: isCurrent ? 700 : 500,
+                            fontSize: 13,
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          {p}
+                        </button>
+                      );
+                    })}
+                </div>
+
+                <Button
+                  variant="secondary"
+                  disabled={page >= totalPages || loading}
+                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                  icon={<IconChevronRight size={14} />}
+                  style={{ padding: '6px 12px', fontSize: 13 }}
+                >
+                  Trang sau
+                </Button>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#64748b', marginLeft: 6 }}>
+                  <span>Đến trang:</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={totalPages}
+                    value={jumpPage}
+                    onChange={(e) => setJumpPage(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        const val = parseInt(jumpPage, 10);
+                        if (!isNaN(val) && val >= 1 && val <= totalPages) {
+                          setPage(val);
+                        }
+                      }
+                    }}
+                    onBlur={() => {
+                      const val = parseInt(jumpPage, 10);
+                      if (!isNaN(val) && val >= 1 && val <= totalPages) {
+                        setPage(val);
+                      } else {
+                        setJumpPage(String(page));
+                      }
+                    }}
+                    style={{
+                      width: 52,
+                      height: 32,
+                      padding: '0 4px',
+                      textAlign: 'center',
+                      borderRadius: 8,
+                      border: '1px solid #e2e8f0',
+                      fontSize: 13,
+                      outline: 'none',
+                      background: '#ffffff',
+                      color: '#0f172a',
+                      fontWeight: 600,
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                  <span>/ {totalPages}</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {/* Create / Edit Modal */}

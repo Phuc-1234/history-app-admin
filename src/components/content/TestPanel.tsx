@@ -19,6 +19,7 @@ import {
   IconTarget
 } from '../ui/Icons';
 import { getDeleteErrorMessage } from '../../utils/deleteHelper';
+import { QuestionBatchModal, type FormQuestionItem } from './QuestionBatchModal';
 
 interface TestPanelProps {
   onToast: (msg: string, type: ToastType) => void;
@@ -56,6 +57,12 @@ export function TestPanel({ onToast }: TestPanelProps) {
   const [deleteTarget, setDeleteTarget] = useState<AdminTestDto | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [expandedQIds, setExpandedQIds] = useState<Set<number>>(new Set());
+
+  // Tabs and search states for questions inside Modal
+  const [questionTab, setQuestionTab] = useState<'BANK' | 'LOCAL'>('BANK');
+  const [questionSearch, setQuestionSearch] = useState('');
+  const [localQuestions, setLocalQuestions] = useState<FormQuestionItem[]>([]);
+  const [localModalOpen, setLocalModalOpen] = useState(false);
 
   // Cascading dropdowns inside Form Modal
   const [formTopics, setFormTopics] = useState<TopicDto[]>([]);
@@ -123,11 +130,19 @@ export function TestPanel({ onToast }: TestPanelProps) {
     setForm(EMPTY_FORM);
     setSelectedQIds([]);
     setExpandedQIds(new Set());
+    setQuestionTab('BANK');
+    setQuestionSearch('');
+    setLocalQuestions([]);
+    setLocalModalOpen(false);
     setModalOpen(true);
   };
 
   const openEdit = async (t: AdminTestDto) => {
     setEditTest(t);
+    setQuestionTab('BANK');
+    setQuestionSearch('');
+    setLocalQuestions([]);
+    setLocalModalOpen(false);
 
     const scopeTypeVal = (t.scopeType as any) || 'GRADE';
     const scopeIdVal = t.scopeId;
@@ -218,6 +233,56 @@ export function TestPanel({ onToast }: TestPanelProps) {
 
     try {
       setSaving(true);
+
+      // 1. Create staged local questions on backend, inheriting the test's scope
+      const createdQIds: number[] = [];
+      if (localQuestions.length > 0) {
+        for (const qItem of localQuestions) {
+          const diff = Number(qItem.difficulty) || 1;
+          let answerDataJson: any = null;
+          if (qItem.type === 'CHOOSE') {
+            const options = qItem.answers.map(a => a.content.trim()).filter(Boolean);
+            const correctOption = qItem.answers
+              .map((a, i) => (a.isCorrect ? i : -1))
+              .filter(i => i !== -1);
+            answerDataJson = { options, correctOption };
+          } else if (qItem.type === 'FILL') {
+            const acceptedAnswers = qItem.answers.map(a => a.content.trim()).filter(Boolean);
+            answerDataJson = { acceptedAnswers };
+          } else if (qItem.type === 'MATCH') {
+            const pairs = qItem.answers
+              .filter(a => a.leftText.trim() && a.rightText.trim())
+              .map(a => ({ [a.leftText.trim()]: a.rightText.trim() }));
+            answerDataJson = { pairs };
+          }
+
+          const qPayload = {
+            type: qItem.type,
+            difficulty: diff,
+            promptText: qItem.promptText.trim(),
+            document: qItem.document.trim() || null,
+            explanation: qItem.explanation.trim() || null,
+            isActive: qItem.isActive !== false,
+            scopeType: form.scopeType,
+            scopeId: scopeId,
+            answerDataJson,
+            gradeId: form.gradeId ? Number(form.gradeId) : null,
+            topicId: form.topicId ? Number(form.topicId) : null,
+            lessonId: form.lessonId ? Number(form.lessonId) : null,
+            sectionId: form.sectionId ? Number(form.sectionId) : null,
+            nodeId: null,
+          };
+
+          const qRes = await client.post('/api/admin/questions', qPayload);
+          const createdId = qRes.data?.id ?? qRes.data?.question?.id;
+          if (createdId) {
+            createdQIds.push(createdId);
+          }
+        }
+      }
+
+      const finalQuestionIds = Array.from(new Set([...selectedQIds, ...createdQIds]));
+
       const payload = {
         title: form.title,
         summary: form.summary || null,
@@ -227,7 +292,7 @@ export function TestPanel({ onToast }: TestPanelProps) {
         isNationalTest: form.scopeType === 'NATIONAL',
         isPro: form.isPro,
         imgUrl: form.imgUrl.trim() || null,
-        questionIds: selectedQIds,
+        questionIds: finalQuestionIds,
       };
 
       if (editTest) {
@@ -237,8 +302,10 @@ export function TestPanel({ onToast }: TestPanelProps) {
         await client.post('/api/admin/tests', payload);
         onToast(`Đã tạo đề thi ${form.title}`, 'success');
       }
+      setLocalQuestions([]);
       setModalOpen(false);
       fetchTests();
+      fetchQuestionsPool();
     } catch (err: any) {
       onToast(err?.response?.data?.error ?? 'Lỗi khi lưu đề thi', 'error');
     } finally {
@@ -466,118 +533,268 @@ export function TestPanel({ onToast }: TestPanelProps) {
           {/* Vertical Divider */}
           <div style={{ width: 1, background: '#e2e8f0', alignSelf: 'stretch' }} />
 
-          {/* Right Column: Question Selection */}
+          {/* Right Column: Question Selection & Creation */}
           <div style={{ flex: '1.2', display: 'flex', flexDirection: 'column', minWidth: 500 }}>
-            <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: '#475569', marginBottom: 8 }}>
-              Gán câu hỏi tĩnh từ Ngân hàng ({selectedQIds.length} đã chọn)
-            </label>
-            <div style={{ border: '1px solid #cbd5e1', borderRadius: 8, flex: 1, overflowY: 'auto', padding: 8, display: 'flex', flexDirection: 'column', gap: 8, background: '#f8fafc', maxHeight: '55vh' }}>
-              {questions.map((q) => {
-                const isChecked = selectedQIds.includes(q.id);
-                const isExpanded = expandedQIds.has(q.id);
-                return (
-                  <div key={q.id} style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '8px 10px', borderRadius: 8, background: isChecked ? '#f5f3ff' : '#ffffff', border: isChecked ? '1px solid #ddd6fe' : '1px solid #e2e8f0', transition: 'all 0.15s ease' }}>
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', width: '100%' }}>
-                      <input
-                        type="checkbox"
-                        checked={isChecked}
-                        onChange={() => toggleQuestionSelection(q.id)}
-                        style={{ cursor: 'pointer', marginTop: 3 }}
-                      />
-                      <div
-                        onClick={(e) => toggleQuestionExpand(q.id, e)}
-                        style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1, cursor: 'pointer' }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-                          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                            <span style={{ color: '#64748b', fontWeight: 600, fontSize: 12.5 }}>#{q.id}</span>
-                            <span style={{ background: '#e2e8f0', fontSize: 9.5, padding: '1px 5px', borderRadius: 4, fontWeight: 700, color: '#475569' }}>{q.type}</span>
-                          </div>
-                          <span style={{ fontSize: 11, color: '#c37938', display: 'flex', alignItems: 'center', gap: 2, fontWeight: 600 }}>
-                            {isExpanded ? 'Thu gọn' : 'Xem chi tiết'}
-                            <svg
-                              width="12"
-                              height="12"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2.5"
-                              style={{
-                                transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
-                                transition: 'transform 0.2s ease',
-                              }}
+            {/* Tabs Header */}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 12, borderBottom: '1px solid #e2e8f0', paddingBottom: 8 }}>
+              <button
+                type="button"
+                onClick={() => setQuestionTab('BANK')}
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: 30,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  border: 'none',
+                  background: questionTab === 'BANK' ? '#4f46e5' : '#f1f5f9',
+                  color: questionTab === 'BANK' ? '#ffffff' : '#64748b',
+                  transition: 'all 0.15s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6
+                }}
+              >
+                <span>Ngân hàng câu hỏi</span>
+                <span style={{
+                  fontSize: 11,
+                  padding: '1px 6px',
+                  borderRadius: 12,
+                  background: questionTab === 'BANK' ? 'rgba(255,255,255,0.25)' : '#e2e8f0',
+                  color: questionTab === 'BANK' ? '#ffffff' : '#475569',
+                }}>
+                  {selectedQIds.length}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setQuestionTab('LOCAL')}
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: 30,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  border: 'none',
+                  background: questionTab === 'LOCAL' ? '#4f46e5' : '#f1f5f9',
+                  color: questionTab === 'LOCAL' ? '#ffffff' : '#64748b',
+                  transition: 'all 0.15s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6
+                }}
+              >
+                <span>Thêm câu hỏi mới</span>
+                {localQuestions.length > 0 && (
+                  <span style={{
+                    fontSize: 11,
+                    padding: '1px 6px',
+                    borderRadius: 12,
+                    background: questionTab === 'LOCAL' ? 'rgba(255,255,255,0.25)' : '#10b981',
+                    color: '#ffffff',
+                    fontWeight: 700
+                  }}>
+                    {localQuestions.length}
+                  </span>
+                )}
+              </button>
+            </div>
+
+            {/* Tab 1: Bank Questions */}
+            {questionTab === 'BANK' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, flex: 1, minHeight: 0 }}>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <input
+                    type="text"
+                    placeholder="Tìm kiếm theo ID hoặc nội dung câu hỏi..."
+                    value={questionSearch}
+                    onChange={(e) => setQuestionSearch(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      borderRadius: 8,
+                      border: '1px solid #cbd5e1',
+                      outline: 'none',
+                      fontSize: 13,
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                  {questionSearch && (
+                    <Button variant="ghost" onClick={() => setQuestionSearch('')} style={{ fontSize: 12, padding: '6px 10px', whiteSpace: 'nowrap' }}>
+                      Xóa lọc
+                    </Button>
+                  )}
+                </div>
+
+                <div style={{ border: '1px solid #cbd5e1', borderRadius: 8, flex: 1, overflowY: 'auto', padding: 8, display: 'flex', flexDirection: 'column', gap: 8, background: '#f8fafc', maxHeight: '50vh' }}>
+                  {questions
+                    .filter((q) => {
+                      if (!questionSearch.trim()) return true;
+                      const term = questionSearch.toLowerCase().trim();
+                      return (
+                        `#${q.id}`.includes(term) ||
+                        String(q.id).includes(term) ||
+                        stripHtml(q.promptText || '').toLowerCase().includes(term)
+                      );
+                    })
+                    .map((q) => {
+                      const isChecked = selectedQIds.includes(q.id);
+                      const isExpanded = expandedQIds.has(q.id);
+                      return (
+                        <div key={q.id} style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '8px 10px', borderRadius: 8, background: isChecked ? '#f5f3ff' : '#ffffff', border: isChecked ? '1px solid #ddd6fe' : '1px solid #e2e8f0', transition: 'all 0.15s ease' }}>
+                          <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', width: '100%' }}>
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={() => toggleQuestionSelection(q.id)}
+                              style={{ cursor: 'pointer', marginTop: 3 }}
+                            />
+                            <div
+                              onClick={(e) => toggleQuestionExpand(q.id, e)}
+                              style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1, cursor: 'pointer' }}
                             >
-                              <polyline points="6 9 12 15 18 9"></polyline>
-                            </svg>
-                          </span>
-                        </div>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                                  <span style={{ color: '#64748b', fontWeight: 600, fontSize: 12.5 }}>#{q.id}</span>
+                                  <span style={{ background: '#e2e8f0', fontSize: 9.5, padding: '1px 5px', borderRadius: 4, fontWeight: 700, color: '#475569' }}>{q.type}</span>
+                                </div>
+                                <span style={{ fontSize: 11, color: '#c37938', display: 'flex', alignItems: 'center', gap: 2, fontWeight: 600 }}>
+                                  {isExpanded ? 'Thu gọn' : 'Xem chi tiết'}
+                                  <svg
+                                    width="12"
+                                    height="12"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2.5"
+                                    style={{
+                                      transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                                      transition: 'transform 0.2s ease',
+                                    }}
+                                  >
+                                    <polyline points="6 9 12 15 18 9"></polyline>
+                                  </svg>
+                                </span>
+                              </div>
 
-                        {!isExpanded && (
-                          <div style={{
-                            color: '#334155',
-                            fontSize: 13,
-                            lineHeight: 1.4,
-                            display: '-webkit-box',
-                            WebkitLineClamp: 2,
-                            WebkitBoxOrient: 'vertical',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                          }}>
-                            {stripHtml(q.promptText)}
+                              {!isExpanded && (
+                                <div style={{
+                                  color: '#334155',
+                                  fontSize: 13,
+                                  lineHeight: 1.4,
+                                  display: '-webkit-box',
+                                  WebkitLineClamp: 2,
+                                  WebkitBoxOrient: 'vertical',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                }}>
+                                  {stripHtml(q.promptText)}
+                                </div>
+                              )}
+                            </div>
                           </div>
-                        )}
-                      </div>
-                    </div>
 
-                    {isExpanded && (
-                      <div style={{ padding: '8px 10px', background: '#f8fafc', border: '1px dashed #cbd5e1', borderRadius: 6, marginLeft: 22, marginTop: 4, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                        {/* Full prompt text */}
-                        <div style={{ fontWeight: 600, color: '#1e293b', fontSize: 12.5, lineHeight: 1.4 }}>
+                          {isExpanded && (
+                            <div style={{ padding: '8px 10px', background: '#f8fafc', border: '1px dashed #cbd5e1', borderRadius: 6, marginLeft: 22, marginTop: 4, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                              {/* Full prompt text */}
+                              <div style={{ fontWeight: 600, color: '#1e293b', fontSize: 12.5, lineHeight: 1.4 }}>
+                                {stripHtml(q.promptText)}
+                              </div>
+
+                              {/* Document if exists */}
+                              {q.document && (
+                                <div style={{ background: '#f1f5f9', padding: 8, borderRadius: 6, fontSize: 11.5, color: '#475569', borderLeft: '3px solid #cbd5e1' }}>
+                                  <strong>Tài liệu:</strong> {stripHtml(q.document)}
+                                </div>
+                              )}
+
+                              {/* Answer Choices */}
+                              {q.answers && q.answers.length > 0 && (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, paddingLeft: 8 }}>
+                                  {q.answers.map((ans) => {
+                                    let isAnsCorrect = ans.isCorrect;
+                                    let answerText = ans.content;
+                                    if (q.type === 'MATCH') {
+                                      answerText = `${ans.leftText} ➔ ${ans.rightText}`;
+                                      isAnsCorrect = true;
+                                    } else if (q.type === 'FILL') {
+                                      answerText = ans.correctAnswer || ans.content;
+                                      isAnsCorrect = true;
+                                    }
+                                    return (
+                                      <div key={ans.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 6, fontSize: 12, color: isAnsCorrect ? '#16a34a' : '#475569', fontWeight: isAnsCorrect ? 600 : 400 }}>
+                                        <span style={{ fontSize: 13, lineHeight: 1 }}>{isAnsCorrect ? '✓' : '◦'}</span>
+                                        <span style={{ flex: 1 }}>{stripHtml(answerText || '')}</span>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+
+                              {/* Explanation */}
+                              {q.explanation && (
+                                <div style={{ fontSize: 11, color: '#a66228', padding: '6px 8px', background: '#fffbeb', borderRadius: 6, borderLeft: '3px solid #fbbf24' }}>
+                                  <strong>Giải thích:</strong> {stripHtml(q.explanation)}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
+            )}
+
+            {/* Tab 2: Local Staged Questions */}
+            {questionTab === 'LOCAL' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, flex: 1, minHeight: 0 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: '#475569' }}>
+                    {localQuestions.length === 0 ? 'Chưa có câu hỏi tự tạo nào' : `${localQuestions.length} câu hỏi mới thêm`}
+                  </span>
+                  <Button
+                    icon={localQuestions.length > 0 ? <IconEdit size={14} /> : <IconPlus size={14} />}
+                    onClick={() => setLocalModalOpen(true)}
+                    style={{ padding: '6px 12px', fontSize: 13 }}
+                  >
+                    {localQuestions.length > 0 ? 'Chỉnh sửa câu hỏi mới thêm' : 'Thêm câu hỏi mới'}
+                  </Button>
+                </div>
+
+                <div style={{ border: '1px solid #cbd5e1', borderRadius: 8, flex: 1, overflowY: 'auto', padding: 8, display: 'flex', flexDirection: 'column', gap: 8, background: '#f8fafc', maxHeight: '50vh' }}>
+                  {localQuestions.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '36px 16px', color: '#94a3b8', fontSize: 13, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontWeight: 600 }}>Chưa có câu hỏi tự tạo nào cho đề thi này.</span>
+                      <span style={{ fontSize: 12, color: '#64748b', maxWidth: 360 }}>
+                        Nhấn nút <strong>"Thêm câu hỏi mới"</strong> ở trên để soạn câu hỏi trực tiếp hoặc nhập từ file Excel. Khi lưu đề thi, các câu hỏi này sẽ tự động được gán phạm vi tương ứng của đề thi.
+                      </span>
+                    </div>
+                  ) : (
+                    localQuestions.map((q, idx) => (
+                      <div key={q.key} style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '10px 12px', borderRadius: 8, background: '#ffffff', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                            <span style={{ fontWeight: 700, fontSize: 13, color: '#4f46e5' }}>#{idx + 1}</span>
+                            <span style={{ background: '#e0e7ff', color: '#4338ca', fontSize: 10, padding: '1px 6px', borderRadius: 4, fontWeight: 700 }}>{q.type}</span>
+                            <span style={{ background: '#fef3c7', color: '#b45309', fontSize: 10, padding: '1px 6px', borderRadius: 4, fontWeight: 600 }}>Mức {q.difficulty}</span>
+                            <span style={{ fontSize: 11, color: '#10b981', fontWeight: 600 }}>({q.answers.length} đáp án)</span>
+                          </div>
+                          <div style={{ display: 'flex', gap: 6 }}>
+                            <Button variant="ghost" onClick={() => setLocalModalOpen(true)} style={{ padding: '2px 8px', fontSize: 12, color: '#64748b' }}>Sửa</Button>
+                            <Button variant="danger" onClick={() => setLocalQuestions(prev => prev.filter((_, i) => i !== idx))} style={{ padding: '2px 8px', fontSize: 12 }}>Xóa</Button>
+                          </div>
+                        </div>
+                        <div style={{ color: '#1e293b', fontSize: 13, lineHeight: 1.4, maxHeight: 60, overflowY: 'auto' }}>
                           {stripHtml(q.promptText)}
                         </div>
-
-                        {/* Document if exists */}
-                        {q.document && (
-                          <div style={{ background: '#f1f5f9', padding: 8, borderRadius: 6, fontSize: 11.5, color: '#475569', borderLeft: '3px solid #cbd5e1' }}>
-                            <strong>Tài liệu:</strong> {stripHtml(q.document)}
-                          </div>
-                        )}
-
-                        {/* Answer Choices */}
-                        {q.answers && q.answers.length > 0 && (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, paddingLeft: 8 }}>
-                            {q.answers.map((ans) => {
-                              let isAnsCorrect = ans.isCorrect;
-                              let answerText = ans.content;
-                              if (q.type === 'MATCH') {
-                                answerText = `${ans.leftText} ➔ ${ans.rightText}`;
-                                isAnsCorrect = true;
-                              } else if (q.type === 'FILL') {
-                                answerText = ans.correctAnswer || ans.content;
-                                isAnsCorrect = true;
-                              }
-                              return (
-                                <div key={ans.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 6, fontSize: 12, color: isAnsCorrect ? '#16a34a' : '#475569', fontWeight: isAnsCorrect ? 600 : 400 }}>
-                                  <span style={{ fontSize: 13, lineHeight: 1 }}>{isAnsCorrect ? '✓' : '◦'}</span>
-                                  <span style={{ flex: 1 }}>{stripHtml(answerText || '')}</span>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-
-                        {/* Explanation */}
-                        {q.explanation && (
-                          <div style={{ fontSize: 11, color: '#a66228', padding: '6px 8px', background: '#fffbeb', borderRadius: 6, borderLeft: '3px solid #fbbf24' }}>
-                            <strong>Giải thích:</strong> {stripHtml(q.explanation)}
-                          </div>
-                        )}
                       </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -586,6 +803,19 @@ export function TestPanel({ onToast }: TestPanelProps) {
           <Button onClick={handleSave} loading={saving}>{editTest ? 'Lưu thay đổi' : 'Tạo mới'}</Button>
         </div>
       </Modal>
+
+      {/* Sub-modal for creating / editing local staged questions */}
+      <QuestionBatchModal
+        open={localModalOpen}
+        title={localQuestions.length > 0 ? 'Chỉnh sửa danh sách câu hỏi mới' : 'Thêm câu hỏi mới vào đề thi'}
+        initialQuestions={localQuestions}
+        onClose={() => setLocalModalOpen(false)}
+        onSave={(qs) => {
+          setLocalQuestions(qs);
+          onToast(`Đã lưu ${qs.length} câu hỏi vào danh sách đề thi`, 'success');
+        }}
+        onToast={onToast}
+      />
 
       {/* Delete confirm */}
       <ConfirmDialog
