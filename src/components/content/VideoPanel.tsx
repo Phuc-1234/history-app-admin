@@ -137,9 +137,6 @@ export function VideoPanel({ onToast }: VideoPanelProps) {
         const lRes = await client.get(`/api/content/topics/${firstTopicId}/lessons`);
         const ls: LessonDto[] = lRes.data.lessons ?? [];
         setLessons(ls);
-        if (targetLessonId === undefined && ls.length > 0) {
-          setForm(f => ({ ...f, lessonId: String(ls[0].id) }));
-        }
       } else {
         setSelectedTopicId('');
         setLessons([]);
@@ -175,11 +172,7 @@ export function VideoPanel({ onToast }: VideoPanelProps) {
       const res = await client.get(`/api/content/topics/${topicId}/lessons`);
       const ls = res.data.lessons ?? [];
       setLessons(ls);
-      if (ls.length > 0) {
-        setForm(f => ({ ...f, lessonId: String(ls[0].id) }));
-      } else {
-        setForm(f => ({ ...f, lessonId: '' }));
-      }
+      setForm(f => ({ ...f, lessonId: '' }));
     } catch {
       onToast('Không tải được danh sách bài học', 'error');
     }
