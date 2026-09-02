@@ -21,6 +21,7 @@ import {
   IconInventory,
   IconPackagePricing,
   IconFeedback,
+  IconGoogle,
 } from '../components/ui/Icons';
 import type { UserProfile } from '../types/api';
 import { APP_CONFIG } from '../config';
@@ -330,6 +331,30 @@ export function LoginPage() {
               style={{ width: '100%', justifyContent: 'center', padding: '14px', fontSize: 15 }}
             >
               Đăng nhập
+            </Button>
+
+            <div style={{ display: 'flex', alignItems: 'center', margin: '20px 0', gap: 12 }}>
+              <div style={{ flex: 1, height: 1, backgroundColor: '#e2e8f0' }} />
+              <span style={{ fontSize: 12, color: '#94a3b8', textTransform: 'uppercase', fontWeight: 600 }}>hoặc</span>
+              <div style={{ flex: 1, height: 1, backgroundColor: '#e2e8f0' }} />
+            </div>
+
+            <Button
+              type="button"
+              variant="secondary"
+              icon={<IconGoogle size={18} />}
+              style={{
+                width: '100%',
+                justifyContent: 'center',
+                padding: '13px',
+                fontSize: 15,
+                background: '#ffffff',
+                border: '1.5px solid #e2e8f0',
+                color: '#1e293b',
+              }}
+              onClick={() => {}}
+            >
+              Đăng nhập với Google
             </Button>
           </form>
         </div>
