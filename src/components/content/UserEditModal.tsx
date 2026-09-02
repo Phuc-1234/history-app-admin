@@ -325,7 +325,7 @@ export function UserEditModal({
                   }}
                 >
                   <option value="false" style={{ color: '#16a34a' }}>Hiển thị công khai</option>
-                  <option value="true" style={{ color: '#ef4444' }}>Bị ẩn (Vô hiệu hóa)</option>
+                  <option value="true" style={{ color: '#ef4444' }}>Bị ẩn</option>
                 </select>
                 <span style={CHEVRON_WRAPPER_STYLE}>
                   <IconChevronDown size={16} color={selectedIsHidden ? '#ef4444' : '#16a34a'} />
