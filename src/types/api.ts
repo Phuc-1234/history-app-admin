@@ -127,6 +127,7 @@ export interface AdminTestDto {
   isPro: boolean;
   imgUrl: string | null;
   questionIds: number[];
+  lesson?: { id: number; name: string; position: number } | null;
   // Backup
   isManual: boolean;
   questionNumber: number;

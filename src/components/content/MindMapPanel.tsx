@@ -171,7 +171,7 @@ const SectionNode = ({ data }: any) => {
         position: 'relative',
         fontFamily: 'Inter, system-ui, sans-serif',
         textAlign: 'left',
-        overflow: 'hidden',
+        overflow: 'visible',
       }}
     >
       <Handle
@@ -292,7 +292,7 @@ const SectionNode = ({ data }: any) => {
             fontSize: '14px',
             fontWeight: 'bold',
             cursor: 'pointer',
-            zIndex: 10,
+            zIndex: 30,
             boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
             transition: 'all 0.15s ease',
           }}

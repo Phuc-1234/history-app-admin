@@ -224,7 +224,7 @@ export function TestPanel({ onToast }: TestPanelProps) {
         presetId: form.presetId,
         scopeType: form.scopeType,
         scopeId,
-        isNationalTest: form.isNationalTest,
+        isNationalTest: form.scopeType === 'NATIONAL',
         isPro: form.isPro,
         imgUrl: form.imgUrl.trim() || null,
         questionIds: selectedQIds,
@@ -265,7 +265,13 @@ export function TestPanel({ onToast }: TestPanelProps) {
     if (t.scopeType === 'NATIONAL') return 'Quốc gia';
     if (t.scopeType === 'GRADE') return `Khối ${t.scopeId}`;
     if (t.scopeType === 'TOPIC') return `Chủ đề #${t.scopeId}`;
-    if (t.scopeType === 'LESSON') return `Bài #${t.scopeId}`;
+    if (t.scopeType === 'LESSON') {
+      if (t.lesson) {
+        const truncatedName = t.lesson.name.length > 25 ? `${t.lesson.name.substring(0, 25)}...` : t.lesson.name;
+        return `Bài ${t.lesson.position}: ${truncatedName}`;
+      }
+      return `Bài #${t.scopeId}`;
+    }
     if (t.scopeType === 'SECTION') return `Phần #${t.scopeId}`;
     return 'Chưa xác định';
   };
@@ -356,14 +362,9 @@ export function TestPanel({ onToast }: TestPanelProps) {
                     </td>
                     <td style={TD_STYLE}>
                       <div style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
-                        <span style={{ fontWeight: 600, color: '#c37938' }}>
+                        <span style={{ fontWeight: 600, color: '#c37938' }} title={t.lesson?.name || undefined}>
                           {getScopeBadgeLabel(t)}
                         </span>
-                        {t.isNationalTest && (
-                          <span style={{ marginLeft: 6, padding: '2px 6px', background: '#fee2e2', color: '#ef4444', borderRadius: 4, fontSize: 10, fontWeight: 700 }}>
-                            Quốc gia
-                          </span>
-                        )}
                       </div>
                     </td>
                     <td style={TD_STYLE}>
@@ -398,9 +399,7 @@ export function TestPanel({ onToast }: TestPanelProps) {
               <Select label="Cấp độ phạm vi (Scope Level)" value={form.scopeType} onChange={(e) => setForm(f => ({ ...f, scopeType: e.target.value as any }))}>
                 <option value="NATIONAL">NATIONAL — Quốc gia</option>
                 <option value="GRADE">GRADE — Khối lớp</option>
-                <option value="TOPIC">TOPIC — Chủ đề</option>
                 <option value="LESSON">LESSON — Bài học</option>
-                <option value="SECTION">SECTION — Phần</option>
               </Select>
             </div>
 
@@ -416,40 +415,32 @@ export function TestPanel({ onToast }: TestPanelProps) {
                   {grades.map(g => <option key={g.id} value={g.id}>Khối {g.id}</option>)}
                 </Select>
 
-                {['TOPIC', 'LESSON', 'SECTION'].includes(form.scopeType) && (
-                  <Select
-                    label="Chủ đề"
-                    value={form.topicId}
-                    onChange={(e) => setForm(f => ({ ...f, topicId: e.target.value, lessonId: '', sectionId: '' }))}
-                    disabled={!formTopics.length}
-                  >
-                    <option value="">Chọn Chủ đề</option>
-                    {formTopics.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                  </Select>
-                )}
+                {form.scopeType === 'LESSON' && (
+                  <>
+                    <Select
+                      label="Chủ đề"
+                      value={form.topicId}
+                      onChange={(e) => setForm(f => ({ ...f, topicId: e.target.value, lessonId: '', sectionId: '' }))}
+                      disabled={!formTopics.length}
+                    >
+                      <option value="">Chọn Chủ đề</option>
+                      {formTopics.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                    </Select>
 
-                {['LESSON', 'SECTION'].includes(form.scopeType) && (
-                  <Select
-                    label="Bài học"
-                    value={form.lessonId}
-                    onChange={(e) => setForm(f => ({ ...f, lessonId: e.target.value, sectionId: '' }))}
-                    disabled={!formLessons.length}
-                  >
-                    <option value="">Chọn Bài học</option>
-                    {formLessons.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
-                  </Select>
-                )}
-
-                {form.scopeType === 'SECTION' && (
-                  <Select
-                    label="Phần"
-                    value={form.sectionId}
-                    onChange={(e) => setForm(f => ({ ...f, sectionId: e.target.value }))}
-                    disabled={!formSections.length}
-                  >
-                    <option value="">Chọn Phần</option>
-                    {formSections.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                  </Select>
+                    <Select
+                      label="Bài học"
+                      value={form.lessonId}
+                      onChange={(e) => setForm(f => ({ ...f, lessonId: e.target.value, sectionId: '' }))}
+                      disabled={!formLessons.length}
+                    >
+                      <option value="">Chọn Bài học</option>
+                      {formLessons.map(l => (
+                        <option key={l.id} value={l.id}>
+                          Bài {l.position ?? l.id}: {l.name}
+                        </option>
+                      ))}
+                    </Select>
+                  </>
                 )}
               </div>
             )}
@@ -458,23 +449,17 @@ export function TestPanel({ onToast }: TestPanelProps) {
             <Input label="Mô tả tóm tắt" value={form.summary} onChange={(e) => setForm(f => ({ ...f, summary: e.target.value }))} placeholder="Mô tả ngắn gọn..." />
             <ImageUploadInput label="Hình ảnh đề thi" value={form.imgUrl} onChange={(val) => setForm(f => ({ ...f, imgUrl: val }))} placeholder="Đường dẫn ảnh hoặc tải lên..." />
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <Select label="Đề thi quốc gia" value={form.isNationalTest ? 'true' : 'false'} onChange={(e) => setForm(f => ({ ...f, isNationalTest: e.target.value === 'true' }))}>
-                <option value="false">Không</option>
-                <option value="true">Đúng (National Test)</option>
-              </Select>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 24 }}>
-                <input
-                  type="checkbox"
-                  id="test-is-pro"
-                  checked={form.isPro}
-                  onChange={(e) => setForm(f => ({ ...f, isPro: e.target.checked }))}
-                  style={{ width: 16, height: 16, cursor: 'pointer' }}
-                />
-                <label htmlFor="test-is-pro" style={{ fontSize: 14, fontWeight: 600, color: '#334155', cursor: 'pointer' }}>
-                  Chỉ dành cho tài khoản PRO
-                </label>
-              </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+              <input
+                type="checkbox"
+                id="test-is-pro"
+                checked={form.isPro}
+                onChange={(e) => setForm(f => ({ ...f, isPro: e.target.checked }))}
+                style={{ width: 16, height: 16, cursor: 'pointer' }}
+              />
+              <label htmlFor="test-is-pro" style={{ fontSize: 14, fontWeight: 600, color: '#334155', cursor: 'pointer' }}>
+                Chỉ dành cho tài khoản PRO
+              </label>
             </div>
           </div>
 
