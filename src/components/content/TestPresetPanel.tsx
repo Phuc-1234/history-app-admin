@@ -33,6 +33,142 @@ const EMPTY_DEFAULT_FORM = {
   defaultTestPresetId: ''
 };
 
+const EXAM_TOOLTIP = 'Có thể di chuyển đến bất kỳ câu hỏi nào. Chỉ biết kết quả sau khi nộp bài';
+const PRACTICE_TOOLTIP = 'Làm lần lượt từng câu hỏi và biết kết quả ngay sau mỗi câu.';
+
+function adjustRatios(current: number[], targetIdx: number, rawVal: number): number[] {
+  const nextR = [...current];
+  const newVal = Math.max(0, Math.min(100, Math.round(rawVal)));
+  const delta = newVal - nextR[targetIdx];
+  if (delta === 0) return nextR;
+
+  nextR[targetIdx] = newVal;
+  let remainingDelta = -delta;
+
+  const otherIndices = [];
+  for (let step = 1; step <= 3; step++) {
+    otherIndices.push((targetIdx + step) % 4);
+  }
+
+  for (const idx of otherIndices) {
+    if (remainingDelta === 0) break;
+    const oldVal = nextR[idx];
+    if (remainingDelta > 0) {
+      const canAdd = 100 - oldVal;
+      const add = Math.min(canAdd, remainingDelta);
+      nextR[idx] += add;
+      remainingDelta -= add;
+    } else {
+      const canSub = oldVal;
+      const sub = Math.min(canSub, -remainingDelta);
+      nextR[idx] -= sub;
+      remainingDelta += sub;
+    }
+  }
+
+  const currentSum = nextR.reduce((a, b) => a + b, 0);
+  if (currentSum !== 100) {
+    nextR[targetIdx] += (100 - currentSum);
+  }
+
+  return nextR;
+}
+
+function Tooltip({ text, children }: { text: string; children: React.ReactNode }) {
+  const [show, setShow] = useState(false);
+
+  return (
+    <span
+      style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}
+      onMouseEnter={() => setShow(true)}
+      onMouseLeave={() => setShow(false)}
+    >
+      {children}
+      {show && (
+        <span
+          style={{
+            position: 'absolute',
+            bottom: 'calc(100% + 8px)',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: '#1e293b',
+            color: '#f8fafc',
+            padding: '7px 11px',
+            borderRadius: 8,
+            fontSize: 12,
+            fontWeight: 500,
+            lineHeight: 1.4,
+            whiteSpace: 'normal',
+            width: 'max-content',
+            maxWidth: 260,
+            textAlign: 'left',
+            zIndex: 9999,
+            boxShadow: '0 8px 20px rgba(0,0,0,0.2)',
+            pointerEvents: 'none',
+          }}
+        >
+          {text}
+          <span
+            style={{
+              position: 'absolute',
+              top: '100%',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              borderWidth: 5,
+              borderStyle: 'solid',
+              borderColor: '#1e293b transparent transparent transparent',
+            }}
+          />
+        </span>
+      )}
+    </span>
+  );
+}
+
+function PurposeBadge({ type }: { type: 'EXAM' | 'PRACTICE' }) {
+  const isExam = type === 'EXAM';
+  const tooltip = isExam ? EXAM_TOOLTIP : PRACTICE_TOOLTIP;
+
+  return (
+    <Tooltip text={tooltip}>
+      <span
+        style={{
+          fontSize: 11,
+          padding: '3px 8px',
+          borderRadius: 6,
+          fontWeight: 700,
+          cursor: 'pointer',
+          background: isExam ? '#fee2e2' : '#ecfdf5',
+          color: isExam ? '#ef4444' : '#047857',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 5,
+          userSelect: 'none'
+        }}
+      >
+        <span>{isExam ? 'Kiểm tra' : 'Thử thách'}</span>
+        <span
+          style={{
+            width: 13,
+            height: 13,
+            borderRadius: '50%',
+            background: isExam ? '#fca5a5' : '#a7f3d0',
+            color: isExam ? '#7f1d1d' : '#064e3b',
+            fontSize: 9,
+            fontWeight: 800,
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            lineHeight: 1
+          }}
+        >
+          ?
+        </span>
+      </span>
+    </Tooltip>
+  );
+}
+
 export function TestPresetPanel({ onToast }: TestPresetPanelProps) {
   const [presets, setPresets] = useState<TestPresetDto[]>([]);
   const [defaults, setDefaults] = useState<ScopeTestPresetDefaultDto[]>([]);
@@ -109,6 +245,23 @@ export function TestPresetPanel({ onToast }: TestPresetPanelProps) {
       ratio4: String(r['4'] ?? 10)
     });
     setPresetModalOpen(true);
+  };
+
+  const handleRatioChange = (targetIdx: number, val: number) => {
+    const current = [
+      Number(presetForm.ratio1) || 0,
+      Number(presetForm.ratio2) || 0,
+      Number(presetForm.ratio3) || 0,
+      Number(presetForm.ratio4) || 0,
+    ];
+    const adjusted = adjustRatios(current, targetIdx, val);
+    setPresetForm(f => ({
+      ...f,
+      ratio1: String(adjusted[0]),
+      ratio2: String(adjusted[1]),
+      ratio3: String(adjusted[2]),
+      ratio4: String(adjusted[3]),
+    }));
   };
 
   const handleSavePreset = async () => {
@@ -232,7 +385,7 @@ export function TestPresetPanel({ onToast }: TestPresetPanelProps) {
             <thead>
               <tr style={{ background: 'linear-gradient(135deg, rgba(108,99,255,0.06), rgba(79,70,229,0.03))' }}>
                 <th style={TH_STYLE}>Tên mẫu đề</th>
-                <th style={TH_STYLE}>Mục đích</th>
+                <th style={TH_STYLE}>Loại</th>
                 <th style={TH_STYLE}>Số câu hỏi</th>
                 <th style={TH_STYLE}>Điểm đạt / Thời gian</th>
                 <th style={TH_STYLE}>Tỷ lệ độ khó (Nhận biết ➔ VDC)</th>
@@ -246,13 +399,7 @@ export function TestPresetPanel({ onToast }: TestPresetPanelProps) {
                   <tr key={p.id} style={{ background: idx % 2 === 0 ? '#ffffff' : '#fafbff', borderTop: '1px solid #f1f5f9' }}>
                     <td style={{ ...TD_STYLE, fontWeight: 700, color: '#0f172a' }}>{p.name}</td>
                     <td style={TD_STYLE}>
-                      <span style={{
-                        fontSize: 11, padding: '4px 8px', borderRadius: 6, fontWeight: 700,
-                        background: p.purposeType === 'EXAM' ? '#fee2e2' : '#ecfdf5',
-                        color: p.purposeType === 'EXAM' ? '#ef4444' : '#047857'
-                      }}>
-                        {p.purposeType === 'EXAM' ? 'EXAM — Thi cử' : 'PRACTICE — Luyện tập'}
-                      </span>
+                      <PurposeBadge type={p.purposeType} />
                     </td>
                     <td style={{ ...TD_STYLE, fontWeight: 600 }}>
                       {p.questionCount !== null ? `${p.questionCount} câu` : 'Lấy tất cả'}
@@ -269,7 +416,7 @@ export function TestPresetPanel({ onToast }: TestPresetPanelProps) {
                     </td>
                     <td style={TD_STYLE}>
                       <div style={{ fontSize: 13, color: '#475569', display: 'flex', gap: 8 }}>
-                        <span style={{ background: '#f1f5f9', padding: '2px 6px', borderRadius: 4 }}>Mức độ 1: {r['1'] ?? 40}%</span>
+                        <span style={{ background: '#ecfdf5', color: '#047857', padding: '2px 6px', borderRadius: 4 }}>Mức độ 1: {r['1'] ?? 40}%</span>
                         <span style={{ background: '#e0e7ff', padding: '2px 6px', borderRadius: 4 }}>Mức độ 2: {r['2'] ?? 30}%</span>
                         <span style={{ background: '#fef3c7', padding: '2px 6px', borderRadius: 4 }}>Mức độ 3: {r['3'] ?? 20}%</span>
                         <span style={{ background: '#fee2e2', padding: '2px 6px', borderRadius: 4 }}>Mức độ 4: {r['4'] ?? 10}%</span>
@@ -293,26 +440,99 @@ export function TestPresetPanel({ onToast }: TestPresetPanelProps) {
       <Modal open={presetModalOpen} title={editPreset ? `Sửa mẫu đề: ${editPreset.name}` : 'Tạo cấu hình mẫu đề mới'} onClose={() => setPresetModalOpen(false)}>
         <Input label="Tên cấu hình mẫu đề" value={presetForm.name} onChange={(e) => setPresetForm(f => ({ ...f, name: e.target.value }))} placeholder="Ví dụ: Đề thi 15 phút mặc định" />
         
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 12 }}>
-          <Select label="Mục đích sử dụng" value={presetForm.purposeType} onChange={(e) => setPresetForm(f => ({ ...f, purposeType: e.target.value as any }))}>
-            <option value="PRACTICE">Luyện tập (Practice)</option>
-            <option value="EXAM">Thi cử (Exam)</option>
-          </Select>
-          <Input label="Số câu hỏi" type="number" value={presetForm.questionCount} onChange={(e) => setPresetForm(f => ({ ...f, questionCount: e.target.value }))} placeholder="Bỏ trống nếu lấy hết" />
-          <Input label="Thời gian (phút)" type="number" value={presetForm.timeLimit} onChange={(e) => setPresetForm(f => ({ ...f, timeLimit: e.target.value }))} placeholder="Bỏ trống nếu vô hạn" />
+        {/* Row 2: Loại on left, tip on the side without "hướng dẫn" and "i" */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.3fr', gap: 14, alignItems: 'center', marginBottom: 12 }}>
+          <div>
+            <Select
+              label="Loại"
+              value={presetForm.purposeType}
+              onChange={(e) => setPresetForm(f => ({ ...f, purposeType: e.target.value as any }))}
+            >
+              <option value="PRACTICE">Thử thách</option>
+              <option value="EXAM">Kiểm tra</option>
+            </Select>
+          </div>
+          <div style={{
+            fontSize: 12.5,
+            color: '#475569',
+            background: '#f8fafc',
+            padding: '10px 14px',
+            borderRadius: 8,
+            border: '1px solid #e2e8f0',
+            lineHeight: 1.45,
+            marginTop: 2
+          }}>
+            {presetForm.purposeType === 'EXAM' ? EXAM_TOOLTIP : PRACTICE_TOOLTIP}
+          </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12, marginBottom: 12 }}>
+        {/* Row 3: 3 fields: ques num, time, pass threshold onto the same row beneath */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 16 }}>
+          <Input label="Số câu hỏi" type="number" value={presetForm.questionCount} onChange={(e) => setPresetForm(f => ({ ...f, questionCount: e.target.value }))} placeholder="Bỏ trống nếu lấy hết" />
+          <Input label="Thời gian (phút)" type="number" value={presetForm.timeLimit} onChange={(e) => setPresetForm(f => ({ ...f, timeLimit: e.target.value }))} placeholder="Bỏ trống nếu vô hạn" />
           <Input label="Tỉ lệ điểm vượt qua (%)" type="number" value={presetForm.passThreshold} onChange={(e) => setPresetForm(f => ({ ...f, passThreshold: e.target.value }))} />
         </div>
 
-        <div style={{ background: '#f8fafc', padding: 14, borderRadius: 10, border: '1px solid #e2e8f0', marginBottom: 16 }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: '#334155', display: 'block', marginBottom: 10 }}>Cấu trúc tỉ lệ độ khó câu hỏi (Tổng bằng 100%)</span>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
-            <Input label="Mức độ 1 (%)" type="number" value={presetForm.ratio1} onChange={(e) => setPresetForm(f => ({ ...f, ratio1: e.target.value }))} />
-            <Input label="Mức độ 2 (%)" type="number" value={presetForm.ratio2} onChange={(e) => setPresetForm(f => ({ ...f, ratio2: e.target.value }))} />
-            <Input label="Mức độ 3 (%)" type="number" value={presetForm.ratio3} onChange={(e) => setPresetForm(f => ({ ...f, ratio3: e.target.value }))} />
-            <Input label="Mức độ 4 (%)" type="number" value={presetForm.ratio4} onChange={(e) => setPresetForm(f => ({ ...f, ratio4: e.target.value }))} />
+        {/* Difficulty ratio with interactive auto-balancing volume sliders */}
+        <div style={{ background: '#f8fafc', padding: 16, borderRadius: 12, border: '1px solid #e2e8f0', marginBottom: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: '#334155' }}>
+              Cấu trúc tỉ lệ độ khó 
+            </span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: '#10b981', background: '#ecfdf5', padding: '2px 8px', borderRadius: 12 }}>
+              Tổng: {Number(presetForm.ratio1) + Number(presetForm.ratio2) + Number(presetForm.ratio3) + Number(presetForm.ratio4)}%
+            </span>
+          </div>
+
+          {/* Overall combined distribution bar */}
+          <div style={{ display: 'flex', height: 10, borderRadius: 6, overflow: 'hidden', marginBottom: 16, background: '#e2e8f0' }}>
+            <div style={{ width: `${presetForm.ratio1}%`, background: '#10b981', transition: 'width 0.1s' }} title={`Mức 1: ${presetForm.ratio1}%`} />
+            <div style={{ width: `${presetForm.ratio2}%`, background: '#6366f1', transition: 'width 0.1s' }} title={`Mức 2: ${presetForm.ratio2}%`} />
+            <div style={{ width: `${presetForm.ratio3}%`, background: '#d97706', transition: 'width 0.1s' }} title={`Mức 3: ${presetForm.ratio3}%`} />
+            <div style={{ width: `${presetForm.ratio4}%`, background: '#ef4444', transition: 'width 0.1s' }} title={`Mức 4: ${presetForm.ratio4}%`} />
+          </div>
+
+          {/* 4 Volume Sliders */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {[
+              { label: 'Mức độ 1 (Nhận biết)', key: 'ratio1', idx: 0, color: '#10b981', bg: '#ecfdf5' },
+              { label: 'Mức độ 2 (Thông hiểu)', key: 'ratio2', idx: 1, color: '#6366f1', bg: '#e0e7ff' },
+              { label: 'Mức độ 3 (Vận dụng)', key: 'ratio3', idx: 2, color: '#d97706', bg: '#fef3c7' },
+              { label: 'Mức độ 4 (Vận dụng cao)', key: 'ratio4', idx: 3, color: '#ef4444', bg: '#fee2e2' },
+            ].map(item => {
+              const val = Number((presetForm as any)[item.key]) || 0;
+              return (
+                <div key={item.key} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ width: 160, fontSize: 12.5, fontWeight: 600, color: '#334155' }}>
+                    {item.label}
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={val}
+                    onChange={(e) => handleRatioChange(item.idx, Number(e.target.value))}
+                    className="custom-range-slider"
+                    style={{
+                      flex: 1,
+                      color: item.color,
+                    }}
+                  />
+                  <span style={{
+                    width: 48,
+                    textAlign: 'right',
+                    fontWeight: 700,
+                    fontSize: 13,
+                    color: item.color,
+                    background: item.bg,
+                    padding: '2px 8px',
+                    borderRadius: 6
+                  }}>
+                    {val}%
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </div>
 
@@ -348,9 +568,14 @@ export function TestPresetPanel({ onToast }: TestPresetPanelProps) {
               <option value="NODE">Nút kiến thức</option>
             </Select>
 
-            <Select label="Mục đích" value={defaultForm.purposeType} onChange={(e) => setDefaultForm(f => ({ ...f, purposeType: e.target.value as any }))}>
-              <option value="PRACTICE">Luyện tập (Practice)</option>
-              <option value="EXAM">Thi cử (Exam)</option>
+            <Select
+              label="Loại"
+              value={defaultForm.purposeType}
+              onChange={(e) => setDefaultForm(f => ({ ...f, purposeType: e.target.value as any }))}
+              title={defaultForm.purposeType === 'EXAM' ? EXAM_TOOLTIP : PRACTICE_TOOLTIP}
+            >
+              <option value="PRACTICE">Thử thách</option>
+              <option value="EXAM">Kiểm tra</option>
             </Select>
 
             <Select label="Mẫu cấu hình mặc định" value={defaultForm.defaultTestPresetId} onChange={(e) => setDefaultForm(f => ({ ...f, defaultTestPresetId: e.target.value }))}>
@@ -376,7 +601,7 @@ export function TestPresetPanel({ onToast }: TestPresetPanelProps) {
               <thead>
                 <tr style={{ background: '#f1f5f9' }}>
                   <th style={{ ...TH_STYLE, padding: '8px 12px' }}>Cấp độ</th>
-                  <th style={{ ...TH_STYLE, padding: '8px 12px' }}>Mục đích</th>
+                  <th style={{ ...TH_STYLE, padding: '8px 12px' }}>Loại</th>
                   <th style={{ ...TH_STYLE, padding: '8px 12px' }}>Mẫu mặc định</th>
                   <th style={{ ...TH_STYLE, padding: '8px 12px', textAlign: 'right' }}>Thao tác</th>
                 </tr>
@@ -385,7 +610,9 @@ export function TestPresetPanel({ onToast }: TestPresetPanelProps) {
                 {defaults.map((d) => (
                   <tr key={`${d.scopeType}-${d.purposeType}`} style={{ borderTop: '1px solid #e2e8f0' }}>
                     <td style={{ ...TD_STYLE, padding: '8px 12px', fontWeight: 600 }}>{d.scopeType}</td>
-                    <td style={{ ...TD_STYLE, padding: '8px 12px' }}>{d.purposeType}</td>
+                    <td style={{ ...TD_STYLE, padding: '8px 12px' }}>
+                      <PurposeBadge type={d.purposeType} />
+                    </td>
                     <td style={{ ...TD_STYLE, padding: '8px 12px', color: '#6366f1', fontWeight: 600 }}>{d.presetName ?? d.defaultTestPresetId}</td>
                     <td style={{ ...TD_STYLE, padding: '8px 12px', textAlign: 'right' }}>
                       <button
