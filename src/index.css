@@ -171,3 +171,46 @@ a, select, input {
   transform: scale(0.998);
 }
 
+/* Custom Range Slider */
+.custom-range-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  background: #e2e8f0;
+  border-radius: 4px;
+  outline: none;
+  cursor: pointer;
+}
+.custom-range-slider::-webkit-slider-runnable-track {
+  height: 6px;
+  background: #e2e8f0;
+  border-radius: 4px;
+}
+.custom-range-slider::-moz-range-track {
+  height: 6px;
+  background: #e2e8f0;
+  border-radius: 4px;
+}
+.custom-range-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: currentColor;
+  cursor: pointer;
+  border: 2px solid #ffffff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  margin-top: -5px;
+}
+.custom-range-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: currentColor;
+  cursor: pointer;
+  border: 2px solid #ffffff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+}
+

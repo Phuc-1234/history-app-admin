@@ -39,6 +39,60 @@ const EMPTY_FORM = {
   imgUrl: ''
 };
 
+const EXAM_TOOLTIP = 'Có thể di chuyển đến bất kỳ câu hỏi nào. Chỉ biết kết quả sau khi nộp bài';
+const PRACTICE_TOOLTIP = 'Làm lần lượt từng câu hỏi và biết kết quả ngay sau mỗi câu.';
+
+function Tooltip({ text, children }: { text: string; children: React.ReactNode }) {
+  const [show, setShow] = useState(false);
+
+  return (
+    <span
+      style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}
+      onMouseEnter={() => setShow(true)}
+      onMouseLeave={() => setShow(false)}
+    >
+      {children}
+      {show && (
+        <span
+          style={{
+            position: 'absolute',
+            bottom: 'calc(100% + 8px)',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: '#1e293b',
+            color: '#f8fafc',
+            padding: '7px 11px',
+            borderRadius: 8,
+            fontSize: 12,
+            fontWeight: 500,
+            lineHeight: 1.4,
+            whiteSpace: 'normal',
+            width: 'max-content',
+            maxWidth: 260,
+            textAlign: 'left',
+            zIndex: 9999,
+            boxShadow: '0 8px 20px rgba(0,0,0,0.2)',
+            pointerEvents: 'none',
+          }}
+        >
+          {text}
+          <span
+            style={{
+              position: 'absolute',
+              top: '100%',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              borderWidth: 5,
+              borderStyle: 'solid',
+              borderColor: '#1e293b transparent transparent transparent',
+            }}
+          />
+        </span>
+      )}
+    </span>
+  );
+}
+
 export function TestPanel({ onToast }: TestPanelProps) {
   const [tests, setTests] = useState<AdminTestDto[]>([]);
   const [questions, setQuestions] = useState<AdminQuestionDto[]>([]);
@@ -380,8 +434,7 @@ export function TestPanel({ onToast }: TestPanelProps) {
             <thead>
               <tr style={{ background: 'linear-gradient(135deg, rgba(108,99,255,0.06), rgba(79,70,229,0.03))' }}>
                 <th style={TH_STYLE}>Đề thi</th>
-                <th style={TH_STYLE}>Mẫu cấu hình (Preset)</th>
-                <th style={TH_STYLE}>Thông tinPreset</th>
+                <th style={TH_STYLE}>Mẫu đề</th>
                 <th style={TH_STYLE}>Phạm vi liên kết</th>
                 <th style={TH_STYLE}>Số câu hỏi gán</th>
                 <th style={{ ...TH_STYLE, textAlign: 'right' }}>Thao tác</th>
@@ -390,6 +443,7 @@ export function TestPanel({ onToast }: TestPanelProps) {
             <tbody>
               {tests.map((t, idx) => {
                 const stats = getPresetStats(t.presetId);
+                const isExam = stats?.purposeType === 'EXAM';
                 return (
                   <tr key={t.id} style={{ background: idx % 2 === 0 ? '#ffffff' : '#fafbff', borderTop: '1px solid #f1f5f9' }}>
                     <td style={TD_STYLE}>
@@ -409,22 +463,56 @@ export function TestPanel({ onToast }: TestPanelProps) {
                       </div>
                     </td>
                     <td style={TD_STYLE}>
-                      <span style={{ fontWeight: 600, color: '#090d16' }}>
-                        {getPresetName(t.presetId)}
-                      </span>
-                    </td>
-                    <td style={TD_STYLE}>
                       {stats ? (
-                        <div style={{ fontSize: 13, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                            <IconClock size={13} color="#64748b" /> {stats.timeLimit ? `${stats.timeLimit} phút` : 'Vô hạn'}
-                          </span>
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                            <IconTarget size={13} color="#64748b" /> Vượt qua: {stats.passThreshold}%
-                          </span>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ fontWeight: 700, color: '#0f172a', fontSize: 13.5 }}>
+                              {stats.name}
+                            </span>
+                            <Tooltip text={isExam ? EXAM_TOOLTIP : PRACTICE_TOOLTIP}>
+                              <span
+                                style={{
+                                  fontSize: 10.5,
+                                  padding: '2px 7px',
+                                  borderRadius: 6,
+                                  fontWeight: 700,
+                                  cursor: 'pointer',
+                                  background: isExam ? '#fee2e2' : '#ecfdf5',
+                                  color: isExam ? '#ef4444' : '#047857',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: 4
+                                }}
+                              >
+                                <span>{isExam ? 'Kiểm tra' : 'Thử thách'}</span>
+                                <span style={{
+                                  width: 12,
+                                  height: 12,
+                                  borderRadius: '50%',
+                                  background: isExam ? '#fca5a5' : '#a7f3d0',
+                                  color: isExam ? '#7f1d1d' : '#064e3b',
+                                  fontSize: 8.5,
+                                  fontWeight: 800,
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  lineHeight: 1
+                                }}>?</span>
+                              </span>
+                            </Tooltip>
+                          </div>
+
+                          <div style={{ display: 'flex', gap: 10, fontSize: 12, color: '#64748b' }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                              <IconClock size={12} color="#64748b" /> {stats.timeLimit ? `${stats.timeLimit} phút` : 'Vô hạn'}
+                            </span>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                              <IconTarget size={12} color="#64748b" /> Đạt: {stats.passThreshold}%
+                            </span>
+                          </div>
                         </div>
                       ) : (
-                        <span style={{ color: '#94a3b8' }}>—</span>
+                        <span style={{ color: '#94a3b8', fontSize: 13 }}>{getPresetName(t.presetId)}</span>
                       )}
                     </td>
                     <td style={TD_STYLE}>
@@ -460,7 +548,7 @@ export function TestPanel({ onToast }: TestPanelProps) {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <Select label="Mẫu cấu hình đề thi (Preset)" value={form.presetId} onChange={(e) => setForm(f => ({ ...f, presetId: e.target.value }))}>
                 <option value="">Chọn một mẫu cấu hình</option>
-                {presets.map(p => <option key={p.id} value={p.id}>{p.name} ({p.purposeType === 'EXAM' ? 'Thi' : 'Luyện tập'})</option>)}
+                {presets.map(p => <option key={p.id} value={p.id}>{p.name} ({p.purposeType === 'EXAM' ? 'Kiểm tra' : 'Thử thách'})</option>)}
               </Select>
 
               <Select label="Cấp độ phạm vi (Scope Level)" value={form.scopeType} onChange={(e) => setForm(f => ({ ...f, scopeType: e.target.value as any }))}>
@@ -469,6 +557,78 @@ export function TestPanel({ onToast }: TestPanelProps) {
                 <option value="LESSON">LESSON — Bài học</option>
               </Select>
             </div>
+
+            {/* Selected Preset Info Card */}
+            {(() => {
+              const selectedPreset = presets.find(p => p.id === form.presetId);
+              if (!selectedPreset) return null;
+              const isExam = selectedPreset.purposeType === 'EXAM';
+              const r = selectedPreset.difficultyRatioJson || {};
+              return (
+                <div style={{
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: 10,
+                  padding: '10px 12px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 8,
+                  fontSize: 12.5,
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontWeight: 700, color: '#334155' }}>Loại:</span>
+                      <Tooltip text={isExam ? EXAM_TOOLTIP : PRACTICE_TOOLTIP}>
+                        <span
+                          style={{
+                            fontSize: 11,
+                            padding: '2px 8px',
+                            borderRadius: 6,
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            background: isExam ? '#fee2e2' : '#ecfdf5',
+                            color: isExam ? '#ef4444' : '#047857',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 4
+                          }}
+                        >
+                          <span>{isExam ? 'Kiểm tra' : 'Thử thách'}</span>
+                          <span style={{
+                            width: 13,
+                            height: 13,
+                            borderRadius: '50%',
+                            background: isExam ? '#fca5a5' : '#a7f3d0',
+                            color: isExam ? '#7f1d1d' : '#064e3b',
+                            fontSize: 9,
+                            fontWeight: 800,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            lineHeight: 1
+                          }}>?</span>
+                        </span>
+                      </Tooltip>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: 10, color: '#475569', fontSize: 12 }}>
+                      <span><strong>Số câu:</strong> {selectedPreset.questionCount !== null ? `${selectedPreset.questionCount} câu` : 'Lấy tất cả'}</span>
+                      <span><strong>Thời gian:</strong> {selectedPreset.timeLimit ? `${selectedPreset.timeLimit} phút` : 'Vô hạn'}</span>
+                      <span><strong>Điểm đạt:</strong> {selectedPreset.passThreshold}%</span>
+                    </div>
+                  </div>
+
+                  {/* Difficulty ratio distribution */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, color: '#64748b', flexWrap: 'wrap' }}>
+                    <span style={{ fontWeight: 600 }}>Tỷ lệ độ khó:</span>
+                    <span style={{ background: '#ecfdf5', color: '#047857', padding: '1px 6px', borderRadius: 4 }}>Mức 1: {r['1'] ?? 40}%</span>
+                    <span style={{ background: '#e0e7ff', color: '#4338ca', padding: '1px 6px', borderRadius: 4 }}>Mức 2: {r['2'] ?? 30}%</span>
+                    <span style={{ background: '#fef3c7', color: '#b45309', padding: '1px 6px', borderRadius: 4 }}>Mức 3: {r['3'] ?? 20}%</span>
+                    <span style={{ background: '#fee2e2', color: '#b91c1c', padding: '1px 6px', borderRadius: 4 }}>Mức 4: {r['4'] ?? 10}%</span>
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Cascade selections depending on Scope Type */}
             {form.scopeType !== 'NATIONAL' && (
