@@ -64,29 +64,24 @@ export function OverviewPanel() {
           <UserGrowthPanel />
         </div>
 
-        {/* Phần 3 — Doanh thu */}
+        {/* Phần 3 — Phân tích người dùng */}
+        <div id="sec-users" style={{ scrollMarginTop: SECTION_SCROLL_MARGIN }}>
+          <UserAnalytics roleSlices={roleSlices} streakBuckets={streakBuckets} derived={derived} />
+        </div>
+
+        {/* Phần 4 — Doanh thu */}
         <div id="sec-revenue" style={{ scrollMarginTop: SECTION_SCROLL_MARGIN }}>
           <RevenuePanel />
         </div>
 
-        {/* Phần 4 — Tiến độ học nội dung */}
+        {/* Phần 5 — Tiến độ học nội dung */}
         <div id="sec-content-progress" style={{ scrollMarginTop: SECTION_SCROLL_MARGIN }}>
           <ContentProgressPanel />
         </div>
 
-        {/* Phần 5 — Biểu đồ hoạt động */}
+        {/* Phần 6 — Biểu đồ hoạt động */}
         <div id="sec-activity" style={{ scrollMarginTop: SECTION_SCROLL_MARGIN }}>
           <GrowthCharts />
-        </div>
-
-        {/* Phần AI — Thống kê & Bảng xếp hạng AI Token */}
-        <div id="sec-ai" style={{ scrollMarginTop: SECTION_SCROLL_MARGIN }}>
-          <AiUsagePanel />
-        </div>
-
-        {/* Phần 6 — Phân tích người dùng */}
-        <div id="sec-users" style={{ scrollMarginTop: SECTION_SCROLL_MARGIN }}>
-          <UserAnalytics roleSlices={roleSlices} streakBuckets={streakBuckets} derived={derived} />
         </div>
 
         {/* Phần 7 — Thống kê làm bài & câu hỏi */}
@@ -99,6 +94,11 @@ export function OverviewPanel() {
         {/* Phần 8 — Bảng xếp hạng */}
         <div id="sec-leaderboard" style={{ scrollMarginTop: SECTION_SCROLL_MARGIN }}>
           <Leaderboard topXp={topXp} topStreak={topStreak} topGold={topGold} />
+        </div>
+
+        {/* Phần AI — Thống kê & Bảng xếp hạng AI Token */}
+        <div id="sec-ai" style={{ scrollMarginTop: SECTION_SCROLL_MARGIN }}>
+          <AiUsagePanel />
         </div>
 
         {/* Phần 9 — Hoạt động gần đây */}

@@ -1,5 +1,4 @@
-// src/components/content/TestPanel.tsx
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import client from '../../api/client';
 import type { AdminTestDto, AdminQuestionDto, GradeDto, TopicDto, LessonDto, SectionDto, TestPresetDto } from '../../types/api';
 import type { ToastType } from '../../hooks/useToast';
@@ -115,6 +114,13 @@ export function TestPanel({ onToast }: TestPanelProps) {
   // Tabs and search states for questions inside Modal
   const [questionTab, setQuestionTab] = useState<'BANK' | 'LOCAL'>('BANK');
   const [questionSearch, setQuestionSearch] = useState('');
+  const [debouncedQuestionSearch, setDebouncedQuestionSearch] = useState('');
+  const [poolPage, setPoolPage] = useState(1);
+  const [poolTotalPages, setPoolTotalPages] = useState(1);
+  const [poolTotal, setPoolTotal] = useState(0);
+  const [poolJumpPage, setPoolJumpPage] = useState('1');
+  const [poolLoading, setPoolLoading] = useState(false);
+  const prioritizeQIdsRef = useRef<number[]>([]);
   const [localQuestions, setLocalQuestions] = useState<FormQuestionItem[]>([]);
   const [localModalOpen, setLocalModalOpen] = useState(false);
 
@@ -145,23 +151,61 @@ export function TestPanel({ onToast }: TestPanelProps) {
     }
   }, []);
 
-  const fetchQuestionsPool = useCallback(async () => {
+  const fetchQuestionsPool = useCallback(async (
+    pageToFetch: number = poolPage,
+    searchVal: string = debouncedQuestionSearch,
+    prioritizeList?: number[]
+  ) => {
     try {
-      const res = await client.get('/api/admin/questions');
+      setPoolLoading(true);
+      const pList = prioritizeList !== undefined ? prioritizeList : prioritizeQIdsRef.current;
+      const params: any = {
+        page: pageToFetch,
+        limit: 50,
+      };
+      if (searchVal && searchVal.trim()) {
+        params.search = searchVal.trim();
+      }
+      if (pList && pList.length > 0) {
+        params.prioritizeIds = pList.join(',');
+      }
+
+      const res = await client.get('/api/admin/questions', { params });
       setQuestions(res.data.questions ?? []);
+      setPoolTotal(res.data.total ?? (res.data.questions ?? []).length);
+      setPoolTotalPages(res.data.totalPages ?? 1);
     } catch {
       // ignore silently
+    } finally {
+      setPoolLoading(false);
     }
-  }, []);
+  }, [poolPage, debouncedQuestionSearch]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedQuestionSearch(questionSearch);
+      setPoolPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [questionSearch]);
+
+  useEffect(() => {
+    setPoolJumpPage(String(poolPage));
+  }, [poolPage]);
+
+  useEffect(() => {
+    if (modalOpen) {
+      fetchQuestionsPool(poolPage, debouncedQuestionSearch);
+    }
+  }, [modalOpen, poolPage, debouncedQuestionSearch, fetchQuestionsPool]);
 
   useEffect(() => {
     fetchTests();
     fetchPresets();
-    fetchQuestionsPool();
     client.get('/api/content/grades').then((r) => {
       setGrades(r.data.grades ?? []);
     }).catch(() => onToast('Không tải được danh sách khối lớp', 'error'));
-  }, [fetchTests, fetchPresets, fetchQuestionsPool, onToast]);
+  }, [fetchTests, fetchPresets, onToast]);
 
   // Cascade loads for form Modal
   useEffect(() => {
@@ -183,18 +227,28 @@ export function TestPanel({ onToast }: TestPanelProps) {
     setEditTest(null);
     setForm(EMPTY_FORM);
     setSelectedQIds([]);
+    prioritizeQIdsRef.current = [];
     setExpandedQIds(new Set());
     setQuestionTab('BANK');
     setQuestionSearch('');
+    setDebouncedQuestionSearch('');
+    setPoolPage(1);
+    setPoolJumpPage('1');
     setLocalQuestions([]);
     setLocalModalOpen(false);
     setModalOpen(true);
   };
 
   const openEdit = async (t: AdminTestDto) => {
+    const initSelected = t.questionIds ?? [];
     setEditTest(t);
     setQuestionTab('BANK');
     setQuestionSearch('');
+    setDebouncedQuestionSearch('');
+    setPoolPage(1);
+    setPoolJumpPage('1');
+    setSelectedQIds(initSelected);
+    prioritizeQIdsRef.current = initSelected;
     setLocalQuestions([]);
     setLocalModalOpen(false);
 
@@ -788,17 +842,16 @@ export function TestPanel({ onToast }: TestPanelProps) {
                 </div>
 
                 <div style={{ border: '1px solid #cbd5e1', borderRadius: 8, flex: 1, overflowY: 'auto', padding: 8, display: 'flex', flexDirection: 'column', gap: 8, background: '#f8fafc', maxHeight: '50vh' }}>
-                  {questions
-                    .filter((q) => {
-                      if (!questionSearch.trim()) return true;
-                      const term = questionSearch.toLowerCase().trim();
-                      return (
-                        `#${q.id}`.includes(term) ||
-                        String(q.id).includes(term) ||
-                        stripHtml(q.promptText || '').toLowerCase().includes(term)
-                      );
-                    })
-                    .map((q) => {
+                  {poolLoading ? (
+                    <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}>
+                      <Spinner size={28} />
+                    </div>
+                  ) : questions.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '36px 16px', color: '#94a3b8', fontSize: 13 }}>
+                      Không tìm thấy câu hỏi nào trong ngân hàng
+                    </div>
+                  ) : (
+                    questions.map((q) => {
                       const isChecked = selectedQIds.includes(q.id);
                       const isExpanded = expandedQIds.has(q.id);
                       return (
@@ -902,8 +955,129 @@ export function TestPanel({ onToast }: TestPanelProps) {
                           )}
                         </div>
                       );
-                    })}
+                    })
+                  )}
                 </div>
+
+                {/* Pagination Controls for Question Pool */}
+                {poolTotalPages > 1 && (
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '8px 12px',
+                    background: '#ffffff',
+                    borderRadius: 8,
+                    border: '1px solid #e2e8f0',
+                    flexWrap: 'wrap',
+                    gap: 8,
+                    fontSize: 12,
+                  }}>
+                    <div style={{ color: '#64748b' }}>
+                      <strong>{questions.length > 0 ? (poolPage - 1) * 50 + 1 : 0}</strong>–<strong>{Math.min(poolPage * 50, poolTotal)}</strong> / <strong>{poolTotal}</strong> câu
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                      <Button
+                        variant="secondary"
+                        disabled={poolPage <= 1 || poolLoading}
+                        onClick={() => setPoolPage(p => Math.max(1, p - 1))}
+                        style={{ padding: '4px 8px', fontSize: 12 }}
+                      >
+                        Trước
+                      </Button>
+
+                      <div style={{ display: 'flex', gap: 3, alignItems: 'center' }}>
+                        {Array.from({ length: poolTotalPages }, (_, i) => i + 1)
+                          .filter(p => p === 1 || p === poolTotalPages || (p >= poolPage - 1 && p <= poolPage + 1))
+                          .reduce<(number | string)[]>((acc, p, idx, arr) => {
+                            if (idx > 0 && typeof arr[idx - 1] === 'number' && (p as number) - (arr[idx - 1] as number) > 1) {
+                              acc.push('...');
+                            }
+                            acc.push(p);
+                            return acc;
+                          }, [])
+                          .map((p, pIdx) => {
+                            if (typeof p === 'string') {
+                              return <span key={`ellipsis-${pIdx}`} style={{ padding: '0 2px', color: '#94a3b8' }}>...</span>;
+                            }
+                            const isCurrent = p === poolPage;
+                            return (
+                              <button
+                                key={p}
+                                type="button"
+                                onClick={() => setPoolPage(p)}
+                                disabled={poolLoading}
+                                style={{
+                                  minWidth: 26,
+                                  height: 26,
+                                  padding: '0 4px',
+                                  borderRadius: 6,
+                                  border: isCurrent ? '1px solid #4f46e5' : '1px solid #e2e8f0',
+                                  background: isCurrent ? '#4f46e5' : '#ffffff',
+                                  color: isCurrent ? '#ffffff' : '#334155',
+                                  fontWeight: isCurrent ? 700 : 500,
+                                  fontSize: 12,
+                                  cursor: 'pointer',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                }}
+                              >
+                                {p}
+                              </button>
+                            );
+                          })}
+                      </div>
+
+                      <Button
+                        variant="secondary"
+                        disabled={poolPage >= poolTotalPages || poolLoading}
+                        onClick={() => setPoolPage(p => Math.min(poolTotalPages, p + 1))}
+                        style={{ padding: '4px 8px', fontSize: 12 }}
+                      >
+                        Sau
+                      </Button>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#64748b', marginLeft: 4 }}>
+                        <span>Đến trang:</span>
+                        <input
+                          type="number"
+                          min={1}
+                          max={poolTotalPages}
+                          value={poolJumpPage}
+                          onChange={(e) => setPoolJumpPage(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              const val = parseInt(poolJumpPage, 10);
+                              if (!isNaN(val) && val >= 1 && val <= poolTotalPages) {
+                                setPoolPage(val);
+                              }
+                            }
+                          }}
+                          onBlur={() => {
+                            const val = parseInt(poolJumpPage, 10);
+                            if (!isNaN(val) && val >= 1 && val <= poolTotalPages) {
+                              setPoolPage(val);
+                            } else {
+                              setPoolJumpPage(String(poolPage));
+                            }
+                          }}
+                          style={{
+                            width: 46,
+                            height: 26,
+                            padding: '0 2px',
+                            textAlign: 'center',
+                            borderRadius: 6,
+                            border: '1px solid #cbd5e1',
+                            fontSize: 12,
+                            outline: 'none',
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

@@ -4,13 +4,13 @@ import { useEffect, useState } from 'react';
 export const DASHBOARD_SECTIONS = [
   { id: 'sec-overview', label: 'Tổng quan' },
   { id: 'sec-user-growth', label: 'Người dùng mới' },
+  { id: 'sec-users', label: 'Phân tích người dùng' },
   { id: 'sec-revenue', label: 'Doanh thu' },
   { id: 'sec-content-progress', label: 'Tiến độ nội dung' },
   { id: 'sec-activity', label: 'Hoạt động' },
-  { id: 'sec-ai', label: 'AI' },
-  { id: 'sec-users', label: 'Người dùng' },
   { id: 'sec-tests', label: 'Làm bài & câu hỏi' },
   { id: 'sec-leaderboard', label: 'Xếp hạng' },
+  { id: 'sec-ai', label: 'AI' },
   { id: 'sec-feed', label: 'Gần đây' },
 ] as const;
 
