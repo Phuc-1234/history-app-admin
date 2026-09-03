@@ -18,6 +18,28 @@ interface QuestionPanelProps {
   onToast: (msg: string, type: ToastType) => void;
 }
 
+export interface SectionWithDepth extends SectionDto {
+  depth: number;
+}
+
+function flattenSectionTree(treeSections: SectionDto[] = []): { flatSections: SectionWithDepth[]; flatNodes: NodeDto[] } {
+  const flatSections: SectionWithDepth[] = [];
+  const flatNodes: NodeDto[] = [];
+  const traverse = (sList: SectionDto[], depth = 0) => {
+    for (const s of sList) {
+      flatSections.push({ ...s, depth });
+      if (s.nodes) {
+        flatNodes.push(...s.nodes);
+      }
+      if (s.children) {
+        traverse(s.children, depth + 1);
+      }
+    }
+  };
+  traverse(treeSections, 0);
+  return { flatSections, flatNodes };
+}
+
 interface FormAnswer {
   content: string;
   isCorrect: boolean;
@@ -57,7 +79,7 @@ export function QuestionPanel({ onToast }: QuestionPanelProps) {
   const [grades, setGrades] = useState<GradeDto[]>([]);
   const [topics, setTopics] = useState<TopicDto[]>([]);
   const [lessons, setLessons] = useState<LessonDto[]>([]);
-  const [sections, setSections] = useState<SectionDto[]>([]);
+  const [sections, setSections] = useState<SectionWithDepth[]>([]);
   const [, setNodes] = useState<NodeDto[]>([]);
 
   // Filter state
@@ -92,7 +114,7 @@ export function QuestionPanel({ onToast }: QuestionPanelProps) {
   // Cascading dropdowns states inside Form Modal
   const [formTopics, setFormTopics] = useState<TopicDto[]>([]);
   const [formLessons, setFormLessons] = useState<LessonDto[]>([]);
-  const [formSections, setFormSections] = useState<SectionDto[]>([]);
+  const [formSections, setFormSections] = useState<SectionWithDepth[]>([]);
   const [formNodes, setFormNodes] = useState<NodeDto[]>([]);
 
   // 0. Search debounce
@@ -154,8 +176,13 @@ export function QuestionPanel({ onToast }: QuestionPanelProps) {
     setPage(1);
     if (!selLessonId) return;
 
-    client.get(`/api/content/lessons/${selLessonId}/sections`).then((r) => {
-      setSections(r.data.sections ?? []);
+    client.get(`/api/content/lessons/${selLessonId}/tree`).then((r) => {
+      const { flatSections, flatNodes } = flattenSectionTree(r.data?.sections ?? []);
+      setSections(flatSections);
+      setNodes(flatNodes);
+    }).catch(() => {
+      setSections([]);
+      setNodes([]);
     });
   }, [selLessonId]);
 
@@ -234,7 +261,14 @@ export function QuestionPanel({ onToast }: QuestionPanelProps) {
 
   useEffect(() => {
     if (!scopeState.lessonId) { setFormSections([]); setFormNodes([]); return; }
-    client.get(`/api/content/lessons/${scopeState.lessonId}/sections`).then(r => setFormSections(r.data.sections ?? []));
+    client.get(`/api/content/lessons/${scopeState.lessonId}/tree`).then(r => {
+      const { flatSections, flatNodes } = flattenSectionTree(r.data?.sections ?? []);
+      setFormSections(flatSections);
+      setFormNodes(flatNodes);
+    }).catch(() => {
+      setFormSections([]);
+      setFormNodes([]);
+    });
   }, [scopeState.lessonId]);
 
   useEffect(() => {
@@ -999,7 +1033,11 @@ export function QuestionPanel({ onToast }: QuestionPanelProps) {
             <label style={LABEL_STYLE}>Phần</label>
             <select value={selSectionId} onChange={(e) => { setSelSectionId(e.target.value); setPage(1); }} disabled={!sections.length} style={SELECT_STYLE}>
               <option value="">Tất cả Phần</option>
-              {sections.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+              {sections.map(s => (
+                <option key={s.id} value={s.id}>
+                  {'\u00A0\u00A0'.repeat(s.depth)}{s.depth > 0 ? '↳ ' : ''}{s.name}
+                </option>
+              ))}
             </select>
           </div>
           <div>
@@ -1276,7 +1314,11 @@ export function QuestionPanel({ onToast }: QuestionPanelProps) {
                 disabled={!formSections.length}
               >
                 <option value="">Chọn Phần</option>
-                {formSections.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                {formSections.map(s => (
+                  <option key={s.id} value={s.id}>
+                    {'\u00A0\u00A0'.repeat(s.depth)}{s.depth > 0 ? '↳ ' : ''}{s.name}
+                  </option>
+                ))}
               </Select>
             )}
 
