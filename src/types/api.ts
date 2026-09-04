@@ -106,6 +106,7 @@ export interface AdminQuestionDto {
   isActive: boolean;
   scopeId: number | null;
   scopeType: string | null;
+  scopeName?: string | null;
   answerDataJson: any;
   // Backup
   gradeId: number | null;

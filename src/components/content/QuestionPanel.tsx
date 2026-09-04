@@ -935,14 +935,40 @@ export function QuestionPanel({ onToast }: QuestionPanelProps) {
     }
   };
 
-  const getScopeBadgeLabel = (q: AdminQuestionDto) => {
+  const getFullScopeLabel = (q: AdminQuestionDto) => {
     if (q.scopeType === 'NATIONAL') return 'Quốc gia';
     if (q.scopeType === 'GRADE') return `Khối ${q.scopeId}`;
-    if (q.scopeType === 'TOPIC') return `Chủ đề #${q.scopeId}`;
-    if (q.scopeType === 'LESSON') return `Bài #${q.scopeId}`;
-    if (q.scopeType === 'SECTION') return `Phần #${q.scopeId}`;
-    if (q.scopeType === 'NODE') return `Nút #${q.scopeId}`;
+    if (q.scopeType === 'TOPIC') {
+      if (q.scopeName) {
+        return /^chủ đề/i.test(q.scopeName.trim()) ? q.scopeName.trim() : `Chủ đề: ${q.scopeName.trim()}`;
+      }
+      return `Chủ đề #${q.scopeId}`;
+    }
+    if (q.scopeType === 'LESSON') {
+      if (q.scopeName) {
+        return /^bài/i.test(q.scopeName.trim()) ? q.scopeName.trim() : `Bài: ${q.scopeName.trim()}`;
+      }
+      return `Bài #${q.scopeId}`;
+    }
+    if (q.scopeType === 'SECTION') {
+      if (q.scopeName) {
+        return /^phần/i.test(q.scopeName.trim()) ? q.scopeName.trim() : `Phần ${q.scopeName.trim()}`;
+      }
+      return `Phần #${q.scopeId}`;
+    }
+    if (q.scopeType === 'NODE') {
+      if (q.scopeName) {
+        return /^nút/i.test(q.scopeName.trim()) ? q.scopeName.trim() : `Nút: ${q.scopeName.trim()}`;
+      }
+      return `Nút #${q.scopeId}`;
+    }
     return 'Chưa xác định';
+  };
+
+  const getScopeBadgeLabel = (q: AdminQuestionDto) => {
+    const full = getFullScopeLabel(q);
+    const maxLen = 28;
+    return full.length > maxLen ? `${full.substring(0, maxLen)}...` : full;
   };
 
   return (
@@ -1101,7 +1127,15 @@ export function QuestionPanel({ onToast }: QuestionPanelProps) {
                       </span>
                     </td>
                     <td style={TD_STYLE}>
-                      <span style={{ fontWeight: 600, color: '#4f46e5', fontSize: 13 }}>
+                      <span
+                        title={getFullScopeLabel(q)}
+                        style={{
+                          fontWeight: 600,
+                          color: '#4f46e5',
+                          fontSize: 13,
+                          cursor: q.scopeName ? 'help' : 'default',
+                        }}
+                      >
                         {getScopeBadgeLabel(q)}
                       </span>
                     </td>
