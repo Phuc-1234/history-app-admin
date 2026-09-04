@@ -12,6 +12,7 @@ import { Spinner } from '../ui/Spinner';
 import { IconPlus, IconEdit, IconDelete, IconFlashcard, IconMagicWand, IconAlert, IconInfo, IconDownload, IconUpload } from '../ui/Icons';
 import type { TabId, NavParams } from '../../pages/DashboardPage';
 import { getDeleteErrorMessage } from '../../utils/deleteHelper';
+import { stripHtml } from '../../utils/html';
 import XLSX from 'xlsx-js-style';
 
 export interface SectionWithDepth extends SectionDto {
@@ -791,6 +792,54 @@ export function FlashcardPanel({ onToast, navParams, onNavigate: _onNavigate }: 
     return true;
   });
 
+  const getFullScopeLabel = (card: FlashcardDto) => {
+    if (card.nodeId) {
+      let name = card.scopeName;
+      if (!name) {
+        const node = nodes.find((n) => n.id === card.nodeId);
+        name = node?.header?.trim() || (node?.body ? stripHtml(node.body).trim() : null);
+      }
+      if (name) {
+        return /^nút/i.test(name.trim()) ? name.trim() : `Nút: ${name.trim()}`;
+      }
+      return `Nút #${card.nodeId}`;
+    }
+
+    if (card.sectionId) {
+      let name = card.scopeName;
+      if (!name) {
+        const sec = sections.find((s) => s.id === card.sectionId);
+        name = sec?.name?.trim();
+      }
+      if (name) {
+        return /^phần/i.test(name.trim()) ? name.trim() : `Phần ${name.trim()}`;
+      }
+      return `Phần #${card.sectionId}`;
+    }
+
+    if (card.lessonId) {
+      let name = card.scopeName;
+      if (!name) {
+        const les = lessons.find((l) => l.id === card.lessonId);
+        if (les) {
+          name = les.position ? `Bài ${les.position}: ${les.name.trim()}` : les.name.trim();
+        }
+      }
+      if (name) {
+        return /^bài/i.test(name.trim()) ? name.trim() : `Bài: ${name.trim()}`;
+      }
+      return `Bài #${card.lessonId}`;
+    }
+
+    return 'Chưa xác định';
+  };
+
+  const getScopeBadgeLabel = (card: FlashcardDto) => {
+    const full = getFullScopeLabel(card);
+    const maxLen = 28;
+    return full.length > maxLen ? `${full.substring(0, maxLen)}...` : full;
+  };
+
   return (
     <div>
       {/* Cascade Filters */}
@@ -949,19 +998,36 @@ export function FlashcardPanel({ onToast, navParams, onNavigate: _onNavigate }: 
                   <span style={{ fontSize: 11, fontWeight: 700, color: '#c37938', background: 'rgba(195, 121, 56, 0.06)', padding: '2px 8px', borderRadius: 20 }}>
                     Thẻ #{card.id}
                   </span>
-                  {card.nodeId ? (
-                    <span style={{ fontSize: 11, fontWeight: 600, color: '#10b981', background: '#ecfdf5', padding: '2px 8px', borderRadius: 20 }}>
-                      Nút #{card.nodeId}
-                    </span>
-                  ) : card.sectionId ? (
-                    <span style={{ fontSize: 11, fontWeight: 600, color: '#0284c7', background: '#f0f9ff', padding: '2px 8px', borderRadius: 20 }}>
-                      Nhánh #{card.sectionId}
-                    </span>
-                  ) : (
-                    <span style={{ fontSize: 11, fontWeight: 600, color: '#64748b', background: '#f1f5f9', padding: '2px 8px', borderRadius: 20 }}>
-                      Bài học #{card.lessonId}
-                    </span>
-                  )}
+                  {(() => {
+                    const full = getFullScopeLabel(card);
+                    const badge = getScopeBadgeLabel(card);
+                    const isNode = Boolean(card.nodeId);
+                    const isSection = Boolean(!card.nodeId && card.sectionId);
+                    const color = isNode ? '#10b981' : isSection ? '#0284c7' : '#64748b';
+                    const bg = isNode ? '#ecfdf5' : isSection ? '#f0f9ff' : '#f1f5f9';
+
+                    return (
+                      <span
+                        title={full}
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 600,
+                          color,
+                          background: bg,
+                          padding: '2px 8px',
+                          borderRadius: 20,
+                          cursor: 'help',
+                          maxWidth: 240,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          display: 'inline-block',
+                        }}
+                      >
+                        {badge}
+                      </span>
+                    );
+                  })()}
                 </div>
                 <div style={{ marginBottom: 12, overflow: 'hidden', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
                   <strong style={{ display: 'block', fontSize: 12, color: '#94a3b8', textTransform: 'uppercase', marginBottom: 2 }}>Mặt trước (Q)</strong>

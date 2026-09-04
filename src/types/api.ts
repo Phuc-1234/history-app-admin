@@ -166,6 +166,9 @@ export interface FlashcardDto {
   lessonId: number | null;
   sectionId: number | null;
   nodeId: number | null;
+  scopeType?: 'LESSON' | 'SECTION' | 'NODE' | null;
+  scopeId?: number | null;
+  scopeName?: string | null;
 }
 
 export interface CreateFlashcardBody {
