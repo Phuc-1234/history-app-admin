@@ -1,7 +1,18 @@
 // src/components/content/RewardRulePanel.tsx
 import { useState, useEffect, useCallback } from 'react';
 import client from '../../api/client';
-import type { RewardRuleDto, RewardTriggerType, ItemDefinitionDto } from '../../types/api';
+import type {
+  RewardRuleDto,
+  RewardTriggerType,
+  ItemDefinitionDto,
+  GradeDto,
+  TopicDto,
+  LessonDto,
+  SectionDto,
+  NodeDto,
+  AdminTestDto,
+  TierDto
+} from '../../types/api';
 import type { ToastType } from '../../hooks/useToast';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
@@ -13,6 +24,28 @@ import { getDeleteErrorMessage } from '../../utils/deleteHelper';
 
 interface RewardRulePanelProps {
   onToast: (msg: string, type: ToastType) => void;
+}
+
+export interface SectionWithDepth extends SectionDto {
+  depth: number;
+}
+
+function flattenSectionTree(treeSections: SectionDto[] = []): { flatSections: SectionWithDepth[]; flatNodes: NodeDto[] } {
+  const flatSections: SectionWithDepth[] = [];
+  const flatNodes: NodeDto[] = [];
+  const traverse = (sList: SectionDto[], depth = 0) => {
+    for (const s of sList) {
+      flatSections.push({ ...s, depth });
+      if (s.nodes) {
+        flatNodes.push(...s.nodes);
+      }
+      if (s.children) {
+        traverse(s.children, depth + 1);
+      }
+    }
+  };
+  traverse(treeSections, 0);
+  return { flatSections, flatNodes };
 }
 
 const TRIGGER_TYPES: { value: RewardTriggerType; label: string; desc: string }[] = [
@@ -69,6 +102,11 @@ export function RewardRulePanel({ onToast }: RewardRulePanelProps) {
   const [itemDefs, setItemDefs] = useState<ItemDefinitionDto[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // Additional data for scope and direct selection
+  const [grades, setGrades] = useState<GradeDto[]>([]);
+  const [tests, setTests] = useState<AdminTestDto[]>([]);
+  const [tiers, setTiers] = useState<TierDto[]>([]);
+
   // Search & Filter
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('ALL');
@@ -78,6 +116,19 @@ export function RewardRulePanel({ onToast }: RewardRulePanelProps) {
   const [editRule, setEditRule] = useState<RewardRuleDto | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+
+  // Cascading scope states inside modal form
+  const [scopeGradeId, setScopeGradeId] = useState('');
+  const [scopeTopicId, setScopeTopicId] = useState('');
+  const [scopeLessonId, setScopeLessonId] = useState('');
+  const [scopeSectionId, setScopeSectionId] = useState('');
+  const [scopeNodeId, setScopeNodeId] = useState('');
+
+  // Cascading options lists
+  const [formTopics, setFormTopics] = useState<TopicDto[]>([]);
+  const [formLessons, setFormLessons] = useState<LessonDto[]>([]);
+  const [formSections, setFormSections] = useState<SectionWithDepth[]>([]);
+  const [formNodes, setFormNodes] = useState<NodeDto[]>([]);
 
   // Deletion states
   const [deleteTarget, setDeleteTarget] = useState<RewardRuleDto | null>(null);
@@ -108,20 +159,75 @@ export function RewardRulePanel({ onToast }: RewardRulePanelProps) {
   useEffect(() => {
     fetchRules();
     fetchItemDefs();
+    client.get('/api/content/grades').then(r => setGrades(r.data.grades ?? [])).catch(() => {});
+    client.get('/api/admin/tests').then(r => setTests(r.data.tests ?? [])).catch(() => {});
+    client.get('/api/admin/tiers').then(r => setTiers(r.data.tiers ?? [])).catch(() => {});
   }, [fetchRules, fetchItemDefs]);
+
+  // Cascade loads for form Modal
+  useEffect(() => {
+    if (!scopeGradeId) {
+      setFormTopics([]);
+      setFormLessons([]);
+      setFormSections([]);
+      setFormNodes([]);
+      return;
+    }
+    client.get(`/api/content/grades/${scopeGradeId}/topics`).then(r => setFormTopics(r.data.topics ?? [])).catch(() => setFormTopics([]));
+  }, [scopeGradeId]);
+
+  useEffect(() => {
+    if (!scopeTopicId) {
+      setFormLessons([]);
+      setFormSections([]);
+      setFormNodes([]);
+      return;
+    }
+    client.get(`/api/content/topics/${scopeTopicId}/lessons`).then(r => setFormLessons(r.data.lessons ?? [])).catch(() => setFormLessons([]));
+  }, [scopeTopicId]);
+
+  useEffect(() => {
+    if (!scopeLessonId) {
+      setFormSections([]);
+      setFormNodes([]);
+      return;
+    }
+    client.get(`/api/content/lessons/${scopeLessonId}/tree`).then(r => {
+      const { flatSections, flatNodes } = flattenSectionTree(r.data?.sections ?? []);
+      setFormSections(flatSections);
+      setFormNodes(flatNodes);
+    }).catch(() => {
+      setFormSections([]);
+      setFormNodes([]);
+    });
+  }, [scopeLessonId]);
+
+  useEffect(() => {
+    if (!scopeSectionId) {
+      setFormNodes([]);
+      return;
+    }
+    client.get(`/api/content/sections/${scopeSectionId}/nodes`).then(r => setFormNodes(r.data.nodes ?? [])).catch(() => setFormNodes([]));
+  }, [scopeSectionId]);
 
   // Handlers
   const openCreate = () => {
     setEditRule(null);
     setForm(EMPTY_FORM);
+    setScopeGradeId('');
+    setScopeTopicId('');
+    setScopeLessonId('');
+    setScopeSectionId('');
+    setScopeNodeId('');
     setModalOpen(true);
   };
 
-  const openEdit = (rule: RewardRuleDto) => {
+  const openEdit = async (rule: RewardRuleDto) => {
     setEditRule(rule);
+    const targetId = rule.triggerTargetId ?? '';
     setForm({
       triggerType: rule.triggerType,
-      triggerTargetId: rule.triggerTargetId ?? '',
+      triggerTargetId: targetId,
       triggerTimeMin: String(rule.triggerTimeMin),
       triggerTimeMax: rule.triggerTimeMax !== null ? String(rule.triggerTimeMax) : '',
       xp: String(rule.xp),
@@ -131,7 +237,57 @@ export function RewardRulePanel({ onToast }: RewardRulePanelProps) {
         quantity: ri.quantity
       }))
     });
+
+    setScopeGradeId('');
+    setScopeTopicId('');
+    setScopeLessonId('');
+    setScopeSectionId('');
+    setScopeNodeId('');
+
+    if (rule.triggerType === 'AUTO_GRADE_TEST_COMPLETE') {
+      setScopeGradeId(targetId);
+    } else if (targetId && ['AUTO_TOPIC_TEST_COMPLETE', 'AUTO_LESSON_TEST_COMPLETE', 'AUTO_SECTION_TEST_COMPLETE', 'AUTO_NODE_TEST_COMPLETE'].includes(rule.triggerType)) {
+      const scopeTypeMap: Record<string, string> = {
+        AUTO_TOPIC_TEST_COMPLETE: 'TOPIC',
+        AUTO_LESSON_TEST_COMPLETE: 'LESSON',
+        AUTO_SECTION_TEST_COMPLETE: 'SECTION',
+        AUTO_NODE_TEST_COMPLETE: 'NODE',
+      };
+      const sType = scopeTypeMap[rule.triggerType];
+      if (sType) {
+        try {
+          const lineageRes = await client.get('/api/content/scope-lineage', {
+            params: { scopeType: sType, scopeId: targetId }
+          });
+          const lineage = lineageRes.data || {};
+          if (lineage.gradeId) setScopeGradeId(String(lineage.gradeId));
+          if (lineage.topicId) setScopeTopicId(String(lineage.topicId));
+          if (lineage.lessonId) setScopeLessonId(String(lineage.lessonId));
+          if (lineage.sectionId) setScopeSectionId(String(lineage.sectionId));
+          if (lineage.nodeId) setScopeNodeId(String(lineage.nodeId));
+        } catch {
+          if (sType === 'TOPIC') setScopeTopicId(targetId);
+          else if (sType === 'LESSON') setScopeLessonId(targetId);
+          else if (sType === 'SECTION') setScopeSectionId(targetId);
+          else if (sType === 'NODE') setScopeNodeId(targetId);
+        }
+      }
+    }
+
     setModalOpen(true);
+  };
+
+  const handleTriggerTypeChange = (nextType: RewardTriggerType) => {
+    setForm(prev => ({
+      ...prev,
+      triggerType: nextType,
+      triggerTargetId: ''
+    }));
+    setScopeGradeId('');
+    setScopeTopicId('');
+    setScopeLessonId('');
+    setScopeSectionId('');
+    setScopeNodeId('');
   };
 
   const handleSave = async () => {
@@ -141,17 +297,27 @@ export function RewardRulePanel({ onToast }: RewardRulePanelProps) {
     const goldVal = Number(form.gold);
 
     if (isNaN(minTime) || minTime < 1) {
-      onToast('Lượt thực hiện tối thiểu phải lớn hơn hoặc bằng 1', 'error');
+      onToast('lần kích hoạt tối thiểu phải lớn hơn hoặc bằng 1', 'error');
       return;
     }
 
     if (maxTime !== null && (isNaN(maxTime) || maxTime < minTime)) {
-      onToast('Lượt thực hiện tối đa phải lớn hơn hoặc bằng lượt tối thiểu', 'error');
+      onToast('lần kích hoạt tối đa phải lớn hơn hoặc bằng lượt tối thiểu', 'error');
       return;
     }
 
     if (isNaN(xpVal) || xpVal < 0 || isNaN(goldVal) || goldVal < 0) {
       onToast('Điểm XP và Vàng phải là số không âm', 'error');
+      return;
+    }
+
+    if (form.triggerType === 'STREAK_REACHED' && !form.triggerTargetId.trim()) {
+      onToast('Vui lòng nhập mốc chuỗi ngày học', 'error');
+      return;
+    }
+
+    if (form.triggerType === 'TIER_REACHED' && !form.triggerTargetId.trim()) {
+      onToast('Vui lòng chọn hạng danh hiệu', 'error');
       return;
     }
 
@@ -213,38 +379,420 @@ export function RewardRulePanel({ onToast }: RewardRulePanelProps) {
     }
   };
 
-  // Helper text depending on selected trigger type in form
-  const getTargetHelper = (type: RewardTriggerType) => {
-    switch (type) {
+  const renderTargetDisplay = (rule: RewardRuleDto) => {
+    if (!rule.triggerTargetId) return 'Mặc định (Tất cả)';
+    if (rule.triggerType === 'MANUAL_TEST_COMPLETE') {
+      const t = tests.find(x => x.id === rule.triggerTargetId);
+      return t ? t.title : 'Đề thi cụ thể';
+    }
+    if (rule.triggerType === 'TIER_REACHED') {
+      const tier = tiers.find(x => String(x.index) === rule.triggerTargetId);
+      return tier ? `${tier.name} (Hạng #${tier.index})` : `Hạng #${rule.triggerTargetId}`;
+    }
+    if (rule.triggerType === 'STREAK_REACHED') {
+      return `Mốc ${rule.triggerTargetId} ngày`;
+    }
+    if (rule.triggerType === 'AUTO_GRADE_TEST_COMPLETE') {
+      return `Khối ${rule.triggerTargetId}`;
+    }
+    return `ID: ${rule.triggerTargetId}`;
+  };
+
+  const renderTargetSelector = () => {
+    switch (form.triggerType) {
       case 'MANUAL_TEST_COMPLETE':
-        return 'Nhập UUID của đề thi (hoặc để trống nếu áp dụng cho mọi đề thi tự do).';
-      case 'AUTO_NODE_TEST_COMPLETE':
-        return 'Nhập ID (Số) của Nút kiến thức (Node) hoặc để trống làm mặc định.';
-      case 'AUTO_SECTION_TEST_COMPLETE':
-        return 'Nhập ID (Số) của Phần học (Section) hoặc để trống làm mặc định.';
-      case 'AUTO_LESSON_TEST_COMPLETE':
-        return 'Nhập ID (Số) của Bài học (Lesson) hoặc để trống làm mặc định.';
-      case 'AUTO_TOPIC_TEST_COMPLETE':
-        return 'Nhập ID (Số) của Chủ đề (Topic) hoặc để trống làm mặc định.';
+        return (
+          <Select
+            label="Chọn đề thi cụ thể"
+            value={form.triggerTargetId}
+            onChange={(e) => setForm(prev => ({ ...prev, triggerTargetId: e.target.value }))}
+            hint="Chọn một đề thi cụ thể hoặc để 'Tất cả đề thi' làm mặc định."
+          >
+            <option value="">-- Tất cả đề thi (Mặc định) --</option>
+            {tests.map(t => (
+              <option key={t.id} value={t.id}>
+                {t.title}
+              </option>
+            ))}
+          </Select>
+        );
+
+      case 'TIER_REACHED':
+        return (
+          <Select
+            label="Chọn hạng danh hiệu"
+            value={form.triggerTargetId}
+            onChange={(e) => setForm(prev => ({ ...prev, triggerTargetId: e.target.value }))}
+            hint="Chọn hạng danh hiệu người dùng đạt tới để nhận thưởng."
+          >
+            <option value="">-- Chọn hạng danh hiệu --</option>
+            {tiers.map(t => (
+              <option key={t.index} value={String(t.index)}>
+                {t.name} (Hạng #{t.index} — Yêu cầu {t.xpThreshold} XP)
+              </option>
+            ))}
+          </Select>
+        );
+
+      case 'STREAK_REACHED':
+        return (
+          <Input
+            label="Mốc chuỗi (Số ngày liên tục)"
+            type="number"
+            min="1"
+            placeholder="Ví dụ: 7, 30..."
+            value={form.triggerTargetId}
+            onChange={(e) => setForm(prev => ({ ...prev, triggerTargetId: e.target.value }))}
+            hint="BẮT BUỘC: Nhập số ngày đạt chuỗi làm mục tiêu (ví dụ: 7, 30)."
+          />
+        );
+
       case 'AUTO_GRADE_TEST_COMPLETE':
-        return 'Nhập ID (Số) của Khối lớp (Grade) hoặc để trống làm mặc định.';
+        return (
+          <Select
+            label="Chọn khối lớp"
+            value={scopeGradeId}
+            onChange={(e) => {
+              const val = e.target.value;
+              setScopeGradeId(val);
+              setForm(prev => ({ ...prev, triggerTargetId: val }));
+            }}
+            hint="Chọn khối lớp cụ thể hoặc để 'Tất cả khối lớp' làm mặc định."
+          >
+            <option value="">-- Tất cả khối lớp (Mặc định) --</option>
+            {grades.map(g => (
+              <option key={g.id} value={String(g.id)}>
+                Khối {g.id}
+              </option>
+            ))}
+          </Select>
+        );
+
+      case 'AUTO_TOPIC_TEST_COMPLETE':
+        return (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 16 }}>
+            <Select
+              label="Khối lớp"
+              value={scopeGradeId}
+              onChange={(e) => {
+                const val = e.target.value;
+                setScopeGradeId(val);
+                setScopeTopicId('');
+                setForm(prev => ({ ...prev, triggerTargetId: '' }));
+              }}
+            >
+              <option value="">-- Chọn khối lớp --</option>
+              {grades.map(g => (
+                <option key={g.id} value={String(g.id)}>
+                  Khối {g.id}
+                </option>
+              ))}
+            </Select>
+
+            <Select
+              label="Chọn chủ đề (Mục tiêu áp dụng)"
+              value={scopeTopicId}
+              disabled={!scopeGradeId}
+              onChange={(e) => {
+                const val = e.target.value;
+                setScopeTopicId(val);
+                setForm(prev => ({ ...prev, triggerTargetId: val }));
+              }}
+              hint="Chọn chủ đề hoặc để 'Tất cả chủ đề' làm mặc định."
+            >
+              <option value="">-- Tất cả chủ đề (Mặc định) --</option>
+              {formTopics.map(t => (
+                <option key={t.id} value={String(t.id)}>
+                  {t.name}
+                </option>
+              ))}
+            </Select>
+          </div>
+        );
+
+      case 'AUTO_LESSON_TEST_COMPLETE':
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 16 }}>
+              <Select
+                label="Khối lớp"
+                value={scopeGradeId}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setScopeGradeId(val);
+                  setScopeTopicId('');
+                  setScopeLessonId('');
+                  setForm(prev => ({ ...prev, triggerTargetId: '' }));
+                }}
+              >
+                <option value="">-- Chọn khối --</option>
+                {grades.map(g => (
+                  <option key={g.id} value={String(g.id)}>
+                    Khối {g.id}
+                  </option>
+                ))}
+              </Select>
+
+              <Select
+                label="Chủ đề"
+                value={scopeTopicId}
+                disabled={!scopeGradeId}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setScopeTopicId(val);
+                  setScopeLessonId('');
+                  setForm(prev => ({ ...prev, triggerTargetId: '' }));
+                }}
+              >
+                <option value="">-- Chọn chủ đề --</option>
+                {formTopics.map(t => (
+                  <option key={t.id} value={String(t.id)}>
+                    {t.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
+
+            <Select
+              label="Chọn bài học (Mục tiêu áp dụng)"
+              value={scopeLessonId}
+              disabled={!scopeTopicId}
+              onChange={(e) => {
+                const val = e.target.value;
+                setScopeLessonId(val);
+                setForm(prev => ({ ...prev, triggerTargetId: val }));
+              }}
+              hint="Chọn bài học hoặc để 'Tất cả bài học' làm mặc định."
+            >
+              <option value="">-- Tất cả bài học trong chủ đề (Mặc định) --</option>
+              {formLessons.map(l => (
+                <option key={l.id} value={String(l.id)}>
+                  {l.name}
+                </option>
+              ))}
+            </Select>
+          </div>
+        );
+
+      case 'AUTO_SECTION_TEST_COMPLETE':
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 16 }}>
+              <Select
+                label="Khối lớp"
+                value={scopeGradeId}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setScopeGradeId(val);
+                  setScopeTopicId('');
+                  setScopeLessonId('');
+                  setScopeSectionId('');
+                  setForm(prev => ({ ...prev, triggerTargetId: '' }));
+                }}
+              >
+                <option value="">-- Chọn khối --</option>
+                {grades.map(g => (
+                  <option key={g.id} value={String(g.id)}>
+                    Khối {g.id}
+                  </option>
+                ))}
+              </Select>
+
+              <Select
+                label="Chủ đề"
+                value={scopeTopicId}
+                disabled={!scopeGradeId}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setScopeTopicId(val);
+                  setScopeLessonId('');
+                  setScopeSectionId('');
+                  setForm(prev => ({ ...prev, triggerTargetId: '' }));
+                }}
+              >
+                <option value="">-- Chọn chủ đề --</option>
+                {formTopics.map(t => (
+                  <option key={t.id} value={String(t.id)}>
+                    {t.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <Select
+                label="Bài học"
+                value={scopeLessonId}
+                disabled={!scopeTopicId}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setScopeLessonId(val);
+                  setScopeSectionId('');
+                  setForm(prev => ({ ...prev, triggerTargetId: '' }));
+                }}
+              >
+                <option value="">-- Chọn bài học --</option>
+                {formLessons.map(l => (
+                  <option key={l.id} value={String(l.id)}>
+                    {l.name}
+                  </option>
+                ))}
+              </Select>
+
+              <Select
+                label="Chọn phần học (Mục tiêu áp dụng)"
+                value={scopeSectionId}
+                disabled={!scopeLessonId}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setScopeSectionId(val);
+                  setForm(prev => ({ ...prev, triggerTargetId: val }));
+                }}
+                hint="Chọn phần hoặc để 'Tất cả phần học' làm mặc định."
+              >
+                <option value="">-- Tất cả phần học (Mặc định) --</option>
+                {formSections.map(s => (
+                  <option key={s.id} value={String(s.id)}>
+                    {'\u00A0\u00A0'.repeat(s.depth)}{s.depth > 0 ? '↳ ' : ''}{s.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          </div>
+        );
+
+      case 'AUTO_NODE_TEST_COMPLETE':
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 16 }}>
+              <Select
+                label="Khối lớp"
+                value={scopeGradeId}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setScopeGradeId(val);
+                  setScopeTopicId('');
+                  setScopeLessonId('');
+                  setScopeSectionId('');
+                  setScopeNodeId('');
+                  setForm(prev => ({ ...prev, triggerTargetId: '' }));
+                }}
+              >
+                <option value="">-- Chọn khối --</option>
+                {grades.map(g => (
+                  <option key={g.id} value={String(g.id)}>
+                    Khối {g.id}
+                  </option>
+                ))}
+              </Select>
+
+              <Select
+                label="Chủ đề"
+                value={scopeTopicId}
+                disabled={!scopeGradeId}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setScopeTopicId(val);
+                  setScopeLessonId('');
+                  setScopeSectionId('');
+                  setScopeNodeId('');
+                  setForm(prev => ({ ...prev, triggerTargetId: '' }));
+                }}
+              >
+                <option value="">-- Chọn chủ đề --</option>
+                {formTopics.map(t => (
+                  <option key={t.id} value={String(t.id)}>
+                    {t.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <Select
+                label="Bài học"
+                value={scopeLessonId}
+                disabled={!scopeTopicId}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setScopeLessonId(val);
+                  setScopeSectionId('');
+                  setScopeNodeId('');
+                  setForm(prev => ({ ...prev, triggerTargetId: '' }));
+                }}
+              >
+                <option value="">-- Chọn bài học --</option>
+                {formLessons.map(l => (
+                  <option key={l.id} value={String(l.id)}>
+                    {l.name}
+                  </option>
+                ))}
+              </Select>
+
+              <Select
+                label="Phần học"
+                value={scopeSectionId}
+                disabled={!scopeLessonId}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setScopeSectionId(val);
+                  setScopeNodeId('');
+                  setForm(prev => ({ ...prev, triggerTargetId: '' }));
+                }}
+              >
+                <option value="">-- Chọn phần học --</option>
+                {formSections.map(s => (
+                  <option key={s.id} value={String(s.id)}>
+                    {'\u00A0\u00A0'.repeat(s.depth)}{s.depth > 0 ? '↳ ' : ''}{s.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
+
+            <Select
+              label="Chọn nút kiến thức (Mục tiêu áp dụng)"
+              value={scopeNodeId}
+              disabled={!scopeSectionId}
+              onChange={(e) => {
+                const val = e.target.value;
+                setScopeNodeId(val);
+                setForm(prev => ({ ...prev, triggerTargetId: val }));
+              }}
+              hint="Chọn nút hoặc để 'Tất cả nút' làm mặc định."
+            >
+              <option value="">-- Tất cả nút trong phần (Mặc định) --</option>
+              {formNodes.map(n => (
+                <option key={n.id} value={String(n.id)}>
+                  {n.header || `Nút #${n.id}`}
+                </option>
+              ))}
+            </Select>
+          </div>
+        );
+
       case 'AUTO_PERSONAL_PRACTICE_COMPLETE':
       case 'AUTO_WRONG_PRACTICE_COMPLETE':
-        return 'Không áp dụng cho loại hoạt động này (bắt buộc để trống).';
-      case 'STREAK_REACHED':
-        return 'BẮT BUỘC: Nhập số ngày đạt chuỗi làm mục tiêu (ví dụ: "7", "30").';
-      case 'TIER_REACHED':
-        return 'BẮT BUỘC: Nhập chỉ mục của hạng danh hiệu mới đạt được (ví dụ: "2", "3").';
       default:
-        return '';
+        return (
+          <Input
+            label="Mục tiêu"
+            value=""
+            disabled
+            placeholder="Không áp dụng"
+            hint="Không áp dụng cho loại hoạt động này (bắt buộc để trống)."
+          />
+        );
     }
   };
 
   // Filters logic
   const filteredRules = rules.filter(r => {
-    const matchesSearch = r.triggerTargetId
-      ? r.triggerTargetId.toLowerCase().includes(searchTerm.toLowerCase())
-      : searchTerm === '';
+    const targetDisplay = renderTargetDisplay(r);
+    const matchesSearch =
+      (r.triggerTargetId && r.triggerTargetId.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      targetDisplay.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (TRIGGER_LABELS[r.triggerType] && TRIGGER_LABELS[r.triggerType].toLowerCase().includes(searchTerm.toLowerCase()));
+
     const matchesType = typeFilter === 'ALL' || r.triggerType === typeFilter;
     return matchesSearch && matchesType;
   });
@@ -272,14 +820,13 @@ export function RewardRulePanel({ onToast }: RewardRulePanelProps) {
         background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 16,
         padding: '16px 20px', marginBottom: 24, boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
       }}>
-        {/* Search */}
         <div style={{ flex: 1, minWidth: 200, position: 'relative' }}>
           <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }}>
             <IconSearch size={16} />
           </span>
           <input
             type="text"
-            placeholder="Tìm kiếm theo Target ID..."
+            placeholder="Tìm kiếm theo mục tiêu, tên hoạt động hoặc ID..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             style={{
@@ -288,35 +835,18 @@ export function RewardRulePanel({ onToast }: RewardRulePanelProps) {
               fontSize: 14, color: '#0f172a', outline: 'none', transition: 'all 0.2s',
               fontFamily: 'inherit', boxSizing: 'border-box'
             }}
-            onFocus={(e) => {
-              e.target.style.borderColor = '#c37938';
-              e.target.style.boxShadow = '0 0 0 3px rgba(195,121,56,0.12)';
-            }}
-            onBlur={(e) => {
-              e.target.style.borderColor = '#e2e8f0';
-              e.target.style.boxShadow = 'none';
-            }}
           />
         </div>
 
-        {/* Filter Type */}
-        <div style={{ width: 240 }}>
+        <div style={{ width: 260 }}>
           <select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
             style={{
               width: '100%', padding: '10px 14px',
               background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10,
-              fontSize: 14, color: '#0f172a', outline: 'none', transition: 'all 0.2s',
-              fontFamily: 'inherit', cursor: 'pointer'
-            }}
-            onFocus={(e) => {
-              e.target.style.borderColor = '#c37938';
-              e.target.style.boxShadow = '0 0 0 3px rgba(195,121,56,0.12)';
-            }}
-            onBlur={(e) => {
-              e.target.style.borderColor = '#e2e8f0';
-              e.target.style.boxShadow = 'none';
+              fontSize: 14, color: '#0f172a', outline: 'none',
+              fontFamily: 'inherit', boxSizing: 'border-box'
             }}
           >
             <option value="ALL">Tất cả loại hoạt động</option>
@@ -348,15 +878,16 @@ export function RewardRulePanel({ onToast }: RewardRulePanelProps) {
               <tr style={{ background: '#f8fafc', borderBottom: '1px solid #f1f5f9' }}>
                 <th style={{ padding: '16px 20px', fontWeight: 600, color: '#475569', width: 60, whiteSpace: 'nowrap' }}>ID</th>
                 <th style={{ padding: '16px 20px', fontWeight: 600, color: '#475569', whiteSpace: 'nowrap' }}>Loại hoạt động</th>
-                <th style={{ padding: '16px 20px', fontWeight: 600, color: '#475569', whiteSpace: 'nowrap' }}>Mục tiêu (Target ID)</th>
+                <th style={{ padding: '16px 20px', fontWeight: 600, color: '#475569', whiteSpace: 'nowrap' }}>Mục tiêu áp dụng</th>
                 <th style={{ padding: '16px 20px', fontWeight: 600, color: '#475569', width: 140, whiteSpace: 'nowrap' }}>Lượt áp dụng</th>
                 <th style={{ padding: '16px 20px', fontWeight: 600, color: '#475569', width: 180, whiteSpace: 'nowrap' }}>Phần thưởng</th>
                 <th style={{ padding: '16px 20px', fontWeight: 600, color: '#475569', width: 100, textAlign: 'right', whiteSpace: 'nowrap' }}>Thao tác</th>
               </tr>
             </thead>
             <tbody>
-              {filteredRules.map((rule) => {
-                const colorConfig = TRIGGER_COLORS[rule.triggerType] ?? { bg: '#f1f5f9', color: '#475569', border: '#e2e8f0' };
+              {filteredRules.map(rule => {
+                const colorConfig = TRIGGER_COLORS[rule.triggerType] || { bg: '#f1f5f9', color: '#475569', border: '#e2e8f0' };
+
                 return (
                   <tr key={rule.id} style={{ borderBottom: '1px solid #f1f5f9', transition: 'background 0.15s' }}
                     onMouseEnter={(e) => (e.currentTarget.style.background = '#f8fafc')}
@@ -378,13 +909,13 @@ export function RewardRulePanel({ onToast }: RewardRulePanelProps) {
                       </span>
                     </td>
 
-                    {/* Target ID */}
-                    <td style={{ padding: '16px 20px', fontFamily: rule.triggerTargetId ? 'monospace' : 'inherit' }}>
+                    {/* Target */}
+                    <td style={{ padding: '16px 20px' }}>
                       {rule.triggerTargetId ? (
                         <span style={{
-                          background: '#f1f5f9', padding: '2px 6px', borderRadius: 6, fontSize: 13, color: '#334155'
+                          background: '#f1f5f9', padding: '2px 8px', borderRadius: 6, fontSize: 13, color: '#334155', fontWeight: 500
                         }}>
-                          {rule.triggerTargetId}
+                          {renderTargetDisplay(rule)}
                         </span>
                       ) : (
                         <span style={{ color: '#94a3b8', fontSize: 13, fontStyle: 'italic' }}>Mặc định (Tất cả)</span>
@@ -407,27 +938,30 @@ export function RewardRulePanel({ onToast }: RewardRulePanelProps) {
                           </div>
                         )}
                         {rule.gold > 0 && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#d97706', fontWeight: 600, fontSize: 13 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#b45309', fontWeight: 600, fontSize: 13 }}>
                             <IconGold size={14} color="#f59e0b" />
-                            <span>+{rule.gold} vàng</span>
+                            <span>+{rule.gold} Vàng</span>
                           </div>
                         )}
                         {rule.rewardRuleItems && rule.rewardRuleItems.length > 0 && (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 4 }}>
-                            {rule.rewardRuleItems.map((ri: any) => (
-                              <div key={ri.id} style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#0d9488', fontWeight: 600, fontSize: 12 }}>
-                                <span>{ri.itemDefinition?.name || `Vật phẩm #${ri.itemDefinitionId}`} x{ri.quantity}</span>
-                              </div>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 2 }}>
+                            {rule.rewardRuleItems.map(item => (
+                              <span key={item.id} style={{
+                                background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0',
+                                padding: '2px 6px', borderRadius: 4, fontSize: 11, fontWeight: 600
+                              }}>
+                                🎁 {item.itemDefinition?.name || `Vật phẩm #${item.itemDefinitionId}`} x{item.quantity}
+                              </span>
                             ))}
                           </div>
                         )}
                         {rule.xp === 0 && rule.gold === 0 && (!rule.rewardRuleItems || rule.rewardRuleItems.length === 0) && (
-                          <span style={{ color: '#94a3b8', fontSize: 13 }}>Không có</span>
+                          <span style={{ color: '#94a3b8', fontSize: 13, fontStyle: 'italic' }}>Không có quà</span>
                         )}
                       </div>
                     </td>
 
-                    {/* Actions */}
+                    {/* Action buttons */}
                     <td style={{ padding: '16px 20px', textAlign: 'right' }}>
                       <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
                         <button
@@ -435,19 +969,11 @@ export function RewardRulePanel({ onToast }: RewardRulePanelProps) {
                           style={{
                             background: '#f8fafc', border: '1px solid #e2e8f0', color: '#475569',
                             width: 32, height: 32, borderRadius: 8, cursor: 'pointer',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s'
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            transition: 'all 0.15s'
                           }}
-                          onMouseEnter={e => {
-                            e.currentTarget.style.background = '#e0e7ff';
-                            e.currentTarget.style.borderColor = '#c7d2fe';
-                            e.currentTarget.style.color = '#4f46e5';
-                          }}
-                          onMouseLeave={e => {
-                            e.currentTarget.style.background = '#f8fafc';
-                            e.currentTarget.style.borderColor = '#e2e8f0';
-                            e.currentTarget.style.color = '#475569';
-                          }}
-                          title="Chỉnh sửa"
+                          onMouseEnter={(e) => { e.currentTarget.style.background = '#f1f5f9'; e.currentTarget.style.color = '#0f172a'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.color = '#475569'; }}
                         >
                           <IconEdit size={14} />
                         </button>
@@ -456,19 +982,11 @@ export function RewardRulePanel({ onToast }: RewardRulePanelProps) {
                           style={{
                             background: '#f8fafc', border: '1px solid #e2e8f0', color: '#475569',
                             width: 32, height: 32, borderRadius: 8, cursor: 'pointer',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s'
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            transition: 'all 0.15s'
                           }}
-                          onMouseEnter={e => {
-                            e.currentTarget.style.background = '#fef2f2';
-                            e.currentTarget.style.borderColor = '#fecaca';
-                            e.currentTarget.style.color = '#ef4444';
-                          }}
-                          onMouseLeave={e => {
-                            e.currentTarget.style.background = '#f8fafc';
-                            e.currentTarget.style.borderColor = '#e2e8f0';
-                            e.currentTarget.style.color = '#475569';
-                          }}
-                          title="Xóa"
+                          onMouseEnter={(e) => { e.currentTarget.style.background = '#fee2e2'; e.currentTarget.style.color = '#ef4444'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.color = '#475569'; }}
                         >
                           <IconDelete size={14} />
                         </button>
@@ -482,47 +1000,32 @@ export function RewardRulePanel({ onToast }: RewardRulePanelProps) {
         </div>
       )}
 
-      {/* Create/Edit Modal */}
+      {/* Create / Edit Rule Modal */}
       <Modal
         open={modalOpen}
-        title={editRule ? `Cập nhật quy tắc #${editRule.id}` : 'Tạo quy tắc phần thưởng mới'}
+        title={editRule ? `Chỉnh sửa quy tắc #${editRule.id}` : 'Thêm quy tắc phần thưởng mới'}
         onClose={() => setModalOpen(false)}
-        width={560}
+        width={720}
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {/* Trigger Type Select */}
           <Select
             label="Loại hoạt động kích hoạt"
             value={form.triggerType}
-            onChange={(e) => setForm(prev => ({ ...prev, triggerType: e.target.value as RewardTriggerType }))}
+            onChange={(e) => handleTriggerTypeChange(e.target.value as RewardTriggerType)}
           >
             {TRIGGER_TYPES.map(t => (
               <option key={t.value} value={t.value}>{t.label}</option>
             ))}
           </Select>
 
-          {/* Trigger Target ID Input */}
-          <Input
-            label="Mục tiêu (Target ID)"
-            placeholder={
-              form.triggerType === 'AUTO_PERSONAL_PRACTICE_COMPLETE' || form.triggerType === 'AUTO_WRONG_PRACTICE_COMPLETE'
-                ? 'Không áp dụng'
-                : 'Nhập ID, UUID hoặc để trống...'
-            }
-            value={
-              form.triggerType === 'AUTO_PERSONAL_PRACTICE_COMPLETE' || form.triggerType === 'AUTO_WRONG_PRACTICE_COMPLETE'
-                ? ''
-                : form.triggerTargetId
-            }
-            onChange={(e) => setForm(prev => ({ ...prev, triggerTargetId: e.target.value }))}
-            disabled={form.triggerType === 'AUTO_PERSONAL_PRACTICE_COMPLETE' || form.triggerType === 'AUTO_WRONG_PRACTICE_COMPLETE'}
-            hint={getTargetHelper(form.triggerType)}
-          />
+          {/* Trigger Target Selector / Input */}
+          {renderTargetSelector()}
 
           {/* Apply Times range */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
             <Input
-              label="Lượt thực hiện tối thiểu"
+              label="lần kích hoạt tối thiểu"
               type="number"
               min="1"
               value={
@@ -539,7 +1042,7 @@ export function RewardRulePanel({ onToast }: RewardRulePanelProps) {
               }
             />
             <Input
-              label="Lượt thực hiện tối đa"
+              label="lần kích hoạt tối đa"
               type="number"
               min="1"
               placeholder={
@@ -556,23 +1059,23 @@ export function RewardRulePanel({ onToast }: RewardRulePanelProps) {
               disabled={form.triggerType === 'AUTO_PERSONAL_PRACTICE_COMPLETE' || form.triggerType === 'AUTO_WRONG_PRACTICE_COMPLETE'}
               hint={
                 form.triggerType === 'AUTO_PERSONAL_PRACTICE_COMPLETE' || form.triggerType === 'AUTO_WRONG_PRACTICE_COMPLETE'
-                  ? 'Không áp dụng giới hạn lượt'
-                  : 'Bỏ trống nếu áp dụng mãi mãi'
+                  ? 'Tự động không giới hạn số lần nhận thưởng'
+                  : 'Bỏ trống nếu không giới hạn lần tối đa'
               }
             />
           </div>
 
-          {/* XP & Gold value */}
+          {/* XP and Gold inputs */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
             <Input
-              label="Phần thưởng điểm XP"
+              label="Thưởng XP"
               type="number"
               min="0"
               value={form.xp}
               onChange={(e) => setForm(prev => ({ ...prev, xp: e.target.value }))}
             />
             <Input
-              label="Phần thưởng Vàng"
+              label="Thưởng Vàng"
               type="number"
               min="0"
               value={form.gold}
@@ -580,21 +1083,28 @@ export function RewardRulePanel({ onToast }: RewardRulePanelProps) {
             />
           </div>
 
-          {/* Items reward section */}
-          <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: 16 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-              <span style={{ fontSize: 14, fontWeight: 600, color: '#334155' }}>Vật phẩm thưởng thêm</span>
+          {/* Reward Items Configuration */}
+          <div style={{
+            background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12,
+            padding: '16px', display: 'flex', flexDirection: 'column', gap: 12
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <label style={{ fontSize: 13, fontWeight: 600, color: '#334155' }}>
+                Vật phẩm đính kèm thưởng (Tùy chọn)
+              </label>
               <button
                 type="button"
-                onClick={() => setForm(prev => ({
-                  ...prev,
-                  items: [...prev.items, { itemDefinitionId: itemDefs[0]?.id || 0, quantity: 1 }]
-                }))}
-                disabled={itemDefs.length === 0}
+                onClick={() => {
+                  const firstDefId = itemDefs[0]?.id || 1;
+                  setForm(prev => ({
+                    ...prev,
+                    items: [...prev.items, { itemDefinitionId: firstDefId, quantity: 1 }]
+                  }));
+                }}
                 style={{
-                  padding: '6px 12px', background: '#f1f5f9', border: '1px solid #e2e8f0',
-                  borderRadius: 8, fontSize: 12, fontWeight: 600, color: '#475569', cursor: 'pointer',
-                  display: 'inline-flex', alignItems: 'center', gap: 4
+                  background: '#f1f5f9', border: '1px solid #cbd5e1', color: '#334155',
+                  padding: '4px 10px', borderRadius: 6, fontSize: 12, cursor: 'pointer',
+                  fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4
                 }}
               >
                 <IconPlus size={12} /> Thêm vật phẩm
@@ -654,12 +1164,14 @@ export function RewardRulePanel({ onToast }: RewardRulePanelProps) {
                     </div>
                     <button
                       type="button"
-                      onClick={() => setForm(prev => ({
-                        ...prev,
-                        items: prev.items.filter((_, i) => i !== idx)
-                      }))}
+                      onClick={() => {
+                        setForm(prev => ({
+                          ...prev,
+                          items: prev.items.filter((_, i) => i !== idx)
+                        }));
+                      }}
                       style={{
-                        background: '#fef2f2', border: '1px solid #fecaca', color: '#ef4444',
+                        background: '#fee2e2', border: 'none', color: '#ef4444',
                         width: 32, height: 32, borderRadius: 8, cursor: 'pointer',
                         display: 'flex', alignItems: 'center', justifyContent: 'center'
                       }}
@@ -672,21 +1184,20 @@ export function RewardRulePanel({ onToast }: RewardRulePanelProps) {
             )}
           </div>
 
-          {/* Submit */}
           <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 12 }}>
             <Button variant="secondary" onClick={() => setModalOpen(false)} disabled={saving}>Hủy</Button>
             <Button variant="primary" loading={saving} onClick={handleSave}>
-              {editRule ? 'Lưu thay đổi' : 'Tạo quy tắc'}
+              {editRule ? 'Lưu thay đổi' : 'Tạo mới'}
             </Button>
           </div>
         </div>
       </Modal>
 
-      {/* Delete Confirm dialog */}
+      {/* Delete Confirmation */}
       <ConfirmDialog
         open={deleteTarget !== null}
         title="Xóa quy tắc phần thưởng"
-        message={`Bạn có chắc chắn muốn xóa quy tắc phần thưởng này (ID: ${deleteTarget?.id}) không? Hành động này không thể hoàn tác.`}
+        message={`Bạn có chắc chắn muốn xóa quy tắc phần thưởng #${deleteTarget?.id} không? Thao tác này không thể hoàn tác.`}
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}
         loading={deleting}

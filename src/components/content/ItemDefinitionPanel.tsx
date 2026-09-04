@@ -18,8 +18,7 @@ interface ItemDefinitionPanelProps {
 const ITEM_TYPES = [
   { value: 'SKIN', label: 'Trang phục / Skin (SKIN)' },
   { value: 'XP_MUL', label: 'Nhân XP / XP Mul (XP_MUL)' },
-  { value: 'GOLD_MUL', label: 'Nhân vàng / Gold Mul (GOLD_MUL)' },
-  { value: 'BADGE', label: 'Huy hiệu / Badge (BADGE)' }
+  { value: 'GOLD_MUL', label: 'Nhân vàng / Gold Mul (GOLD_MUL)' }
 ];
 
 const EQUIPMENT_SLOTS = [
@@ -183,7 +182,7 @@ export function ItemDefinitionPanel({ onToast }: ItemDefinitionPanelProps) {
             Danh mục vật phẩm (Item Definitions)
           </h2>
           <p style={{ margin: 0, color: '#64748b', fontSize: 14 }}>
-            Quản lý các loại vật phẩm trong hệ thống (Trang phục/Skin, Tăng cường/Boost, Huy hiệu/Badge).
+            Quản lý các loại vật phẩm trong hệ thống (Trang phục/Skin, Tăng cường/Boost).
           </p>
         </div>
         <Button variant="primary" icon={<IconPlus size={18} />} onClick={openCreate}>
