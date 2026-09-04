@@ -39,7 +39,7 @@ export const createEmptyQuestionItem = (): FormQuestionItem => ({
   promptText: '',
   document: '',
   explanation: '',
-  answers: [{ ...EMPTY_ANSWER }],
+  answers: [{ ...EMPTY_ANSWER }, { ...EMPTY_ANSWER }],
   isCollapsed: false,
 });
 
@@ -92,7 +92,12 @@ export function QuestionBatchModal({
   };
 
   const removeAnswerField = (qIdx: number, ansIdx: number) => {
-    setFormQuestions(prev => prev.map((q, i) => i === qIdx ? { ...q, answers: q.answers.filter((_, aIdx) => aIdx !== ansIdx) } : q));
+    setFormQuestions(prev => prev.map((q, i) => {
+      if (i !== qIdx) return q;
+      const minAnswers = (q.type === 'CHOOSE' || q.type === 'MATCH') ? 2 : 1;
+      if (q.answers.length <= minAnswers) return q;
+      return { ...q, answers: q.answers.filter((_, aIdx) => aIdx !== ansIdx) };
+    }));
   };
 
   const updateAnswerField = (qIdx: number, ansIdx: number, field: keyof FormAnswer, val: any) => {
@@ -338,13 +343,17 @@ export function QuestionBatchModal({
       }
 
       if (qItem.type === 'CHOOSE') {
-        const options = qItem.answers.map(a => a.content.trim()).filter(Boolean);
-        const correctOption = qItem.answers.some(a => a.isCorrect);
-
-        if (options.length === 0) {
-          onToast(`Câu hỏi số ${index + 1}: Vui lòng điền nội dung các lựa chọn`, 'error');
+        const validOptions = qItem.answers.map(a => a.content.trim());
+        if (validOptions.some(opt => !opt)) {
+          onToast(`Câu hỏi số ${index + 1}: Vui lòng điền nội dung cho tất cả các lựa chọn`, 'error');
           return;
         }
+        if (validOptions.length < 2) {
+          onToast(`Câu hỏi số ${index + 1}: Loại câu hỏi Trắc nghiệm (CHOOSE) phải có ít nhất 2 lựa chọn`, 'error');
+          return;
+        }
+        const correctOption = qItem.answers.some(a => a.isCorrect);
+
         if (!correctOption) {
           onToast(`Câu hỏi số ${index + 1}: Vui lòng chọn ít nhất một lựa chọn đúng`, 'error');
           return;
@@ -356,9 +365,13 @@ export function QuestionBatchModal({
           return;
         }
       } else if (qItem.type === 'MATCH') {
-        const validPairs = qItem.answers.filter(a => a.leftText.trim() && a.rightText.trim());
-        if (validPairs.length === 0) {
-          onToast(`Câu hỏi số ${index + 1}: Vui lòng điền đầy đủ các cặp nối`, 'error');
+        const validPairs = qItem.answers.map(a => ({ left: a.leftText.trim(), right: a.rightText.trim() }));
+        if (validPairs.some(p => !p.left || !p.right)) {
+          onToast(`Câu hỏi số ${index + 1}: Vui lòng điền đầy đủ cả hai vế cho tất cả các cặp nối`, 'error');
+          return;
+        }
+        if (validPairs.length < 2) {
+          onToast(`Câu hỏi số ${index + 1}: Loại câu hỏi Nối cặp (MATCH) phải có ít nhất 2 cặp nối`, 'error');
           return;
         }
       }
@@ -515,8 +528,13 @@ export function QuestionBatchModal({
                       label="Loại câu hỏi"
                       value={qItem.type}
                       onChange={(e) => {
-                        updateQuestionField(qIdx, 'type', e.target.value as any);
-                        setFormQuestions(prev => prev.map((q, i) => i === qIdx ? { ...q, answers: [{ ...EMPTY_ANSWER }] } : q));
+                        const newType = e.target.value as any;
+                        updateQuestionField(qIdx, 'type', newType);
+                        const initialCount = (newType === 'CHOOSE' || newType === 'MATCH') ? 2 : 1;
+                        setFormQuestions(prev => prev.map((q, i) => i === qIdx ? {
+                          ...q,
+                          answers: Array.from({ length: initialCount }, () => ({ ...EMPTY_ANSWER }))
+                        } : q));
                       }}
                     >
                       <option value="CHOOSE">CHOOSE — Trắc nghiệm nhiều lựa chọn</option>
@@ -556,18 +574,6 @@ export function QuestionBatchModal({
                     onChange={(val) => updateQuestionField(qIdx, 'promptText', val)}
                     placeholder="Nhập câu hỏi lịch sử..."
                   />
-                  <RichTextEditor
-                    label="Tài liệu/Đoạn trích đi kèm (Tùy chọn)"
-                    value={qItem.document}
-                    onChange={(val) => updateQuestionField(qIdx, 'document', val)}
-                    placeholder="Nhập đoạn văn trích dẫn lịch sử..."
-                  />
-                  <RichTextEditor
-                    label="Giải thích đáp án (Tùy chọn)"
-                    value={qItem.explanation}
-                    onChange={(val) => updateQuestionField(qIdx, 'explanation', val)}
-                    placeholder="Giải thích vì sao đáp án này chính xác..."
-                  />
                 </div>
 
                 {/* Answer list section inside card */}
@@ -600,7 +606,7 @@ export function QuestionBatchModal({
                                 style={INPUT_STYLE}
                               />
                             </div>
-                            {qItem.answers.length > 1 && (
+                            {qItem.answers.length > 2 && (
                               <button onClick={() => removeAnswerField(qIdx, idx)} style={DEL_BTN_STYLE}>
                                 <IconDelete size={15} />
                               </button>
@@ -648,7 +654,7 @@ export function QuestionBatchModal({
                                 style={INPUT_STYLE}
                               />
                             </div>
-                            {qItem.answers.length > 1 && (
+                            {qItem.answers.length > 2 && (
                               <button onClick={() => removeAnswerField(qIdx, idx)} style={DEL_BTN_STYLE}>
                                 <IconDelete size={15} />
                               </button>
@@ -658,6 +664,21 @@ export function QuestionBatchModal({
                       </div>
                     ))}
                   </div>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 14 }}>
+                  <RichTextEditor
+                    label="Tài liệu/Đoạn trích đi kèm (Tùy chọn)"
+                    value={qItem.document}
+                    onChange={(val) => updateQuestionField(qIdx, 'document', val)}
+                    placeholder="Nhập đoạn văn trích dẫn lịch sử..."
+                  />
+                  <RichTextEditor
+                    label="Giải thích đáp án (Tùy chọn)"
+                    value={qItem.explanation}
+                    onChange={(val) => updateQuestionField(qIdx, 'explanation', val)}
+                    placeholder="Giải thích vì sao đáp án này chính xác..."
+                  />
                 </div>
               </>
             )}

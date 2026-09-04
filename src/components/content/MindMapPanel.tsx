@@ -9,7 +9,7 @@ import { Modal } from '../ui/Modal';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { Input, Textarea, Select } from '../ui/FormField';
 import { Spinner } from '../ui/Spinner';
-import { IconMindMap, IconMagicWand, IconAlert } from '../ui/Icons';
+import { IconMindMap, IconMagicWand, IconAlert, IconDelete } from '../ui/Icons';
 import { RichTextEditor } from '../ui/RichTextEditor';
 import { getDeleteErrorMessage } from '../../utils/deleteHelper';
 import {
@@ -740,7 +740,7 @@ function VisualMindMapDiagramContent({
         maxZoom={1.5}
         fitView
       >
-        <Controls />
+        <Controls showInteractive={false} />
       </ReactFlow>
     </div>
   );
@@ -795,6 +795,7 @@ export function MindMapPanel({ onToast, navParams, onNavigate: _onNavigate }: Mi
   const [aiPreviewSections, setAiPreviewSections] = useState<any[]>([]);
 
   const [aiSaveConfirmOpen, setAiSaveConfirmOpen] = useState(false);
+  const [deleteMindMapConfirmOpen, setDeleteMindMapConfirmOpen] = useState(false);
 
   // 1. Sequential Cascade Select Fetches
   useEffect(() => {
@@ -1227,6 +1228,21 @@ export function MindMapPanel({ onToast, navParams, onNavigate: _onNavigate }: Mi
     }
   };
 
+  const handleDeleteMindMap = async () => {
+    if (!selectedLessonId) return;
+    try {
+      setDeleting(true);
+      await client.delete(`/api/admin/lessons/${selectedLessonId}/mindmap`);
+      onToast('Đã xóa sơ đồ tư duy của bài học', 'success');
+      setDeleteMindMapConfirmOpen(false);
+      fetchLessonTree(selectedLessonId);
+    } catch (err: any) {
+      onToast(getDeleteErrorMessage(err), 'error');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   // 5. AI Generator Handlers
   const handleAIGenerate = async () => {
     if (!aiText.trim()) {
@@ -1386,6 +1402,21 @@ export function MindMapPanel({ onToast, navParams, onNavigate: _onNavigate }: Mi
 
         {selectedLessonId && (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center' }}>
+            {lessonTree && lessonTree.sections && lessonTree.sections.length > 0 && (
+              <Button
+                variant="danger"
+                icon={<IconDelete size={14} />}
+                onClick={() => setDeleteMindMapConfirmOpen(true)}
+                disabled={deleting}
+                style={{
+                  height: '34px',
+                  fontSize: '13px',
+                  boxSizing: 'border-box',
+                }}
+              >
+                Xóa sơ đồ tư duy
+              </Button>
+            )}
             <Button
               variant="secondary"
               icon={<IconMagicWand size={14} color="#c37938" />}
@@ -1640,6 +1671,16 @@ export function MindMapPanel({ onToast, navParams, onNavigate: _onNavigate }: Mi
         title="Xác nhận ghi đè sơ đồ tư duy"
         message="Hành động này sẽ ghi đè và THAY THẾ hoàn toàn sơ đồ tư duy hiện tại của bài học này bằng cấu trúc sơ đồ tư duy mới từ AI. Bạn có chắc chắn muốn tiếp tục không?"
         loading={saving}
+      />
+
+      {/* Delete Entire Mind Map Confirmation */}
+      <ConfirmDialog
+        open={deleteMindMapConfirmOpen}
+        onCancel={() => setDeleteMindMapConfirmOpen(false)}
+        onConfirm={handleDeleteMindMap}
+        title="Xóa sơ đồ tư duy"
+        message="Bạn có chắc chắn muốn xóa toàn bộ sơ đồ tư duy của bài học này? Tất cả các nhánh sơ đồ tư duy sẽ bị xóa và bài học sẽ không còn sơ đồ tư duy."
+        loading={deleting}
       />
     </div>
   );

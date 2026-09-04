@@ -295,7 +295,7 @@ export function QuestionPanel({ onToast }: QuestionPanelProps) {
         promptText: '',
         document: '',
         explanation: '',
-        answers: [{ ...EMPTY_ANSWER }]
+        answers: [{ ...EMPTY_ANSWER }, { ...EMPTY_ANSWER }]
       }
     ]);
     setModalOpen(true);
@@ -421,7 +421,7 @@ export function QuestionPanel({ onToast }: QuestionPanelProps) {
         promptText: '',
         document: '',
         explanation: '',
-        answers: [{ ...EMPTY_ANSWER }]
+        answers: [{ ...EMPTY_ANSWER }, { ...EMPTY_ANSWER }]
       }
     ]);
   };
@@ -439,7 +439,12 @@ export function QuestionPanel({ onToast }: QuestionPanelProps) {
   };
 
   const removeAnswerField = (qIdx: number, ansIdx: number) => {
-    setFormQuestions(prev => prev.map((q, i) => i === qIdx ? { ...q, answers: q.answers.filter((_, aIdx) => aIdx !== ansIdx) } : q));
+    setFormQuestions(prev => prev.map((q, i) => {
+      if (i !== qIdx) return q;
+      const minAnswers = (q.type === 'CHOOSE' || q.type === 'MATCH') ? 2 : 1;
+      if (q.answers.length <= minAnswers) return q;
+      return { ...q, answers: q.answers.filter((_, aIdx) => aIdx !== ansIdx) };
+    }));
   };
 
   const updateAnswerField = (qIdx: number, ansIdx: number, field: keyof FormAnswer, val: any) => {
@@ -849,19 +854,22 @@ export function QuestionPanel({ onToast }: QuestionPanelProps) {
       // Construct answerDataJson based on type
       let answerDataJson: any = null;
       if (qItem.type === 'CHOOSE') {
-        const options = qItem.answers.map(a => a.content.trim()).filter(Boolean);
+        const validOptions = qItem.answers.map(a => a.content.trim());
+        if (validOptions.some(opt => !opt)) {
+          return onToast(`Câu hỏi số ${index + 1}: Vui lòng điền nội dung cho tất cả các lựa chọn`, 'error');
+        }
+        if (validOptions.length < 2) {
+          return onToast(`Câu hỏi số ${index + 1}: Loại câu hỏi Trắc nghiệm (CHOOSE) phải có ít nhất 2 lựa chọn`, 'error');
+        }
         const correctOption = qItem.answers
           .map((a, i) => (a.isCorrect ? i : -1))
           .filter(i => i !== -1);
 
-        if (options.length === 0) {
-          return onToast(`Câu hỏi số ${index + 1}: Vui lòng điền nội dung các lựa chọn`, 'error');
-        }
         if (correctOption.length === 0) {
           return onToast(`Câu hỏi số ${index + 1}: Vui lòng chọn ít nhất một lựa chọn đúng`, 'error');
         }
 
-        answerDataJson = { options, correctOption };
+        answerDataJson = { options: validOptions, correctOption };
       } else if (qItem.type === 'FILL') {
         const acceptedAnswers = qItem.answers.map(a => a.content.trim()).filter(Boolean);
         if (acceptedAnswers.length === 0) {
@@ -870,14 +878,15 @@ export function QuestionPanel({ onToast }: QuestionPanelProps) {
 
         answerDataJson = { acceptedAnswers };
       } else if (qItem.type === 'MATCH') {
-        const pairs = qItem.answers
-          .filter(a => a.leftText.trim() && a.rightText.trim())
-          .map(a => ({ [a.leftText.trim()]: a.rightText.trim() }));
-
-        if (pairs.length === 0) {
-          return onToast(`Câu hỏi số ${index + 1}: Vui lòng điền đầy đủ các cặp nối`, 'error');
+        const validPairs = qItem.answers.map(a => ({ left: a.leftText.trim(), right: a.rightText.trim() }));
+        if (validPairs.some(p => !p.left || !p.right)) {
+          return onToast(`Câu hỏi số ${index + 1}: Vui lòng điền đầy đủ cả hai vế cho tất cả các cặp nối`, 'error');
+        }
+        if (validPairs.length < 2) {
+          return onToast(`Câu hỏi số ${index + 1}: Loại câu hỏi Nối cặp (MATCH) phải có ít nhất 2 cặp nối`, 'error');
         }
 
+        const pairs = validPairs.map(p => ({ [p.left]: p.right }));
         answerDataJson = { pairs };
       }
 
@@ -935,14 +944,40 @@ export function QuestionPanel({ onToast }: QuestionPanelProps) {
     }
   };
 
-  const getScopeBadgeLabel = (q: AdminQuestionDto) => {
+  const getFullScopeLabel = (q: AdminQuestionDto) => {
     if (q.scopeType === 'NATIONAL') return 'Quốc gia';
     if (q.scopeType === 'GRADE') return `Khối ${q.scopeId}`;
-    if (q.scopeType === 'TOPIC') return `Chủ đề #${q.scopeId}`;
-    if (q.scopeType === 'LESSON') return `Bài #${q.scopeId}`;
-    if (q.scopeType === 'SECTION') return `Phần #${q.scopeId}`;
-    if (q.scopeType === 'NODE') return `Nút #${q.scopeId}`;
+    if (q.scopeType === 'TOPIC') {
+      if (q.scopeName) {
+        return /^chủ đề/i.test(q.scopeName.trim()) ? q.scopeName.trim() : `Chủ đề: ${q.scopeName.trim()}`;
+      }
+      return `Chủ đề #${q.scopeId}`;
+    }
+    if (q.scopeType === 'LESSON') {
+      if (q.scopeName) {
+        return /^bài/i.test(q.scopeName.trim()) ? q.scopeName.trim() : `Bài: ${q.scopeName.trim()}`;
+      }
+      return `Bài #${q.scopeId}`;
+    }
+    if (q.scopeType === 'SECTION') {
+      if (q.scopeName) {
+        return /^phần/i.test(q.scopeName.trim()) ? q.scopeName.trim() : `Phần ${q.scopeName.trim()}`;
+      }
+      return `Phần #${q.scopeId}`;
+    }
+    if (q.scopeType === 'NODE') {
+      if (q.scopeName) {
+        return /^nút/i.test(q.scopeName.trim()) ? q.scopeName.trim() : `Nút: ${q.scopeName.trim()}`;
+      }
+      return `Nút #${q.scopeId}`;
+    }
     return 'Chưa xác định';
+  };
+
+  const getScopeBadgeLabel = (q: AdminQuestionDto) => {
+    const full = getFullScopeLabel(q);
+    const maxLen = 28;
+    return full.length > maxLen ? `${full.substring(0, maxLen)}...` : full;
   };
 
   return (
@@ -1101,7 +1136,15 @@ export function QuestionPanel({ onToast }: QuestionPanelProps) {
                       </span>
                     </td>
                     <td style={TD_STYLE}>
-                      <span style={{ fontWeight: 600, color: '#4f46e5', fontSize: 13 }}>
+                      <span
+                        title={getFullScopeLabel(q)}
+                        style={{
+                          fontWeight: 600,
+                          color: '#4f46e5',
+                          fontSize: 13,
+                          cursor: q.scopeName ? 'help' : 'default',
+                        }}
+                      >
                         {getScopeBadgeLabel(q)}
                       </span>
                     </td>
@@ -1487,9 +1530,13 @@ export function QuestionPanel({ onToast }: QuestionPanelProps) {
                         label="Loại câu hỏi"
                         value={qItem.type}
                         onChange={(e) => {
-                          updateQuestionField(qIdx, 'type', e.target.value as any);
-                          // Reset answers list for this question
-                          setFormQuestions(prev => prev.map((q, i) => i === qIdx ? { ...q, answers: [{ ...EMPTY_ANSWER }] } : q));
+                          const newType = e.target.value as any;
+                          updateQuestionField(qIdx, 'type', newType);
+                          const initialCount = (newType === 'CHOOSE' || newType === 'MATCH') ? 2 : 1;
+                          setFormQuestions(prev => prev.map((q, i) => i === qIdx ? {
+                            ...q,
+                            answers: Array.from({ length: initialCount }, () => ({ ...EMPTY_ANSWER }))
+                          } : q));
                         }}
                       >
                         <option value="CHOOSE">CHOOSE — Trắc nghiệm nhiều lựa chọn</option>
@@ -1529,18 +1576,6 @@ export function QuestionPanel({ onToast }: QuestionPanelProps) {
                       onChange={(val) => updateQuestionField(qIdx, 'promptText', val)}
                       placeholder="Nhập câu hỏi lịch sử..."
                     />
-                    <RichTextEditor
-                      label="Tài liệu/Đoạn trích đi kèm (Tùy chọn)"
-                      value={qItem.document}
-                      onChange={(val) => updateQuestionField(qIdx, 'document', val)}
-                      placeholder="Nhập đoạn văn trích dẫn lịch sử..."
-                    />
-                    <RichTextEditor
-                      label="Giải thích đáp án (Tùy chọn)"
-                      value={qItem.explanation}
-                      onChange={(val) => updateQuestionField(qIdx, 'explanation', val)}
-                      placeholder="Giải thích vì sao đáp án này chính xác..."
-                    />
                   </div>
 
                   {/* Answer list section inside card */}
@@ -1572,7 +1607,7 @@ export function QuestionPanel({ onToast }: QuestionPanelProps) {
                                   style={INPUT_STYLE}
                                 />
                               </div>
-                              {qItem.answers.length > 1 && (
+                              {qItem.answers.length > 2 && (
                                 <button onClick={() => removeAnswerField(qIdx, idx)} style={DEL_BTN_STYLE}>
                                   <IconDelete size={16} />
                                 </button>
@@ -1620,7 +1655,7 @@ export function QuestionPanel({ onToast }: QuestionPanelProps) {
                                   style={INPUT_STYLE}
                                 />
                               </div>
-                              {qItem.answers.length > 1 && (
+                              {qItem.answers.length > 2 && (
                                 <button onClick={() => removeAnswerField(qIdx, idx)} style={DEL_BTN_STYLE}>
                                   <IconDelete size={16} />
                                 </button>
@@ -1630,6 +1665,21 @@ export function QuestionPanel({ onToast }: QuestionPanelProps) {
                         </div>
                       ))}
                     </div>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 16 }}>
+                    <RichTextEditor
+                      label="Tài liệu/Đoạn trích đi kèm (Tùy chọn)"
+                      value={qItem.document}
+                      onChange={(val) => updateQuestionField(qIdx, 'document', val)}
+                      placeholder="Nhập đoạn văn trích dẫn lịch sử..."
+                    />
+                    <RichTextEditor
+                      label="Giải thích đáp án (Tùy chọn)"
+                      value={qItem.explanation}
+                      onChange={(val) => updateQuestionField(qIdx, 'explanation', val)}
+                      placeholder="Giải thích vì sao đáp án này chính xác..."
+                    />
                   </div>
                 </>
               )}
