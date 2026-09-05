@@ -1,5 +1,4 @@
-// src/components/content/TestPresetPanel.tsx
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import client from '../../api/client';
 import type { TestPresetDto, ScopeTestPresetDefaultDto } from '../../types/api';
 import type { ToastType } from '../../hooks/useToast';
@@ -36,42 +35,370 @@ const EMPTY_DEFAULT_FORM = {
 const EXAM_TOOLTIP = 'Có thể di chuyển đến bất kỳ câu hỏi nào. Chỉ biết kết quả sau khi nộp bài';
 const PRACTICE_TOOLTIP = 'Làm lần lượt từng câu hỏi và biết kết quả ngay sau mỗi câu.';
 
-function adjustRatios(current: number[], targetIdx: number, rawVal: number): number[] {
-  const nextR = [...current];
-  const newVal = Math.max(0, Math.min(100, Math.round(rawVal)));
-  const delta = newVal - nextR[targetIdx];
-  if (delta === 0) return nextR;
+interface DifficultyRatioSplitBarProps {
+  ratios: [number, number, number, number];
+  questionCount?: number | null;
+  onChange: (ratios: [number, number, number, number]) => void;
+}
 
-  nextR[targetIdx] = newVal;
-  let remainingDelta = -delta;
+function DifficultyRatioSplitBar({ ratios, questionCount, onChange }: DifficultyRatioSplitBarProps) {
+  const [r1, r2, r3, r4] = ratios;
+  const p1 = Math.max(0, Math.min(100, r1));
+  const p2 = Math.max(p1, Math.min(100, p1 + r2));
+  const p3 = Math.max(p2, Math.min(100, p2 + r3));
 
-  const otherIndices = [];
-  for (let step = 1; step <= 3; step++) {
-    otherIndices.push((targetIdx + step) % 4);
-  }
+  const trackRef = useRef<HTMLDivElement>(null);
+  const cutoffsRef = useRef([p1, p2, p3]);
+  const [activeHandle, setActiveHandle] = useState<number | null>(null);
+  const [hoverHandle, setHoverHandle] = useState<number | null>(null);
 
-  for (const idx of otherIndices) {
-    if (remainingDelta === 0) break;
-    const oldVal = nextR[idx];
-    if (remainingDelta > 0) {
-      const canAdd = 100 - oldVal;
-      const add = Math.min(canAdd, remainingDelta);
-      nextR[idx] += add;
-      remainingDelta -= add;
+  useEffect(() => {
+    cutoffsRef.current = [p1, p2, p3];
+  }, [p1, p2, p3]);
+
+  const handlePointerDown = (index: number, e: React.PointerEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setActiveHandle(index);
+
+    let currentTargetIdx = index;
+
+    const onPointerMove = (moveEvt: PointerEvent) => {
+      if (!trackRef.current) return;
+      const rect = trackRef.current.getBoundingClientRect();
+      if (rect.width <= 0) return;
+      const pct = Math.round(((moveEvt.clientX - rect.left) / rect.width) * 100);
+      const [curP1, curP2, curP3] = cutoffsRef.current;
+
+      if (currentTargetIdx === 0) {
+        if (pct > curP2 && curP1 === curP2) {
+          currentTargetIdx = 1;
+          setActiveHandle(1);
+          const nextP2 = Math.min(curP3, pct);
+          onChange([curP1, nextP2 - curP1, curP3 - nextP2, 100 - curP3]);
+          return;
+        }
+        const nextP1 = Math.max(0, Math.min(curP2, pct));
+        onChange([nextP1, curP2 - nextP1, curP3 - curP2, 100 - curP3]);
+      } else if (currentTargetIdx === 1) {
+        if (pct < curP1 && curP1 === curP2) {
+          currentTargetIdx = 0;
+          setActiveHandle(0);
+          const nextP1 = Math.max(0, pct);
+          onChange([nextP1, curP2 - nextP1, curP3 - curP2, 100 - curP3]);
+          return;
+        }
+        if (pct > curP3 && curP2 === curP3) {
+          currentTargetIdx = 2;
+          setActiveHandle(2);
+          const nextP3 = Math.min(100, pct);
+          onChange([curP1, curP2 - curP1, nextP3 - curP2, 100 - nextP3]);
+          return;
+        }
+        const nextP2 = Math.max(curP1, Math.min(curP3, pct));
+        onChange([curP1, nextP2 - curP1, curP3 - nextP2, 100 - curP3]);
+      } else if (currentTargetIdx === 2) {
+        if (pct < curP2 && curP2 === curP3) {
+          currentTargetIdx = 1;
+          setActiveHandle(1);
+          const nextP2 = Math.max(curP1, pct);
+          onChange([curP1, nextP2 - curP1, curP3 - nextP2, 100 - curP3]);
+          return;
+        }
+        const nextP3 = Math.max(curP2, Math.min(100, pct));
+        onChange([curP1, curP2 - curP1, nextP3 - curP2, 100 - nextP3]);
+      }
+    };
+
+    const onPointerUp = () => {
+      setActiveHandle(null);
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+    };
+
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
+  };
+
+  const handleTrackPointerDown = (e: React.PointerEvent) => {
+    if (!trackRef.current) return;
+    const rect = trackRef.current.getBoundingClientRect();
+    if (rect.width <= 0) return;
+    const pct = Math.round(((e.clientX - rect.left) / rect.width) * 100);
+    const [curP1, curP2, curP3] = cutoffsRef.current;
+
+    const d0 = Math.abs(curP1 - pct);
+    const d1 = Math.abs(curP2 - pct);
+    const d2 = Math.abs(curP3 - pct);
+
+    let closestIdx = 0;
+    if (d1 < d0 && d1 <= d2) closestIdx = 1;
+    else if (d2 < d0 && d2 < d1) closestIdx = 2;
+
+    if (closestIdx === 0) {
+      const nextP1 = Math.max(0, Math.min(curP2, pct));
+      onChange([nextP1, curP2 - nextP1, curP3 - curP2, 100 - curP3]);
+    } else if (closestIdx === 1) {
+      const nextP2 = Math.max(curP1, Math.min(curP3, pct));
+      onChange([curP1, nextP2 - curP1, curP3 - nextP2, 100 - curP3]);
     } else {
-      const canSub = oldVal;
-      const sub = Math.min(canSub, -remainingDelta);
-      nextR[idx] -= sub;
-      remainingDelta += sub;
+      const nextP3 = Math.max(curP2, Math.min(100, pct));
+      onChange([curP1, curP2 - curP1, nextP3 - curP2, 100 - nextP3]);
     }
-  }
 
-  const currentSum = nextR.reduce((a, b) => a + b, 0);
-  if (currentSum !== 100) {
-    nextR[targetIdx] += (100 - currentSum);
-  }
+    handlePointerDown(closestIdx, e);
+  };
 
-  return nextR;
+  const handleKeyDown = (index: number, e: React.KeyboardEvent) => {
+    const step = e.shiftKey ? 5 : 1;
+    let delta = 0;
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') delta = -step;
+    else if (e.key === 'ArrowRight' || e.key === 'ArrowUp') delta = step;
+    else return;
+
+    e.preventDefault();
+    const [curP1, curP2, curP3] = cutoffsRef.current;
+    if (index === 0) {
+      const nextP1 = Math.max(0, Math.min(curP2, curP1 + delta));
+      onChange([nextP1, curP2 - nextP1, curP3 - curP2, 100 - curP3]);
+    } else if (index === 1) {
+      const nextP2 = Math.max(curP1, Math.min(curP3, curP2 + delta));
+      onChange([curP1, nextP2 - curP1, curP3 - nextP2, 100 - curP3]);
+    } else if (index === 2) {
+      const nextP3 = Math.max(curP2, Math.min(100, curP3 + delta));
+      onChange([curP1, curP2 - curP1, nextP3 - curP2, 100 - nextP3]);
+    }
+  };
+
+  const cutoffs = [p1, p2, p3];
+
+  const levels = [
+    { name: 'Nhận biết', val: r1, color: '#10b981', bg: '#ecfdf5', border: '#a7f3d0' },
+    { name: 'Thông hiểu', val: r2, color: '#6366f1', bg: '#e0e7ff', border: '#c7d2fe' },
+    { name: 'Vận dụng', val: r3, color: '#d97706', bg: '#fef3c7', border: '#fde68a' },
+    { name: 'Vận dụng cao', val: r4, color: '#ef4444', bg: '#fee2e2', border: '#fecaca' },
+  ];
+
+  return (
+    <div style={{ background: '#f8fafc', padding: 16, borderRadius: 12, border: '1px solid #e2e8f0', marginBottom: 16 }}>
+      <div style={{ marginBottom: 12 }}>
+        <span style={{ fontSize: 13, fontWeight: 700, color: '#334155' }}>
+          Cấu trúc tỉ lệ độ khó
+        </span>
+      </div>
+
+      {/* Single multi-segment slider track */}
+      <div
+        ref={trackRef}
+        onPointerDown={handleTrackPointerDown}
+        style={{
+          position: 'relative',
+          height: 36,
+          marginTop: 18,
+          marginBottom: 16,
+          cursor: 'pointer',
+          userSelect: 'none',
+          touchAction: 'none'
+        }}
+      >
+        {/* Color segments container */}
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            borderRadius: 12,
+            overflow: 'hidden',
+            display: 'flex',
+            background: '#e2e8f0'
+          }}
+        >
+          <div
+            style={{
+              width: `${r1}%`,
+              background: '#10b981',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#ffffff',
+              fontSize: 12,
+              fontWeight: 700,
+              overflow: 'hidden',
+              whiteSpace: 'nowrap',
+              padding: '0 4px',
+              transition: activeHandle !== null ? 'none' : 'width 0.1s ease',
+            }}
+            title={`Mức 1 (Nhận biết): ${r1}%`}
+          >
+            {r1 >= 14 ? `M1: ${r1}%` : r1 >= 8 ? `${r1}%` : ''}
+          </div>
+          <div
+            style={{
+              width: `${r2}%`,
+              background: '#6366f1',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#ffffff',
+              fontSize: 12,
+              fontWeight: 700,
+              overflow: 'hidden',
+              whiteSpace: 'nowrap',
+              padding: '0 4px',
+              transition: activeHandle !== null ? 'none' : 'width 0.1s ease',
+            }}
+            title={`Mức 2 (Thông hiểu): ${r2}%`}
+          >
+            {r2 >= 14 ? `M2: ${r2}%` : r2 >= 8 ? `${r2}%` : ''}
+          </div>
+          <div
+            style={{
+              width: `${r3}%`,
+              background: '#d97706',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#ffffff',
+              fontSize: 12,
+              fontWeight: 700,
+              overflow: 'hidden',
+              whiteSpace: 'nowrap',
+              padding: '0 4px',
+              transition: activeHandle !== null ? 'none' : 'width 0.1s ease',
+            }}
+            title={`Mức 3 (Vận dụng): ${r3}%`}
+          >
+            {r3 >= 14 ? `M3: ${r3}%` : r3 >= 8 ? `${r3}%` : ''}
+          </div>
+          <div
+            style={{
+              width: `${r4}%`,
+              background: '#ef4444',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#ffffff',
+              fontSize: 12,
+              fontWeight: 700,
+              overflow: 'hidden',
+              whiteSpace: 'nowrap',
+              padding: '0 4px',
+              transition: activeHandle !== null ? 'none' : 'width 0.1s ease',
+            }}
+            title={`Mức 4 (Vận dụng cao): ${r4}%`}
+          >
+            {r4 >= 14 ? `M4: ${r4}%` : r4 >= 8 ? `${r4}%` : ''}
+          </div>
+        </div>
+
+        {/* 3 Splitter Slider Handles */}
+        {cutoffs.map((pos, idx) => {
+          const isActive = activeHandle === idx;
+          const isHovered = hoverHandle === idx;
+          return (
+            <div
+              key={idx}
+              role="slider"
+              tabIndex={0}
+              aria-label={`Điểm chia mức ${idx + 1} và mức ${idx + 2}`}
+              aria-valuenow={pos}
+              aria-valuemin={idx === 0 ? 0 : idx === 1 ? p1 : p2}
+              aria-valuemax={idx === 0 ? p2 : idx === 1 ? p3 : 100}
+              onPointerDown={(e) => handlePointerDown(idx, e)}
+              onMouseEnter={() => setHoverHandle(idx)}
+              onMouseLeave={() => setHoverHandle(null)}
+              onKeyDown={(e) => handleKeyDown(idx, e)}
+              style={{
+                position: 'absolute',
+                left: `${pos}%`,
+                top: '50%',
+                transform: 'translate(-50%, -50%)',
+                width: 18,
+                height: 44,
+                borderRadius: 30,
+                background: isActive ? '#f8fafc' : '#ffffff',
+                border: isActive ? '2px solid #0f172a' : isHovered ? '2px solid #334155' : '2px solid #64748b',
+                cursor: 'ew-resize',
+                zIndex: isActive ? 30 : isHovered ? 25 : 15 - idx,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                outline: 'none',
+                touchAction: 'none',
+                transition: activeHandle !== null ? 'none' : 'left 0.1s ease',
+              }}
+            >
+              {/* Grip Indicator */}
+              <div style={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                <div style={{ width: 1.5, height: 14, background: isActive ? '#0f172a' : '#94a3b8', borderRadius: 1 }} />
+                <div style={{ width: 1.5, height: 14, background: isActive ? '#0f172a' : '#94a3b8', borderRadius: 1 }} />
+              </div>
+
+              {/* Floating Value Tooltip */}
+              {(isActive || isHovered) && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    bottom: '100%',
+                    marginBottom: 6,
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    background: '#0f172a',
+                    color: '#ffffff',
+                    fontSize: 11,
+                    fontWeight: 700,
+                    padding: '2px 7px',
+                    borderRadius: 6,
+                    whiteSpace: 'nowrap',
+                    pointerEvents: 'none',
+                  }}
+                >
+                  {pos}%
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* 4 Difficulty Level Cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 10, marginTop: 14 }}>
+        {levels.map((item, i) => (
+          <div
+            key={i}
+            style={{
+              background: item.bg,
+              border: `1px solid ${item.border}`,
+              borderRadius: 12,
+              padding: '10px 12px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 3,
+              minWidth: 0,
+              boxSizing: 'border-box'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, color: '#475569', minWidth: 0 }}>
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: item.color, flexShrink: 0 }} />
+              <span style={{ whiteSpace: 'nowrap' }}>
+                Mức {i + 1}: {item.name}
+              </span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 4, marginTop: 4, flexWrap: 'wrap', minWidth: 0 }}>
+              <span style={{ fontSize: 17, fontWeight: 700, color: item.color }}>
+                {item.val}%
+              </span>
+              {questionCount && questionCount > 0 ? (
+                <span style={{ fontSize: 11.5, fontWeight: 600, color: '#64748b', whiteSpace: 'nowrap' }}>
+                  ~{Math.round((questionCount * item.val) / 100)} câu
+                </span>
+              ) : null}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function Tooltip({ text, children }: { text: string; children: React.ReactNode }) {
@@ -247,20 +574,13 @@ export function TestPresetPanel({ onToast }: TestPresetPanelProps) {
     setPresetModalOpen(true);
   };
 
-  const handleRatioChange = (targetIdx: number, val: number) => {
-    const current = [
-      Number(presetForm.ratio1) || 0,
-      Number(presetForm.ratio2) || 0,
-      Number(presetForm.ratio3) || 0,
-      Number(presetForm.ratio4) || 0,
-    ];
-    const adjusted = adjustRatios(current, targetIdx, val);
+  const handleRatiosChange = (ratios: [number, number, number, number]) => {
     setPresetForm(f => ({
       ...f,
-      ratio1: String(adjusted[0]),
-      ratio2: String(adjusted[1]),
-      ratio3: String(adjusted[2]),
-      ratio4: String(adjusted[3]),
+      ratio1: String(ratios[0]),
+      ratio2: String(ratios[1]),
+      ratio3: String(ratios[2]),
+      ratio4: String(ratios[3]),
     }));
   };
 
@@ -437,7 +757,7 @@ export function TestPresetPanel({ onToast }: TestPresetPanelProps) {
       )}
 
       {/* Preset Create / Edit Modal */}
-      <Modal open={presetModalOpen} title={editPreset ? `Sửa mẫu đề: ${editPreset.name}` : 'Tạo cấu hình mẫu đề mới'} onClose={() => setPresetModalOpen(false)}>
+      <Modal width={740} open={presetModalOpen} title={editPreset ? `Sửa mẫu đề: ${editPreset.name}` : 'Tạo cấu hình mẫu đề mới'} onClose={() => setPresetModalOpen(false)}>
         <Input label="Tên cấu hình mẫu đề" value={presetForm.name} onChange={(e) => setPresetForm(f => ({ ...f, name: e.target.value }))} placeholder="Ví dụ: Đề thi 15 phút mặc định" />
         
         {/* Row 2: Loại on left, tip on the side without "hướng dẫn" and "i" */}
@@ -473,68 +793,17 @@ export function TestPresetPanel({ onToast }: TestPresetPanelProps) {
           <Input label="Tỉ lệ điểm vượt qua (%)" type="number" value={presetForm.passThreshold} onChange={(e) => setPresetForm(f => ({ ...f, passThreshold: e.target.value }))} />
         </div>
 
-        {/* Difficulty ratio with interactive auto-balancing volume sliders */}
-        <div style={{ background: '#f8fafc', padding: 16, borderRadius: 12, border: '1px solid #e2e8f0', marginBottom: 16 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <span style={{ fontSize: 13, fontWeight: 700, color: '#334155' }}>
-              Cấu trúc tỉ lệ độ khó 
-            </span>
-            <span style={{ fontSize: 12, fontWeight: 700, color: '#10b981', background: '#ecfdf5', padding: '2px 8px', borderRadius: 12 }}>
-              Tổng: {Number(presetForm.ratio1) + Number(presetForm.ratio2) + Number(presetForm.ratio3) + Number(presetForm.ratio4)}%
-            </span>
-          </div>
-
-          {/* Overall combined distribution bar */}
-          <div style={{ display: 'flex', height: 10, borderRadius: 6, overflow: 'hidden', marginBottom: 16, background: '#e2e8f0' }}>
-            <div style={{ width: `${presetForm.ratio1}%`, background: '#10b981', transition: 'width 0.1s' }} title={`Mức 1: ${presetForm.ratio1}%`} />
-            <div style={{ width: `${presetForm.ratio2}%`, background: '#6366f1', transition: 'width 0.1s' }} title={`Mức 2: ${presetForm.ratio2}%`} />
-            <div style={{ width: `${presetForm.ratio3}%`, background: '#d97706', transition: 'width 0.1s' }} title={`Mức 3: ${presetForm.ratio3}%`} />
-            <div style={{ width: `${presetForm.ratio4}%`, background: '#ef4444', transition: 'width 0.1s' }} title={`Mức 4: ${presetForm.ratio4}%`} />
-          </div>
-
-          {/* 4 Volume Sliders */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {[
-              { label: 'Mức độ 1 (Nhận biết)', key: 'ratio1', idx: 0, color: '#10b981', bg: '#ecfdf5' },
-              { label: 'Mức độ 2 (Thông hiểu)', key: 'ratio2', idx: 1, color: '#6366f1', bg: '#e0e7ff' },
-              { label: 'Mức độ 3 (Vận dụng)', key: 'ratio3', idx: 2, color: '#d97706', bg: '#fef3c7' },
-              { label: 'Mức độ 4 (Vận dụng cao)', key: 'ratio4', idx: 3, color: '#ef4444', bg: '#fee2e2' },
-            ].map(item => {
-              const val = Number((presetForm as any)[item.key]) || 0;
-              return (
-                <div key={item.key} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div style={{ width: 160, fontSize: 12.5, fontWeight: 600, color: '#334155' }}>
-                    {item.label}
-                  </div>
-                  <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    value={val}
-                    onChange={(e) => handleRatioChange(item.idx, Number(e.target.value))}
-                    className="custom-range-slider"
-                    style={{
-                      flex: 1,
-                      color: item.color,
-                    }}
-                  />
-                  <span style={{
-                    width: 48,
-                    textAlign: 'right',
-                    fontWeight: 700,
-                    fontSize: 13,
-                    color: item.color,
-                    background: item.bg,
-                    padding: '2px 8px',
-                    borderRadius: 6
-                  }}>
-                    {val}%
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+        {/* Difficulty ratio with 3 sliders on a single 4-segment bar */}
+        <DifficultyRatioSplitBar
+          ratios={[
+            Number(presetForm.ratio1) || 0,
+            Number(presetForm.ratio2) || 0,
+            Number(presetForm.ratio3) || 0,
+            Number(presetForm.ratio4) || 0,
+          ]}
+          questionCount={presetForm.questionCount ? Number(presetForm.questionCount) : null}
+          onChange={handleRatiosChange}
+        />
 
         <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 20 }}>
           <Button variant="ghost" onClick={() => setPresetModalOpen(false)}>Hủy</Button>

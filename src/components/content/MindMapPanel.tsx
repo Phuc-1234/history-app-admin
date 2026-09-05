@@ -63,6 +63,8 @@ interface VisualMindMapDiagramProps {
   rootTitle: string;
   sections: any[];
   height?: string;
+  resetKey?: string | number;
+  expandSectionTrigger?: { id: number; ts: number } | null;
   onAddSection?: (parentId?: number) => void;
   onEditSection?: (sec: any) => void;
   onDeleteSection?: (id: number) => void;
@@ -562,23 +564,32 @@ function computeTreeLayout(
   return { subtreeHeight, centerY };
 }
 
-function getInitialCollapsedSections(sectionsList: any[]): Set<string> {
-  const collapsed = new Set<string>();
-  // Must produce the SAME keys as mapSectionToTreeNode, so both walk the tree
-  // with buildSectionKey(parentKey, index).
-  const walk = (items: any[], parentKey: string, depth: number) => {
-    items.forEach((item, index) => {
-      const key = buildSectionKey(item, parentKey, index);
-      if (depth >= 1) {
-        collapsed.add(key);
+function getInitialCollapsedSections(_sectionsList?: any[]): Set<string> {
+  // Expand all branches by default
+  return new Set<string>();
+}
+
+function findAncestorKeys(sectionsList: any[], targetId: number): string[] {
+  const keys: string[] = [];
+  const walk = (items: any[], parentKey: string): boolean => {
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      const key = buildSectionKey(item, parentKey, i);
+      if (item.id === targetId) {
+        keys.push(key);
+        return true;
       }
-      if (item.children) {
-        walk(item.children, key, depth + 1);
+      if (item.children && item.children.length > 0) {
+        if (walk(item.children, key)) {
+          keys.push(key);
+          return true;
+        }
       }
-    });
+    }
+    return false;
   };
-  walk(sectionsList, 'root', 0);
-  return collapsed;
+  walk(sectionsList, 'root');
+  return keys;
 }
 
 // ─── VisualMindMapDiagramContent & Provider ───────────────────────────────────
@@ -587,6 +598,8 @@ function VisualMindMapDiagramContent({
   rootTitle,
   sections,
   height = '600px',
+  resetKey,
+  expandSectionTrigger,
   onAddSection,
   onEditSection,
   onDeleteSection,
@@ -602,9 +615,31 @@ function VisualMindMapDiagramContent({
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
   const lastFittedTitleRef = useRef<string | null>(null);
 
+  const effectiveResetKey = resetKey !== undefined ? resetKey : rootTitle;
+  const prevResetKeyRef = useRef<string | number | undefined>(effectiveResetKey);
+
+  // Re-initialize collapsed sections ONLY when effectiveResetKey changes (e.g. lesson changed or fresh AI generation)
   useEffect(() => {
-    setCollapsedSections(getInitialCollapsedSections(sections));
-  }, [sections]);
+    if (prevResetKeyRef.current !== effectiveResetKey) {
+      prevResetKeyRef.current = effectiveResetKey;
+      setCollapsedSections(getInitialCollapsedSections(sections));
+    }
+  }, [effectiveResetKey, sections]);
+
+  // When expandSectionTrigger fires (e.g. adding a new branch or saving an edited branch),
+  // expand the target section and all its ancestors so it remains fully visible.
+  useEffect(() => {
+    if (expandSectionTrigger?.id != null) {
+      const ancestorKeys = findAncestorKeys(sections, expandSectionTrigger.id);
+      if (ancestorKeys.length > 0) {
+        setCollapsedSections(prev => {
+          const next = new Set(prev);
+          ancestorKeys.forEach(k => next.delete(k));
+          return next;
+        });
+      }
+    }
+  }, [expandSectionTrigger, sections]);
 
   const toggleSection = useCallback((secKey: string) => {
     setCollapsedSections(prev => {
@@ -754,6 +789,99 @@ export function VisualMindMapDiagram(props: VisualMindMapDiagramProps) {
   );
 }
 
+// ─── Tree Mutation Helpers (used by both Main MindMap & AI Preview) ───────────
+
+function updateSectionInTree(list: any[], editId: number, data: { name: string; summary: string | null; position: number; parentSectionId: number | null }): any[] {
+  return list.map(sec => {
+    if (sec.id === editId) {
+      return {
+        ...sec,
+        name: data.name,
+        summary: data.summary,
+        position: data.position,
+        parentSectionId: data.parentSectionId,
+      };
+    }
+    if (sec.children) {
+      return { ...sec, children: updateSectionInTree(sec.children, editId, data) };
+    }
+    return sec;
+  });
+}
+
+function addSectionToTree(list: any[], parentId: number | null, newSec: any): any[] {
+  if (!parentId) {
+    return [...list, newSec];
+  }
+  return list.map(sec => {
+    if (sec.id === parentId) {
+      return { ...sec, children: [...(sec.children || []), newSec] };
+    }
+    if (sec.children) {
+      return { ...sec, children: addSectionToTree(sec.children, parentId, newSec) };
+    }
+    return sec;
+  });
+}
+
+function updateNodeInTree(list: any[], editId: number, data: { header: string | null; body: string; position: number; videoId: string | null }): any[] {
+  return list.map(sec => {
+    if (sec.nodes) {
+      const hasNode = sec.nodes.some((n: any) => n.id === editId);
+      if (hasNode) {
+        return {
+          ...sec,
+          nodes: sec.nodes.map((n: any) => {
+            if (n.id === editId) {
+              return { ...n, ...data };
+            }
+            return n;
+          })
+        };
+      }
+    }
+    if (sec.children) {
+      return { ...sec, children: updateNodeInTree(sec.children, editId, data) };
+    }
+    return sec;
+  });
+}
+
+function addNodeToTree(list: any[], sectionId: number, newNd: any): any[] {
+  return list.map(sec => {
+    if (sec.id === sectionId) {
+      return { ...sec, nodes: [...(sec.nodes || []), newNd] };
+    }
+    if (sec.children) {
+      return { ...sec, children: addNodeToTree(sec.children, sectionId, newNd) };
+    }
+    return sec;
+  });
+}
+
+function deleteSectionFromTree(list: any[], deleteId: number): any[] {
+  return list
+    .filter(sec => sec.id !== deleteId)
+    .map(sec => {
+      if (sec.children) {
+        return { ...sec, children: deleteSectionFromTree(sec.children, deleteId) };
+      }
+      return sec;
+    });
+}
+
+function deleteNodeFromTree(list: any[], deleteId: number): any[] {
+  return list.map(sec => {
+    if (sec.nodes) {
+      sec.nodes = sec.nodes.filter((n: any) => n.id !== deleteId);
+    }
+    if (sec.children) {
+      return { ...sec, children: deleteNodeFromTree(sec.children, deleteId) };
+    }
+    return sec;
+  });
+}
+
 interface MindMapPanelProps {
   onToast: (msg: string, type: ToastType) => void;
   navParams?: NavParams;
@@ -772,6 +900,13 @@ export function MindMapPanel({ onToast, navParams, onNavigate: _onNavigate }: Mi
 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // Target scope for edits: 'main' operates on lessonTree and calls API; 'ai' operates locally on aiPreviewSections
+  const [editScope, setEditScope] = useState<'main' | 'ai'>('main');
+
+  // Controls expanding specific branch hierarchy (e.g. on new branch creation or edit)
+  const [expandSectionTrigger, setExpandSectionTrigger] = useState<{ id: number; ts: number } | null>(null);
+  const [aiGenVersion, setAiGenVersion] = useState(0);
 
   // Section Modal States
   const [sectionModalOpen, setSectionModalOpen] = useState(false);
@@ -966,7 +1101,8 @@ export function MindMapPanel({ onToast, navParams, onNavigate: _onNavigate }: Mi
   }, [selectedLessonId, fetchLessonTree]);
 
   // 2. Section CRUD Handlers
-  const openCreateSection = (parentSecId?: number) => {
+  const openCreateSection = (parentSecId?: number, scope: 'main' | 'ai' = 'main') => {
+    setEditScope(scope);
     setEditSection(null);
     setSectionForm({
       name: '',
@@ -974,10 +1110,14 @@ export function MindMapPanel({ onToast, navParams, onNavigate: _onNavigate }: Mi
       position: '1',
       parentSectionId: parentSecId ? String(parentSecId) : '',
     });
+    if (parentSecId) {
+      setExpandSectionTrigger({ id: parentSecId, ts: Date.now() });
+    }
     setSectionModalOpen(true);
   };
 
-  const openEditSection = (sec: SectionDto) => {
+  const openEditSection = (sec: SectionDto, scope: 'main' | 'ai' = 'main') => {
+    setEditScope(scope);
     setEditSection(sec);
     setSectionForm({
       name: sec.name,
@@ -998,62 +1138,66 @@ export function MindMapPanel({ onToast, navParams, onNavigate: _onNavigate }: Mi
       onToast('Thứ tự hiển thị phải là số không âm', 'error');
       return;
     }
-    if (!selectedLessonId || !lessonTree) return;
-    try {
-      setSaving(true);
-      const parentId = sectionForm.parentSectionId ? Number(sectionForm.parentSectionId) : null;
-      let updatedSections: any[] = [];
-      const currentSections = lessonTree.sections || [];
 
+    const parentId = sectionForm.parentSectionId ? Number(sectionForm.parentSectionId) : null;
+    if (parentId) {
+      setExpandSectionTrigger({ id: parentId, ts: Date.now() });
+    } else if (editSection) {
+      setExpandSectionTrigger({ id: editSection.id, ts: Date.now() });
+    }
+
+    if (editScope === 'ai') {
       if (editSection) {
-        // Edit existing section
-        const updateRecursive = (list: any[]): any[] => {
-          return list.map(sec => {
-            if (sec.id === editSection.id) {
-              return {
-                ...sec,
-                name: sectionForm.name.trim(),
-                summary: sectionForm.summary.trim() || null,
-                position: Number(sectionForm.position) || 1,
-                parentSectionId: parentId,
-              };
-            }
-            if (sec.children) {
-              return { ...sec, children: updateRecursive(sec.children) };
-            }
-            return sec;
-          });
-        };
-        updatedSections = updateRecursive(currentSections);
-      } else {
-        // Create new section
-        const newSec = {
-          id: Date.now(), // Unique temp ID
+        setAiPreviewSections(prev => updateSectionInTree(prev, editSection.id, {
           name: sectionForm.name.trim(),
           summary: sectionForm.summary.trim() || null,
-          position: Number(sectionForm.position) || 1,
+          position: position || 1,
+          parentSectionId: parentId,
+        }));
+        onToast('Đã cập nhật nhánh xem trước', 'success');
+      } else {
+        const newSec = {
+          id: Date.now(),
+          name: sectionForm.name.trim(),
+          summary: sectionForm.summary.trim() || null,
+          position: position || 1,
           lessonId: selectedLessonId,
           parentSectionId: parentId || null,
           nodes: [],
           children: [],
         };
+        setAiPreviewSections(prev => addSectionToTree(prev, parentId, newSec));
+        onToast('Đã tạo nhánh xem trước mới', 'success');
+      }
+      setSectionModalOpen(false);
+      return;
+    }
 
-        if (!parentId) {
-          updatedSections = [...currentSections, newSec];
-        } else {
-          const addRecursive = (list: any[]): any[] => {
-            return list.map(sec => {
-              if (sec.id === parentId) {
-                return { ...sec, children: [...(sec.children || []), newSec] };
-              }
-              if (sec.children) {
-                return { ...sec, children: addRecursive(sec.children) };
-              }
-              return sec;
-            });
-          };
-          updatedSections = addRecursive(currentSections);
-        }
+    if (!selectedLessonId || !lessonTree) return;
+    try {
+      setSaving(true);
+      const currentSections = lessonTree.sections || [];
+      let updatedSections: any[] = [];
+
+      if (editSection) {
+        updatedSections = updateSectionInTree(currentSections, editSection.id, {
+          name: sectionForm.name.trim(),
+          summary: sectionForm.summary.trim() || null,
+          position: position || 1,
+          parentSectionId: parentId,
+        });
+      } else {
+        const newSec = {
+          id: Date.now(),
+          name: sectionForm.name.trim(),
+          summary: sectionForm.summary.trim() || null,
+          position: position || 1,
+          lessonId: selectedLessonId,
+          parentSectionId: parentId || null,
+          nodes: [],
+          children: [],
+        };
+        updatedSections = addSectionToTree(currentSections, parentId, newSec);
       }
 
       await client.post(`/api/admin/lessons/${selectedLessonId}/mindmap/bulk`, {
@@ -1070,7 +1214,8 @@ export function MindMapPanel({ onToast, navParams, onNavigate: _onNavigate }: Mi
   };
 
   // 3. Node CRUD Handlers
-  const openCreateNode = (secId: number) => {
+  const openCreateNode = (secId: number, scope: 'main' | 'ai' = 'main') => {
+    setEditScope(scope);
     setEditNode(null);
     setNodeForm({
       header: '',
@@ -1079,10 +1224,14 @@ export function MindMapPanel({ onToast, navParams, onNavigate: _onNavigate }: Mi
       position: '1',
       sectionId: String(secId),
     });
+    if (secId) {
+      setExpandSectionTrigger({ id: secId, ts: Date.now() });
+    }
     setNodeModalOpen(true);
   };
 
-  const openEditNode = (node: NodeDto) => {
+  const openEditNode = (node: NodeDto, scope: 'main' | 'ai' = 'main') => {
+    setEditScope(scope);
     setEditNode(node);
     setNodeForm({
       header: node.header ?? '',
@@ -1104,67 +1253,59 @@ export function MindMapPanel({ onToast, navParams, onNavigate: _onNavigate }: Mi
       onToast('Thứ tự hiển thị phải là số không âm', 'error');
       return;
     }
-    if (!selectedLessonId || !lessonTree) return;
-    try {
-      setSaving(true);
-      let updatedSections: any[] = [];
-      const currentSections = lessonTree.sections || [];
-      const sectionId = Number(nodeForm.sectionId);
+    const sectionId = Number(nodeForm.sectionId);
+    if (sectionId) {
+      setExpandSectionTrigger({ id: sectionId, ts: Date.now() });
+    }
 
+    if (editScope === 'ai') {
       if (editNode) {
-        // Edit existing node
-        const updateRecursive = (list: any[]): any[] => {
-          return list.map(sec => {
-            if (sec.nodes) {
-              const hasNode = sec.nodes.some((n: any) => n.id === editNode.id);
-              if (hasNode) {
-                return {
-                  ...sec,
-                  nodes: sec.nodes.map((n: any) => {
-                    if (n.id === editNode.id) {
-                      return {
-                        ...n,
-                        header: nodeForm.header.trim() || null,
-                        body: nodeForm.body.trim(),
-                        position: Number(nodeForm.position) || 1,
-                        videoId: nodeForm.videoId || null,
-                      };
-                    }
-                    return n;
-                  })
-                };
-              }
-            }
-            if (sec.children) {
-              return { ...sec, children: updateRecursive(sec.children) };
-            }
-            return sec;
-          });
-        };
-        updatedSections = updateRecursive(currentSections);
+        setAiPreviewSections(prev => updateNodeInTree(prev, editNode.id, {
+          header: nodeForm.header.trim() || null,
+          body: nodeForm.body.trim(),
+          position: position || 1,
+          videoId: nodeForm.videoId || null,
+        }));
+        onToast('Đã cập nhật nút kiến thức xem trước', 'success');
       } else {
-        // Create new node
         const newNd = {
           id: Date.now(),
           header: nodeForm.header.trim() || null,
           body: nodeForm.body.trim(),
-          position: Number(nodeForm.position) || 1,
+          position: position || 1,
           videoId: nodeForm.videoId || null,
           sectionId,
         };
+        setAiPreviewSections(prev => addNodeToTree(prev, sectionId, newNd));
+        onToast('Đã tạo nút kiến thức xem trước mới', 'success');
+      }
+      setNodeModalOpen(false);
+      return;
+    }
 
-        const addRecursive = (list: any[]): any[] => {
-          return list.map(sec => {
-            if (sec.id === sectionId) {
-              return { ...sec, nodes: [...(sec.nodes || []), newNd] };
-            }
-            if (sec.children) {
-              return { ...sec, children: addRecursive(sec.children) };
-            }
-            return sec;
-          });
+    if (!selectedLessonId || !lessonTree) return;
+    try {
+      setSaving(true);
+      const currentSections = lessonTree.sections || [];
+      let updatedSections: any[] = [];
+
+      if (editNode) {
+        updatedSections = updateNodeInTree(currentSections, editNode.id, {
+          header: nodeForm.header.trim() || null,
+          body: nodeForm.body.trim(),
+          position: position || 1,
+          videoId: nodeForm.videoId || null,
+        });
+      } else {
+        const newNd = {
+          id: Date.now(),
+          header: nodeForm.header.trim() || null,
+          body: nodeForm.body.trim(),
+          position: position || 1,
+          videoId: nodeForm.videoId || null,
+          sectionId,
         };
-        updatedSections = addRecursive(currentSections);
+        updatedSections = addNodeToTree(currentSections, sectionId, newNd);
       }
 
       await client.post(`/api/admin/lessons/${selectedLessonId}/mindmap/bulk`, {
@@ -1182,37 +1323,29 @@ export function MindMapPanel({ onToast, navParams, onNavigate: _onNavigate }: Mi
 
   // 4. Delete Handler
   const handleDeleteConfirm = async () => {
-    if (!deleteTarget || !selectedLessonId || !lessonTree) return;
+    if (!deleteTarget) return;
+
+    if (editScope === 'ai') {
+      if (deleteTarget.type === 'section') {
+        setAiPreviewSections(prev => deleteSectionFromTree(prev, deleteTarget.id));
+      } else {
+        setAiPreviewSections(prev => deleteNodeFromTree(prev, deleteTarget.id));
+      }
+      onToast(deleteTarget.type === 'section' ? 'Đã xóa nhánh sơ đồ xem trước' : 'Đã xóa nút kiến thức xem trước', 'success');
+      setDeleteTarget(null);
+      return;
+    }
+
+    if (!selectedLessonId || !lessonTree) return;
     try {
       setDeleting(true);
-      let updatedSections: any[] = [];
       const currentSections = lessonTree.sections || [];
+      let updatedSections: any[] = [];
 
       if (deleteTarget.type === 'section') {
-        const deleteRecursive = (list: any[]): any[] => {
-          return list
-            .filter(sec => sec.id !== deleteTarget.id)
-            .map(sec => {
-              if (sec.children) {
-                return { ...sec, children: deleteRecursive(sec.children) };
-              }
-              return sec;
-            });
-        };
-        updatedSections = deleteRecursive(currentSections);
+        updatedSections = deleteSectionFromTree(currentSections, deleteTarget.id);
       } else {
-        const deleteRecursive = (list: any[]): any[] => {
-          return list.map(sec => {
-            if (sec.nodes) {
-              sec.nodes = sec.nodes.filter((n: any) => n.id !== deleteTarget.id);
-            }
-            if (sec.children) {
-              sec.children = deleteRecursive(sec.children);
-            }
-            return sec;
-          });
-        };
-        updatedSections = deleteRecursive(currentSections);
+        updatedSections = deleteNodeFromTree(currentSections, deleteTarget.id);
       }
 
       await client.post(`/api/admin/lessons/${selectedLessonId}/mindmap/bulk`, {
@@ -1263,6 +1396,7 @@ export function MindMapPanel({ onToast, navParams, onNavigate: _onNavigate }: Mi
       }
 
       setAiPreviewSections(data.sections);
+      setAiGenVersion(v => v + 1);
       onToast(`Sinh thành công cấu trúc sơ đồ tư duy từ AI!`, 'success');
     } catch (err: any) {
       console.error(err);
@@ -1458,12 +1592,20 @@ export function MindMapPanel({ onToast, navParams, onNavigate: _onNavigate }: Mi
             rootTitle={lessons.find(l => l.id === selectedLessonId)?.name || 'Bài học'}
             sections={lessonTree.sections}
             height="calc(100vh - 230px)"
-            onAddSection={openCreateSection}
-            onEditSection={openEditSection}
-            onDeleteSection={(id) => setDeleteTarget({ type: 'section', id })}
-            onAddNode={openCreateNode}
-            onEditNode={openEditNode}
-            onDeleteNode={(id) => setDeleteTarget({ type: 'node', id })}
+            resetKey={selectedLessonId ?? 'empty'}
+            expandSectionTrigger={expandSectionTrigger}
+            onAddSection={(parentId) => openCreateSection(parentId, 'main')}
+            onEditSection={(sec) => openEditSection(sec, 'main')}
+            onDeleteSection={(id) => {
+              setEditScope('main');
+              setDeleteTarget({ type: 'section', id });
+            }}
+            onAddNode={(secId) => openCreateNode(secId, 'main')}
+            onEditNode={(node) => openEditNode(node, 'main')}
+            onDeleteNode={(id) => {
+              setEditScope('main');
+              setDeleteTarget({ type: 'node', id });
+            }}
           />
           {loading && (
             <div style={{
@@ -1490,6 +1632,7 @@ export function MindMapPanel({ onToast, navParams, onNavigate: _onNavigate }: Mi
         open={sectionModalOpen}
         onClose={() => setSectionModalOpen(false)}
         title={editSection ? 'Chỉnh sửa nhánh/phần' : 'Tạo nhánh/phần sơ đồ mới'}
+        zIndex={1050}
       >
         <div style={{ width: 440, maxWidth: '100%' }}>
           <Input
@@ -1524,6 +1667,7 @@ export function MindMapPanel({ onToast, navParams, onNavigate: _onNavigate }: Mi
         open={nodeModalOpen}
         onClose={() => setNodeModalOpen(false)}
         title={editNode ? 'Chỉnh sửa nút kiến thức' : 'Thêm nút kiến thức mới'}
+        zIndex={1050}
       >
         <div style={{ width: 460, maxWidth: '100%' }}>
           <Input
@@ -1568,9 +1712,9 @@ export function MindMapPanel({ onToast, navParams, onNavigate: _onNavigate }: Mi
         open={aiModalOpen}
         onClose={() => !aiGenerating && setAiModalOpen(false)}
         title="Tự động sinh Sơ đồ tư duy bằng Trợ lý AI"
-        width={1000}
+        width={1100}
       >
-        <div style={{ width: '100%', maxWidth: '100%', maxHeight: '76vh', display: 'flex', flexDirection: 'column', overflowY: 'auto', paddingRight: '4px' }}>
+        <div style={{ width: '100%', maxWidth: '100%', maxHeight: '82vh', display: 'flex', flexDirection: 'column', overflowY: 'auto', paddingRight: '4px' }}>
           {/* Settings row */}
           <div style={{
             display: 'flex',
@@ -1587,7 +1731,7 @@ export function MindMapPanel({ onToast, navParams, onNavigate: _onNavigate }: Mi
             fontWeight: 500,
           }}>
             <IconAlert size={16} color="#b45309" />
-            <span>AI có thể mắc sai sót. Hãy kiểm tra kỹ thông tin trước khi lưu.</span>
+            <span>AI có thể mắc sai sót. Bạn có thể thêm, sửa, xóa trực tiếp trên sơ đồ xem trước bên dưới trước khi lưu.</span>
           </div>
 
           {/* Text Input */}
@@ -1602,7 +1746,7 @@ export function MindMapPanel({ onToast, navParams, onNavigate: _onNavigate }: Mi
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
             <span style={{ fontSize: 13, color: '#64748b' }}>
-              {aiPreviewSections.length > 0 && `Đang xem trước ${aiPreviewSections.length} nhánh lớn`}
+              {aiPreviewSections.length > 0 && `Đang xem trước ${aiPreviewSections.length} nhánh lớn (Có thể chỉnh sửa trực tiếp)`}
             </span>
             <Button
               variant="secondary"
@@ -1623,12 +1767,26 @@ export function MindMapPanel({ onToast, navParams, onNavigate: _onNavigate }: Mi
           {aiPreviewSections.length > 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, marginBottom: '16px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <span style={{ fontSize: 13, fontWeight: 600, color: '#475569' }}>Xem trước sơ đồ trực quan từ AI 🎨</span>
+                <span style={{ fontSize: 13, fontWeight: 600, color: '#475569' }}>Xem trước & chỉnh sửa sơ đồ trực quan 🎨</span>
               </div>
               <VisualMindMapDiagram
                 rootTitle={lessons.find(l => l.id === selectedLessonId)?.name || 'Xem trước bài học'}
                 sections={aiPreviewSections}
-                height="320px"
+                height="460px"
+                resetKey={`ai-gen-${aiGenVersion}`}
+                expandSectionTrigger={expandSectionTrigger}
+                onAddSection={(parentId) => openCreateSection(parentId, 'ai')}
+                onEditSection={(sec) => openEditSection(sec, 'ai')}
+                onDeleteSection={(id) => {
+                  setEditScope('ai');
+                  setDeleteTarget({ type: 'section', id });
+                }}
+                onAddNode={(secId) => openCreateNode(secId, 'ai')}
+                onEditNode={(node) => openEditNode(node, 'ai')}
+                onDeleteNode={(id) => {
+                  setEditScope('ai');
+                  setDeleteTarget({ type: 'node', id });
+                }}
               />
             </div>
           )}

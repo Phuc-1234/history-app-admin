@@ -7,6 +7,7 @@ interface ModalProps {
   onClose: () => void;
   children: ReactNode;
   width?: number;
+  zIndex?: number;
   closeOnOverlayClick?: boolean;
   closeOnEscape?: boolean;
 }
@@ -17,6 +18,7 @@ export function Modal({
   onClose,
   children,
   width = 520,
+  zIndex = 1000,
   closeOnOverlayClick = false,
   closeOnEscape = false
 }: ModalProps) {
@@ -32,7 +34,7 @@ export function Modal({
   return (
     <div
       style={{
-        position: 'fixed', inset: 0, zIndex: 1000,
+        position: 'fixed', inset: 0, zIndex,
         background: 'rgba(15,23,42,0.4)',
         backdropFilter: 'blur(6px)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
